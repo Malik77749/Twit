@@ -371,6 +371,7 @@ window.toggleComments = comments.toggleComments;
 window.showProfile = profile.showProfile;
 window.updateProfilePicture = profile.updateProfilePicture;
 window.editProfile = profile.editProfile;
+window.saveProfile = profile.saveProfile;
 
 window.focusComposer = focusComposer;
 
