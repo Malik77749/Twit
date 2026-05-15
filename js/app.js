@@ -6,6 +6,7 @@ import { getStorage } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-
 
 import { firebaseConfig } from './config.js';
 import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js';
+import { escapeHtml, showToast } from './utils.js';
 import * as auth from './auth.js';
 import * as posts from './posts.js';
 import * as comments from './comments.js';
@@ -466,19 +467,8 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// ===== Toast =====
-
-window.showToast = function(message) {
-    let toast = document.querySelector('.toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.className = 'toast';
-        document.body.appendChild(toast);
-    }
-    toast.textContent = message;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 3000);
-};
+// ===== Toast (imported from utils, exposed globally) =====
+window.showToast = showToast;
 
 // ===== Update sidebar with user info =====
 
@@ -660,10 +650,3 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 showAuth();
-
-// Helper: escapeHtml (needed for search results)
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}

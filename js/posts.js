@@ -1,7 +1,7 @@
 // Posts Module
 import { ref, push, set, get, update, remove, increment } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
-import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl } from './utils.js';
+import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast } from './utils.js';
 import { showLoading, hideLoading, showView } from './ui.js';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
 import { loadComments } from './comments.js';

@@ -45,4 +45,19 @@ function getYouTubeEmbedUrl(url) {
     return match ? `https://www.youtube.com/embed/${match[1]}` : null;
 }
 
-export { escapeHtml, formatTimestamp, formatJoinDate, getYouTubeEmbedUrl };
+/**
+ * Show a toast notification
+ */
+function showToast(message) {
+    let toast = document.querySelector('.toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'toast';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+export { escapeHtml, formatTimestamp, formatJoinDate, getYouTubeEmbedUrl, showToast };
