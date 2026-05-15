@@ -1,7 +1,7 @@
 // Main Application Entry Point
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getDatabase, ref, get, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { getDatabase, ref, get, update, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { getStorage } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 import { firebaseConfig } from './config.js';
@@ -507,8 +507,7 @@ window.openPostDetail = async function(postId) {
     container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
     try {
-        const { get: dbGet } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-        const snapshot = await dbGet(ref(database, `posts/${postId}`));
+        const snapshot = await get(ref(database, `posts/${postId}`));
 
         if (!snapshot.exists()) {
             container.innerHTML = '<div class="empty-state"><p>المنشور غير موجود</p></div>';
@@ -600,8 +599,7 @@ window.openPostDetail = async function(postId) {
 
         // Increment view
         if (!isOwnPost) {
-            const { update: dbUpdate } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-            await dbUpdate(ref(database, `posts/${postId}`), { views: (views || 0) + 1 });
+            await update(ref(database, `posts/${postId}`), { views: (views || 0) + 1 });
         }
     } catch (error) {
         container.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';
