@@ -27,13 +27,21 @@ async function showProfile(userId) {
         document.getElementById('profile-following').textContent = userData.following || 0;
         document.getElementById('profile-picture').src = userData.profilePicture || 'https://via.placeholder.com/134';
 
+        // Join date
+        if (userData.joinDate) {
+            const d = new Date(userData.joinDate);
+            const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+            document.getElementById('profile-join-date').innerHTML = `<i class="far fa-calendar"></i> انضم في ${months[d.getMonth()]} ${d.getFullYear()}`;
+        }
+
         // Profile actions
         const actionsDiv = document.getElementById('profile-actions');
         if (isOwnProfile) {
             actionsDiv.innerHTML = `
-                <div id="profile-picture-update" style="margin-top:8px;">
-                    <input type="text" class="auth-input" id="profile-picture-url" placeholder="رابط صورة الملف الشخصي" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;">
-                    <button class="follow-btn" onclick="updateProfilePicture()" style="font-size:13px;padding:4px 12px;">تحديث الصورة</button>
+                <button class="profile-edit-btn" onclick="editProfile()">تعديل الملف الشخصي</button>
+                <div id="profile-edit-form" style="display:none;margin-top:12px;">
+                    <input type="text" class="auth-input" id="profile-picture-url" placeholder="رابط صورة جديدة" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;">
+                    <button class="follow-btn" onclick="updateProfilePicture()" style="font-size:13px;padding:4px 12px;background:var(--accent);color:white;">حفظ</button>
                 </div>
             `;
         } else {
@@ -42,12 +50,25 @@ async function showProfile(userId) {
             actionsDiv.innerHTML = `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${userId}" onclick="followUser('${userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>`;
         }
 
+        // Profile tabs
+        document.querySelectorAll('.profile-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
+        });
+
         showView('profile');
         loadProfilePosts(userId);
     } catch (error) {
         alert('خطأ: ' + error.message);
         hideLoading();
     }
+}
+
+function editProfile() {
+    const form = document.getElementById('profile-edit-form');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
 async function updateProfilePicture() {
@@ -129,4 +150,4 @@ async function loadProfilePosts(userId) {
     }
 }
 
-export { init, showProfile, updateProfilePicture };
+export { init, showProfile, updateProfilePicture, editProfile };

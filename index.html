@@ -47,7 +47,7 @@
         <!-- Drawer Overlay -->
         <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
 
-        <!-- Drawer Sidebar (slides in on mobile) -->
+        <!-- Drawer Sidebar -->
         <div class="drawer" id="drawer">
             <div class="drawer-header">
                 <button class="drawer-close" onclick="closeDrawer()"><i class="fas fa-times"></i></button>
@@ -115,7 +115,7 @@
 
         <!-- Main Feed -->
         <main class="main-feed">
-            <!-- Home Feed -->
+            <!-- ===== HOME VIEW ===== -->
             <div id="home-view">
                 <!-- Mobile Header -->
                 <div class="mobile-header">
@@ -143,15 +143,21 @@
                         <div class="composer-divider"></div>
                         <div class="composer-actions">
                             <div class="composer-tools">
-                                <label class="composer-tool" title="صورة">
+                                <label class="composer-tool" title="وسائط">
                                     <i class="far fa-image"></i>
-                                    <input type="file" id="postImage" accept="image/*" style="display:none" onchange="handleImageSelect(this)">
+                                    <input type="file" id="postImage" accept="image/*,video/*" style="display:none" onchange="handleImageSelect(this)">
                                 </label>
-                                <button class="composer-tool" title="رابط صورة" onclick="toggleUrlInput()">
-                                    <i class="fas fa-link"></i>
+                                <button class="composer-tool" title="GIF">
+                                    <i class="fas fa-film"></i>
                                 </button>
-                                <button class="composer-tool" title="فيديو YouTube" onclick="toggleVideoInput()">
-                                    <i class="fab fa-youtube"></i>
+                                <button class="composer-tool" title="استطلاع">
+                                    <i class="fas fa-square-poll-horizontal"></i>
+                                </button>
+                                <button class="composer-tool" title="إيموجي">
+                                    <i class="far fa-face-smile"></i>
+                                </button>
+                                <button class="composer-tool" title="מיקום">
+                                    <i class="fas fa-location-dot"></i>
                                 </button>
                             </div>
                             <button class="composer-submit" onclick="postTweet()">نشر</button>
@@ -168,7 +174,7 @@
                 <div id="posts"></div>
             </div>
 
-            <!-- Notifications View -->
+            <!-- ===== NOTIFICATIONS VIEW ===== -->
             <div id="notifications-view" style="display:none;">
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
@@ -179,33 +185,49 @@
                 <div id="notifications-list"></div>
             </div>
 
-            <!-- Profile View -->
+            <!-- ===== PROFILE VIEW (X Style) ===== -->
             <div id="profile-view" style="display:none;">
-                <div class="feed-header">
-                    <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
-                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
-                        <div>
-                            <h2 id="profile-view-name" style="font-size:18px;">مستخدم</h2>
-                            <span id="profile-view-count" style="color:var(--text-secondary);font-size:13px;">0 منشورات</span>
-                        </div>
+                <!-- Profile Header -->
+                <div class="profile-header-bar">
+                    <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-left"></i></button>
+                    <div class="profile-header-info">
+                        <h2 id="profile-view-name">مستخدم</h2>
+                        <span id="profile-view-count">0 منشورات</span>
                     </div>
                 </div>
-                <div class="profile-banner"></div>
-                <div class="profile-info">
+
+                <!-- Banner -->
+                <div class="profile-banner">
+                    <div class="profile-banner-gradient"></div>
+                </div>
+
+                <!-- Avatar Row -->
+                <div class="profile-avatar-row">
                     <img class="profile-avatar-large" id="profile-picture" src="https://via.placeholder.com/134" alt="">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;">
-                        <div>
-                            <div class="profile-name" id="profile-name">مستخدم</div>
-                            <div class="profile-handle" id="profile-handle">@user</div>
-                        </div>
-                        <div id="profile-actions"></div>
+                    <div id="profile-actions" class="profile-actions"></div>
+                </div>
+
+                <!-- Profile Info -->
+                <div class="profile-details">
+                    <div class="profile-name" id="profile-name">مستخدم</div>
+                    <div class="profile-handle" id="profile-handle">@user</div>
+                    <div class="profile-join-date" id="profile-join-date">
+                        <i class="far fa-calendar"></i> انضم في يناير ٢٠٢٦
                     </div>
                     <div class="profile-stats">
-                        <span><strong id="profile-following">0</strong> يتابع</span>
-                        <span><strong id="profile-followers">0</strong> متابع</span>
+                        <span class="profile-stat"><strong id="profile-following">0</strong> يتابع</span>
+                        <span class="profile-stat"><strong id="profile-followers">0</strong> متابع</span>
                     </div>
-                    <div id="profile-picture-update" style="margin-top:12px;"></div>
                 </div>
+
+                <!-- Profile Tabs (like X) -->
+                <div class="profile-tabs">
+                    <button class="profile-tab active" data-tab="posts">منشورات</button>
+                    <button class="profile-tab" data-tab="replies">الردود</button>
+                    <button class="profile-tab" data-tab="media">الوسائط</button>
+                    <button class="profile-tab" data-tab="likes">الإعجابات</button>
+                </div>
+
                 <div id="profile-posts"></div>
             </div>
         </main>
@@ -216,6 +238,17 @@
                 <i class="fas fa-magnifying-glass"></i>
                 <input type="text" placeholder="بحث">
             </div>
+
+            <!-- Subscribe Card -->
+            <div class="trending-card">
+                <h3>اشترك في Premium</h3>
+                <div style="padding:12px 16px;">
+                    <p style="font-size:15px;margin-bottom:12px;">اشترك لفتح ميزات جديدة والحصول على حصة من الإيرادات.</p>
+                    <button class="follow-btn" style="background:var(--accent);color:white;font-size:15px;padding:8px 16px;">اشترك</button>
+                </div>
+            </div>
+
+            <!-- Trending -->
             <div class="trending-card">
                 <h3>الأكثر تداولاً</h3>
                 <div class="trending-item">
@@ -229,34 +262,52 @@
                     <div class="count">8.5K منشور</div>
                 </div>
                 <div class="trending-item">
-                    <div class="category">ترند · الأكثر تداولاً</div>
+                    <div class="category">ترند</div>
                     <div class="topic">#السعودية</div>
                     <div class="count">25K منشور</div>
+                </div>
+                <div class="trending-item">
+                    <div class="category">ترند في السعودية</div>
+                    <div class="topic">#رؤية_2030</div>
+                    <div class="count">18K منشور</div>
+                </div>
+            </div>
+
+            <!-- Who to follow -->
+            <div class="trending-card">
+                <h3>من تتابع</h3>
+                <div class="trending-item" style="display:flex;align-items:center;gap:12px;">
+                    <img src="https://via.placeholder.com/40" style="width:40px;height:40px;border-radius:50%;" alt="">
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:15px;">مستخدم</div>
+                        <div style="color:var(--text-secondary);font-size:13px;">@user</div>
+                    </div>
+                    <button class="follow-btn" style="font-size:13px;padding:4px 12px;">متابعة</button>
                 </div>
             </div>
         </aside>
     </div>
 
-    <!-- Mobile Bottom Nav -->
+    <!-- Mobile Bottom Nav (X style) -->
     <nav class="mobile-nav" id="mobile-nav">
-        <button class="mobile-nav-item active" onclick="showHome()" data-view="home">
+        <button class="mobile-nav-item active" onclick="showHome()">
             <i class="fas fa-home"></i>
         </button>
-        <button class="mobile-nav-item" onclick="showNotifications()" data-view="notifications">
+        <button class="mobile-nav-item" onclick="">
             <i class="fas fa-magnifying-glass"></i>
         </button>
-        <button class="mobile-nav-item" onclick="showNotifications()" data-view="notifications">
+        <button class="mobile-nav-item" onclick="showNotifications()" style="position:relative;">
             <i class="fas fa-bell"></i>
             <span class="mobile-notif-badge" id="notif-badge" style="display:none;"></span>
         </button>
-        <button class="mobile-nav-item" onclick="showNotifications()" data-view="notifications">
+        <button class="mobile-nav-item" onclick="">
             <i class="far fa-envelope"></i>
         </button>
     </nav>
 
-    <!-- Mobile FAB (Compose) -->
+    <!-- Mobile FAB -->
     <button class="mobile-fab" id="mobile-fab" onclick="focusComposer()">
-        <i class="fas fa-feather-pointed"></i>
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M23 3c-6.62-.1-10.38 2.421-13.05 6.03C7.29 12.61 6 17.331 6 22h2c0-1.007.07-2.012.19-3H12c4.1 0 7.48-3.082 7.94-7.054C22.79 10.147 23.17 6.359 23 3zm-7 8h-1.5v2H16c-.63 2.06-2.45 3.5-4.5 3.5H8.19c.18 1.51.51 3.01.99 4.45C10.67 22.67 13.16 24 16 24h2c3.87 0 7-3.13 7-7 0-5.52-4.48-10-10-10H8.5C7.12 7 6 8.12 6 9.5S7.12 12 8.5 12H11v2H8.5C6.57 14 5 12.43 5 10.5S6.57 7 8.5 7H16c2.21 0 4 1.79 4 4s-1.79 4-4 4h-1.5v2H16c3.31 0 6-2.69 6-6s-2.69-6-6-6H8.5C5.46 5 3 7.46 3 10.5S5.46 16 8.5 16H11v2H8.5C4.36 18 1 14.64 1 10.5S4.36 3 8.5 3H16c4.42 0 8 3.58 8 8s-3.58 8-8 8h-1.5v2H16c5.52 0 10-4.48 10-10 0-2.13-.68-4.09-1.83-5.69"/></svg>
     </button>
 
     <script type="module" src="js/app.js"></script>
