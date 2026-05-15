@@ -532,7 +532,7 @@ async function renderRetweet(retweet, originalPost, container) {
 
     let mediaHtml = '';
     if (originalPost.imageUrl) {
-        mediaHtml = `<div class="tweet-media"><img src="${originalPost.imageUrl}" alt="صورة"></div>`;
+        mediaHtml = `<div class="tweet-media" onclick="event.stopPropagation(); openLightbox('${originalPost.imageUrl}')" style="cursor:zoom-in;"><img src="${originalPost.imageUrl}" alt="صورة"></div>`;
     } else if (originalPost.videoUrl) {
         mediaHtml = `<div class="tweet-media"><iframe src="${originalPost.videoUrl}" allowfullscreen></iframe></div>`;
     }
