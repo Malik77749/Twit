@@ -2,12 +2,12 @@
 import { ref, push, set, get, update, remove, increment } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl } from './utils.js';
-import { showLoading, hideLoading } from './ui.js';
+import { showLoading, hideLoading, showView } from './ui.js';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
 import { loadComments } from './comments.js';
 
 let auth, database, storage;
-let activeListeners = [];
+let selectedFile = null;
 
 function init(authInstance, databaseInstance, storageInstance) {
     auth = authInstance;
@@ -15,42 +15,69 @@ function init(authInstance, databaseInstance, storageInstance) {
     storage = storageInstance;
 }
 
-function unsubscribeAll() {
-    activeListeners.forEach(unsub => unsub());
-    activeListeners = [];
+// ===== Composer Helpers =====
+
+function handleImageSelect(input) {
+    if (input.files && input.files[0]) {
+        selectedFile = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-img').src = e.target.result;
+            document.getElementById('composer-preview').style.display = 'block';
+        };
+        reader.readAsDataURL(selectedFile);
+    }
 }
 
-/**
- * Create a new post
- */
+function removePreview() {
+    selectedFile = null;
+    document.getElementById('postImage').value = '';
+    document.getElementById('postImageUrl').value = '';
+    document.getElementById('postVideo').value = '';
+    document.getElementById('preview-img').src = '';
+    document.getElementById('composer-preview').style.display = 'none';
+    document.getElementById('url-input-row').style.display = 'none';
+    document.getElementById('video-input-row').style.display = 'none';
+}
+
+function toggleUrlInput() {
+    const row = document.getElementById('url-input-row');
+    row.style.display = row.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('video-input-row').style.display = 'none';
+}
+
+function toggleVideoInput() {
+    const row = document.getElementById('video-input-row');
+    row.style.display = row.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('url-input-row').style.display = 'none';
+}
+
+// ===== Post Actions =====
+
 async function postTweet() {
-    showLoading();
     const content = document.getElementById('postContent').value.trim();
-    const imageInput = document.getElementById('postImage');
     const imageUrl = document.getElementById('postImageUrl').value.trim();
     const videoUrl = document.getElementById('postVideo').value.trim();
 
-    if (!content && !imageInput.files[0] && !imageUrl && !videoUrl) {
-        alert('يرجى إدخال محتوى أو صورة أو رابط صورة أو رابط فيديو');
-        hideLoading();
+    if (!content && !selectedFile && !imageUrl && !videoUrl) {
+        alert('اكتب شيئاً أو أضف صورة');
         return;
     }
 
+    showLoading();
     const postRef = push(ref(database, 'posts'));
     const postData = {
         userId: auth.currentUser.uid,
         content: escapeHtml(content),
         timestamp: new Date().toISOString(),
         likes: 0,
-        retweets: 0,
-        comments: 0
+        retweets: 0
     };
 
     try {
-        if (imageInput.files[0]) {
-            const imageFile = imageInput.files[0];
-            const imgRef = storageRef(storage, `posts/${postRef.key}/${imageFile.name}`);
-            const snapshot = await uploadBytes(imgRef, imageFile);
+        if (selectedFile) {
+            const imgRef = storageRef(storage, `posts/${postRef.key}/${selectedFile.name}`);
+            const snapshot = await uploadBytes(imgRef, selectedFile);
             postData.imageUrl = await getDownloadURL(snapshot.ref);
         } else if (imageUrl) {
             try {
@@ -64,7 +91,7 @@ async function postTweet() {
         } else if (videoUrl) {
             const embedUrl = getYouTubeEmbedUrl(videoUrl);
             if (!embedUrl) {
-                alert('رابط فيديو غير صالح');
+                alert('رابط YouTube غير صالح');
                 hideLoading();
                 return;
             }
@@ -73,29 +100,21 @@ async function postTweet() {
 
         await set(postRef, postData);
         document.getElementById('postContent').value = '';
-        document.getElementById('postImage').value = '';
-        document.getElementById('postImageUrl').value = '';
-        document.getElementById('postVideo').value = '';
+        document.getElementById('postContent').style.height = 'auto';
+        removePreview();
         loadPosts();
     } catch (error) {
-        alert('خطأ أثناء النشر: ' + error.message);
+        alert('خطأ: ' + error.message);
         hideLoading();
     }
 }
 
-/**
- * Delete a post
- */
 async function deletePost(postId, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (!confirm('حذف المنشور؟')) return;
+
     showLoading();
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (!confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
-        hideLoading();
-        return;
-    }
-
     try {
         await remove(ref(database, 'posts/' + postId));
         await remove(ref(database, 'comments/' + postId));
@@ -103,29 +122,23 @@ async function deletePost(postId, event) {
 
         const retweetsSnapshot = await get(ref(database, 'retweets'));
         if (retweetsSnapshot.exists()) {
-            const retweets = retweetsSnapshot.val();
-            for (const retweetId in retweets) {
-                if (retweets[retweetId].originalPostId === postId) {
-                    await remove(ref(database, 'retweets/' + retweetId));
+            for (const [key, val] of Object.entries(retweetsSnapshot.val())) {
+                if (val.originalPostId === postId) {
+                    await remove(ref(database, 'retweets/' + key));
                 }
             }
         }
-
         document.querySelectorAll(`[data-post-id="${postId}"]`).forEach(el => el.remove());
     } catch (error) {
-        alert('خطأ أثناء حذف المنشور: ' + error.message);
+        alert('خطأ: ' + error.message);
     } finally {
         hideLoading();
     }
 }
 
-/**
- * Like/unlike a post
- */
 async function likePost(postId, event) {
-    event.preventDefault();
-    event.stopPropagation();
-    showLoading();
+    event?.preventDefault();
+    event?.stopPropagation();
 
     const userId = auth.currentUser.uid;
     const likeRef = ref(database, `likes/${postId}/${userId}`);
@@ -151,70 +164,54 @@ async function likePost(postId, event) {
 
         await update(postRef, { likes });
 
-        const likeButton = document.querySelector(`button[data-post-id="${postId}"][data-action="like"]`);
-        if (likeButton) {
-            likeButton.innerHTML = `<i class="fa-heart ${isLiked ? 'far' : 'fas active'}"></i> ${likes}`;
-        }
+        // Update all matching buttons
+        document.querySelectorAll(`[data-like-id="${postId}"]`).forEach(btn => {
+            btn.className = `tweet-action like ${isLiked ? '' : 'active'}`;
+            btn.innerHTML = `<span class="icon-wrap"><i class="${isLiked ? 'far' : 'fas'} fa-heart"></i></span><span>${likes}</span>`;
+        });
     } catch (error) {
-        alert('خطأ أثناء الإعجاب: ' + error.message);
-    } finally {
-        hideLoading();
+        alert('خطأ: ' + error.message);
     }
 }
 
-/**
- * Retweet/un-retweet a post
- */
 async function retweetPost(postId, event) {
-    event.preventDefault();
-    event.stopPropagation();
-    showLoading();
+    event?.preventDefault();
+    event?.stopPropagation();
 
     const userId = auth.currentUser.uid;
     const retweetsSnapshot = await get(ref(database, 'retweets'));
-    let alreadyRetweeted = false;
-    let userRetweetId = null;
+    let existingKey = null;
 
     if (retweetsSnapshot.exists()) {
-        retweetsSnapshot.forEach(child => {
-            const retweet = child.val();
-            if (retweet.originalPostId === postId && retweet.userId === userId) {
-                alreadyRetweeted = true;
-                userRetweetId = child.key;
-            }
-        });
-    }
-
-    if (alreadyRetweeted) {
-        if (confirm('لقد قمت بإعادة تغريد هذا المنشور. هل تريد إلغاء إعادة التغريد؟')) {
-            try {
-                await remove(ref(database, 'retweets/' + userRetweetId));
-                const postRef = ref(database, `posts/${postId}`);
-                const postSnapshot = await get(postRef);
-                let retweets = postSnapshot.exists() ? postSnapshot.val().retweets || 0 : 0;
-                retweets = Math.max(0, retweets - 1);
-                await update(postRef, { retweets });
-
-                const retweetButton = document.querySelector(`button[data-post-id="${postId}"][data-action="retweet"]`);
-                if (retweetButton) {
-                    retweetButton.innerHTML = `<i class="fas fa-retweet"></i> ${retweets}`;
-                }
-            } catch (error) {
-                alert('خطأ أثناء إلغاء إعادة التغريد: ' + error.message);
+        for (const [key, val] of Object.entries(retweetsSnapshot.val())) {
+            if (val.originalPostId === postId && val.userId === userId) {
+                existingKey = key;
+                break;
             }
         }
-        hideLoading();
+    }
+
+    if (existingKey) {
+        if (!confirm('إلغاء إعادة التغريد؟')) return;
+        try {
+            await remove(ref(database, 'retweets/' + existingKey));
+            const postRef = ref(database, `posts/${postId}`);
+            const postSnapshot = await get(postRef);
+            let retweets = postSnapshot.exists() ? postSnapshot.val().retweets || 0 : 0;
+            retweets = Math.max(0, retweets - 1);
+            await update(postRef, { retweets });
+            document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
+                btn.innerHTML = `<span class="icon-wrap"><i class="fas fa-retweet"></i></span><span>${retweets}</span>`;
+            });
+        } catch (error) {
+            alert('خطأ: ' + error.message);
+        }
         return;
     }
 
     try {
         const retweetRef = push(ref(database, 'retweets'));
-        await set(retweetRef, {
-            originalPostId: postId,
-            userId: userId,
-            timestamp: new Date().toISOString()
-        });
-
+        await set(retweetRef, { originalPostId: postId, userId, timestamp: new Date().toISOString() });
         const postRef = ref(database, `posts/${postId}`);
         const postSnapshot = await get(postRef);
         let retweets = postSnapshot.exists() ? postSnapshot.val().retweets || 0 : 0;
@@ -222,36 +219,26 @@ async function retweetPost(postId, event) {
         await update(postRef, { retweets });
 
         if (postSnapshot.exists() && postSnapshot.val().userId !== userId) {
-            const retweeterName = await getUserName(database, userId);
-            await addNotification(database, postSnapshot.val().userId, `قام ${retweeterName} بإعادة نشر تغريدتك`, postId);
+            const name = await getUserName(database, userId);
+            await addNotification(database, postSnapshot.val().userId, `أعاد ${name} نشر تغريدتك`, postId);
         }
 
-        const retweetButton = document.querySelector(`button[data-post-id="${postId}"][data-action="retweet"]`);
-        if (retweetButton) {
-            retweetButton.innerHTML = `<i class="fas fa-retweet"></i> ${retweets}`;
-        }
+        document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
+            btn.innerHTML = `<span class="icon-wrap"><i class="fas fa-retweet"></i></span><span>${retweets}</span>`;
+        });
     } catch (error) {
-        alert('خطأ أثناء إعادة التغريد: ' + error.message);
-    } finally {
-        hideLoading();
+        alert('خطأ: ' + error.message);
     }
 }
 
-/**
- * Follow/unfollow a user
- */
 async function followUser(userId, event) {
-    event.preventDefault();
-    event.stopPropagation();
-    showLoading();
+    event?.preventDefault();
+    event?.stopPropagation();
 
     const currentUserId = auth.currentUser.uid;
-    if (userId === currentUserId) {
-        alert('لا يمكنك متابعة نفسك');
-        hideLoading();
-        return;
-    }
+    if (userId === currentUserId) return;
 
+    showLoading();
     const followRef = ref(database, `followers/${userId}/${currentUserId}`);
 
     try {
@@ -267,66 +254,50 @@ async function followUser(userId, event) {
             await set(followRef, { timestamp: new Date().toISOString() });
             updates[`users/${userId}/followers`] = increment(1);
             updates[`users/${currentUserId}/following`] = increment(1);
-            const followerName = await getUserName(database, currentUserId);
-            await addNotification(database, userId, `قام ${followerName} بمتابعتك`, null);
+            const name = await getUserName(database, currentUserId);
+            await addNotification(database, userId, `بدأ ${name} بمتابعتك`, null);
         }
 
         await update(ref(database), updates);
 
-        const userSnapshot = await get(ref(database, `users/${userId}`));
-        const currentUserSnapshot = await get(ref(database, `users/${currentUserId}`));
-        document.getElementById('profile-followers').textContent = userSnapshot.val()?.followers || 0;
-        document.getElementById('profile-following').textContent = currentUserSnapshot.val()?.following || 0;
-
-        document.querySelectorAll(`button.follow-btn[onclick="followUser('${userId}', event)"]`).forEach(button => {
-            button.textContent = isFollowing ? 'متابعة' : 'إلغاء المتابعة';
-            button.classList.toggle('unfollow', !isFollowing);
+        document.querySelectorAll(`[data-follow-id="${userId}"]`).forEach(btn => {
+            if (isFollowing) {
+                btn.className = 'follow-btn';
+                btn.textContent = 'متابعة';
+            } else {
+                btn.className = 'follow-btn following';
+                btn.textContent = 'متابَع';
+            }
         });
     } catch (error) {
-        alert('خطأ أثناء المتابعة: ' + error.message);
+        alert('خطأ: ' + error.message);
     } finally {
         hideLoading();
     }
 }
 
-/**
- * Report a post
- */
 async function reportPost(postId, userId, event) {
-    event.preventDefault();
-    event.stopPropagation();
-    showLoading();
-
-    const reason = prompt('يرجى إدخال سبب الإبلاغ:');
-    if (!reason) {
-        hideLoading();
-        return;
-    }
+    event?.preventDefault();
+    event?.stopPropagation();
+    const reason = prompt('سبب الإبلاغ:');
+    if (!reason) return;
 
     try {
-        const reportRef = push(ref(database, 'reports'));
-        await set(reportRef, {
-            postId,
-            userId,
-            reporterId: auth.currentUser.uid,
-            reason,
-            timestamp: new Date().toISOString()
+        await set(push(ref(database, 'reports')), {
+            postId, userId, reporterId: auth.currentUser.uid, reason, timestamp: new Date().toISOString()
         });
-        alert('تم إرسال الإبلاغ بنجاح');
+        alert('تم الإبلاغ');
     } catch (error) {
-        alert('خطأ أثناء الإبلاغ: ' + error.message);
-    } finally {
-        hideLoading();
+        alert('خطأ: ' + error.message);
     }
 }
 
-/**
- * Load all posts and retweets
- */
+// ===== Feed Loading =====
+
 async function loadPosts() {
     showLoading();
     const postsDiv = document.getElementById('posts');
-    postsDiv.innerHTML = '<p class="loading">جارٍ تحميل التغريدات...</p>';
+    postsDiv.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
     try {
         const [postsSnapshot, retweetsSnapshot] = await Promise.all([
@@ -335,195 +306,202 @@ async function loadPosts() {
         ]);
 
         postsDiv.innerHTML = '';
-        const posts = [];
-        const retweets = [];
+        const allItems = [];
 
         if (postsSnapshot.exists()) {
             postsSnapshot.forEach(child => {
-                posts.push({ id: child.key, ...child.val(), type: 'post' });
+                allItems.push({ id: child.key, ...child.val(), type: 'post' });
             });
         }
         if (retweetsSnapshot.exists()) {
             retweetsSnapshot.forEach(child => {
-                retweets.push({ id: child.key, ...child.val(), type: 'retweet' });
+                allItems.push({ id: child.key, ...child.val(), type: 'retweet' });
             });
         }
 
-        if (!posts.length && !retweets.length) {
-            postsDiv.innerHTML = '<p class="loading">لا توجد تغريدات بعد.</p>';
+        if (!allItems.length) {
+            postsDiv.innerHTML = '<div class="empty-state"><h3>لا توجد منشورات</h3><p>كن أول من ينشر!</p></div>';
             hideLoading();
             return;
         }
 
-        const allItems = [...posts, ...retweets].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        allItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         for (const item of allItems) {
-            let container = postsDiv.querySelector(`[data-post-id="${item.id}"]`);
-            if (!container) {
-                container = document.createElement('div');
-                container.setAttribute('data-post-id', item.id);
-                postsDiv.appendChild(container);
-            }
+            const container = document.createElement('div');
+            container.setAttribute('data-post-id', item.id);
+            postsDiv.appendChild(container);
             await renderFeedItem(item, container);
         }
 
         hideLoading();
     } catch (error) {
-        postsDiv.innerHTML = '<p class="error-message">حدث خطأ أثناء تحميل التغريدات.</p>';
+        postsDiv.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';
         hideLoading();
     }
 }
 
-/**
- * Render a feed item (post or retweet)
- */
 async function renderFeedItem(item, container) {
     if (item.type === 'post') {
         await renderPost(item, container);
     } else if (item.type === 'retweet') {
         const snapshot = await get(ref(database, 'posts/' + item.originalPostId));
         if (snapshot.exists()) {
-            const originalPost = { id: snapshot.key, ...snapshot.val() };
-            await renderRetweet(item, originalPost, container);
+            await renderRetweet(item, { id: snapshot.key, ...snapshot.val() }, container);
         }
     }
 }
 
-/**
- * Render a single post
- */
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    if (diffMin < 1) return 'الآن';
+    if (diffMin < 60) return `${diffMin}د`;
+    if (diffHr < 24) return `${diffHr}س`;
+    if (diffDay < 7) return `${diffDay}ي`;
+    return date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+}
+
 async function renderPost(post, container) {
     const postId = post.id;
     const userId = auth.currentUser?.uid;
-    const postUserId = post.userId;
-    const userData = await getUserData(database, postUserId);
-    const userName = userData.name || `مستخدم ${postUserId.slice(0, 8)}`;
-    const profilePicture = userData.profilePicture || 'https://via.placeholder.com/48';
+    const userData = await getUserData(database, post.userId);
+    const userName = userData.name || 'مستخدم';
+    const avatar = userData.profilePicture || 'https://via.placeholder.com/40';
+    const isOwnPost = post.userId === userId;
 
-    container.className = 'card post-card';
-    container.setAttribute('data-post-id', postId);
+    // Check like status
+    const likeSnapshot = await get(ref(database, `likes/${postId}/${userId}`));
+    const isLiked = likeSnapshot.exists();
 
-    let mediaContent = '';
-    if (post.imageUrl) {
-        mediaContent = `<img src="${post.imageUrl}" class="post-media" alt="Post image">`;
-    } else if (post.videoUrl) {
-        mediaContent = `<iframe src="${post.videoUrl}" class="post-video" frameborder="0" allowfullscreen></iframe>`;
+    // Check follow status
+    let isFollowing = false;
+    if (!isOwnPost) {
+        const followSnap = await get(ref(database, `followers/${post.userId}/${userId}`));
+        isFollowing = followSnap.exists();
     }
 
-    const postContent = post.content ? `<p class="post-content">${post.content}</p>` : '';
-    const likeRef = ref(database, `likes/${postId}/${userId}`);
-    const likeSnapshot = await get(likeRef);
-    const isLiked = likeSnapshot.exists();
-    const commentsSnapshot = await get(ref(database, 'comments/' + postId));
-    const commentCount = commentsSnapshot.exists() ? Object.keys(commentsSnapshot.val()).length : 0;
-    const isOwnPost = postUserId === userId;
-    const followRef = ref(database, `followers/${postUserId}/${userId}`);
-    const followSnapshot = await get(followRef);
-    const isFollowing = followSnapshot.exists();
+    // Comment count
+    const commentsSnap = await get(ref(database, 'comments/' + postId));
+    const commentCount = commentsSnap.exists() ? Object.keys(commentsSnap.val()).length : 0;
+
+    // Media
+    let mediaHtml = '';
+    if (post.imageUrl) {
+        mediaHtml = `<div class="tweet-media"><img src="${post.imageUrl}" alt="صورة"></div>`;
+    } else if (post.videoUrl) {
+        mediaHtml = `<div class="tweet-media"><iframe src="${post.videoUrl}" allowfullscreen></iframe></div>`;
+    }
 
     container.innerHTML = `
-        ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'unfollow' : ''}" onclick="followUser('${postUserId}', event)">${isFollowing ? 'إلغاء المتابعة' : 'متابعة'}</button>` : ''}
-        <div class="post-header">
-            <img src="${profilePicture}" alt="Avatar" onclick="showProfile('${postUserId}')">
-            <span>${escapeHtml(userName)}</span>
-            <span class="timestamp">${formatTimestamp(post.timestamp)}</span>
+        <div class="tweet">
+            <img class="tweet-avatar" src="${avatar}" alt="" onclick="showProfile('${post.userId}')">
+            <div class="tweet-body">
+                <div class="tweet-header">
+                    <span class="tweet-name" onclick="showProfile('${post.userId}')">${escapeHtml(userName)}</span>
+                    <span class="tweet-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
+                    <span class="tweet-dot">·</span>
+                    <span class="tweet-time">${formatTime(post.timestamp)}</span>
+                    ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${post.userId}" onclick="followUser('${post.userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
+                    <button class="tweet-more" onclick="event.stopPropagation()">
+                        <i class="fas fa-ellipsis"></i>
+                    </button>
+                </div>
+                ${post.content ? `<div class="tweet-content">${post.content}</div>` : ''}
+                ${mediaHtml}
+                <div class="tweet-actions">
+                    <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
+                        <span class="icon-wrap"><i class="far fa-comment"></i></span>
+                        <span>${commentCount}</span>
+                    </button>
+                    <button class="tweet-action retweet" data-retweet-id="${postId}" onclick="retweetPost('${postId}', event)">
+                        <span class="icon-wrap"><i class="fas fa-retweet"></i></span>
+                        <span>${post.retweets || 0}</span>
+                    </button>
+                    <button class="tweet-action like ${isLiked ? 'active' : ''}" data-like-id="${postId}" onclick="likePost('${postId}', event)">
+                        <span class="icon-wrap"><i class="${isLiked ? 'fas' : 'far'} fa-heart"></i></span>
+                        <span>${post.likes || 0}</span>
+                    </button>
+                    <button class="tweet-action share">
+                        <span class="icon-wrap"><i class="far fa-bookmark"></i></span>
+                    </button>
+                </div>
+            </div>
         </div>
-        ${postContent}
-        ${mediaContent}
-        <div class="post-actions">
-            <button data-post-id="${postId}" data-action="retweet" onclick="retweetPost('${postId}', event)"><i class="fas fa-retweet"></i> ${post.retweets || 0}</button>
-            <button data-post-id="${postId}" data-action="like" onclick="likePost('${postId}', event)"><i class="fa-heart ${isLiked ? 'fas active' : 'far'}"></i> ${post.likes || 0}</button>
-            <button onclick="toggleComments('${postId}', event)"><i class="far fa-comment"></i> ${commentCount}</button>
-        </div>
-        <div class="dropdown mt-2">
-            <button class="btn btn-link p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-ellipsis-h"></i></button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" onclick="reportPost('${postId}', '${postUserId}', event)"><i class="fas fa-flag"></i> إبلاغ</a></li>
-                ${isOwnPost ? `<li><a class="dropdown-item" href="#" onclick="deletePost('${postId}', event)"><i class="fas fa-trash"></i> حذف</a></li>` : ''}
-            </ul>
-        </div>
-        <div id="comments-${postId}" class="comment-section" style="display: none;">
-            <textarea id="comment-input-${postId}" class="form-control mb-2" placeholder="أضف تعليقًا"></textarea>
-            <button class="btn btn-primary btn-sm" onclick="addComment('${postId}', null, event)">إرسال</button>
-            <div id="comment-list-${postId}"></div>
-        </div>
+        <div id="comments-${postId}" class="comment-section" style="display:none;"></div>
     `;
 
     loadComments(postId);
 }
 
-/**
- * Render a retweet with original post
- */
 async function renderRetweet(retweet, originalPost, container) {
     const postId = originalPost.id;
-    const retweetUserId = retweet.userId;
-    const originalUserId = originalPost.userId;
-    const retweetUserData = await getUserData(database, retweetUserId);
-    const originalUserData = await getUserData(database, originalUserId);
-    const retweetUserName = retweetUserData.name || `مستخدم ${retweetUserId.slice(0, 8)}`;
-    const originalUserName = originalUserData.name || `مستخدم ${originalUserId.slice(0, 8)}`;
-    const retweetProfilePicture = retweetUserData.profilePicture || 'https://via.placeholder.com/48';
-    const originalProfilePicture = originalUserData.profilePicture || 'https://via.placeholder.com/48';
     const userId = auth.currentUser?.uid;
+    const retweetUser = await getUserData(database, retweet.userId);
+    const originalUser = await getUserData(database, originalPost.userId);
 
-    container.className = 'card post-card';
-    container.setAttribute('data-post-id', retweet.id);
+    const likeSnapshot = await get(ref(database, `likes/${postId}/${userId}`));
+    const isLiked = likeSnapshot.exists();
+    const commentsSnap = await get(ref(database, 'comments/' + postId));
+    const commentCount = commentsSnap.exists() ? Object.keys(commentsSnap.val()).length : 0;
 
-    let mediaContent = '';
+    let mediaHtml = '';
     if (originalPost.imageUrl) {
-        mediaContent = `<img src="${originalPost.imageUrl}" class="post-media" alt="Post image">`;
+        mediaHtml = `<div class="tweet-media"><img src="${originalPost.imageUrl}" alt="صورة"></div>`;
     } else if (originalPost.videoUrl) {
-        mediaContent = `<iframe src="${originalPost.videoUrl}" class="post-video" frameborder="0" allowfullscreen></iframe>`;
+        mediaHtml = `<div class="tweet-media"><iframe src="${originalPost.videoUrl}" allowfullscreen></iframe></div>`;
     }
 
-    const postContent = originalPost.content ? `<p class="post-content">${originalPost.content}</p>` : '';
-    const likeRef = ref(database, `likes/${postId}/${userId}`);
-    const likeSnapshot = await get(likeRef);
-    const isLiked = likeSnapshot.exists();
-    const commentsSnapshot = await get(ref(database, 'comments/' + postId));
-    const commentCount = commentsSnapshot.exists() ? Object.keys(commentsSnapshot.val()).length : 0;
-    const isOwnPost = originalUserId === userId;
-    const followRef = ref(database, `followers/${originalUserId}/${userId}`);
-    const followSnapshot = await get(followRef);
-    const isFollowing = followSnapshot.exists();
-
     container.innerHTML = `
-        ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'unfollow' : ''}" onclick="followUser('${originalUserId}', event)">${isFollowing ? 'إلغاء المتابعة' : 'متابعة'}</button>` : ''}
-        <div class="post-header">
-            <img src="${retweetProfilePicture}" alt="Avatar" onclick="showProfile('${retweetUserId}')">
-            <span>${escapeHtml(retweetUserName)}</span>
-            <span class="timestamp">${formatTimestamp(retweet.timestamp)}</span>
-        </div>
-        <p style="color: var(--action-color); font-size: 0.9rem; margin: 5px 0;">
-            قام ${escapeHtml(retweetUserName)} بإعادة نشر تغريدة
-        </p>
-        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
-            <div class="post-header">
-                <img src="${originalProfilePicture}" alt="Avatar" onclick="showProfile('${originalUserId}')">
-                <span>${escapeHtml(originalUserName)}</span>
-                <span class="timestamp">${formatTimestamp(originalPost.timestamp)}</span>
+        <div class="tweet">
+            <img class="tweet-avatar" src="${retweetUser.profilePicture || 'https://via.placeholder.com/40'}" alt="" onclick="showProfile('${retweet.userId}')">
+            <div class="tweet-body">
+                <div class="tweet-header">
+                    <span class="tweet-name">${escapeHtml(retweetUser.name || 'مستخدم')}</span>
+                    <span class="tweet-handle">@${escapeHtml(retweetUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
+                    <span class="tweet-dot">·</span>
+                    <span class="tweet-time">${formatTime(retweet.timestamp)}</span>
+                </div>
+                <div style="color:var(--text-secondary);font-size:13px;margin:4px 0;">
+                    <i class="fas fa-retweet"></i> أعاد نشر
+                </div>
+                <div style="border:1px solid var(--border-color);border-radius:16px;padding:12px;">
+                    <div class="tweet-header">
+                        <img class="tweet-avatar" src="${originalUser.profilePicture || 'https://via.placeholder.com/40'}" style="width:32px;height:32px;" alt="" onclick="showProfile('${originalPost.userId}')">
+                        <span class="tweet-name">${escapeHtml(originalUser.name || 'مستخدم')}</span>
+                        <span class="tweet-handle">@${escapeHtml(originalUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
+                        <span class="tweet-dot">·</span>
+                        <span class="tweet-time">${formatTime(originalPost.timestamp)}</span>
+                    </div>
+                    ${originalPost.content ? `<div class="tweet-content">${originalPost.content}</div>` : ''}
+                    ${mediaHtml}
+                </div>
+                <div class="tweet-actions">
+                    <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
+                        <span class="icon-wrap"><i class="far fa-comment"></i></span>
+                        <span>${commentCount}</span>
+                    </button>
+                    <button class="tweet-action retweet" data-retweet-id="${postId}" onclick="retweetPost('${postId}', event)">
+                        <span class="icon-wrap"><i class="fas fa-retweet"></i></span>
+                        <span>${originalPost.retweets || 0}</span>
+                    </button>
+                    <button class="tweet-action like ${isLiked ? 'active' : ''}" data-like-id="${postId}" onclick="likePost('${postId}', event)">
+                        <span class="icon-wrap"><i class="${isLiked ? 'fas' : 'far'} fa-heart"></i></span>
+                        <span>${originalPost.likes || 0}</span>
+                    </button>
+                    <button class="tweet-action share">
+                        <span class="icon-wrap"><i class="far fa-bookmark"></i></span>
+                    </button>
+                </div>
             </div>
-            ${postContent}
-            ${mediaContent}
         </div>
-        <div class="post-actions">
-            <button data-post-id="${postId}" data-action="retweet" onclick="retweetPost('${postId}', event)"><i class="fas fa-retweet"></i> ${originalPost.retweets || 0}</button>
-            <button data-post-id="${postId}" data-action="like" onclick="likePost('${postId}', event)"><i class="fa-heart ${isLiked ? 'fas active' : 'far'}"></i> ${originalPost.likes || 0}</button>
-            <button onclick="toggleComments('${postId}', event)"><i class="far fa-comment"></i> ${commentCount}</button>
-        </div>
-        <div class="dropdown mt-2">
-            <button class="btn btn-link p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-ellipsis-h"></i></button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" onclick="reportPost('${postId}', '${originalUserId}', event)"><i class="fas fa-flag"></i> إبلاغ</a></li>
-                ${isOwnPost ? `<li><a class="dropdown-item" href="#" onclick="deletePost('${postId}', event)"><i class="fas fa-trash"></i> حذف</a></li>` : ''}
-            </ul>
-        </div>
-        <div id="comments-${postId}" class="comment-section" style="display: none;">
-            <textarea id="comment-input-${postId}" class="form-control mb-2" placeholder="أضف تعليقًا"></textarea>
-            <button class="btn btn-primary btn-sm" onclick="addComment('${postId}', null, event)">إرسال</button>
-            <div id="comment-list-${postId}"></div>
-        </div>
+        <div id="comments-${postId}" class="comment-section" style="display:none;"></div>
     `;
 
     loadComments(postId);
@@ -531,6 +509,6 @@ async function renderRetweet(retweet, originalPost, container) {
 
 export {
     init, postTweet, deletePost, likePost, retweetPost, followUser,
-    reportPost, loadPosts, renderPost, renderRetweet, renderFeedItem,
-    unsubscribeAll
+    reportPost, loadPosts, handleImageSelect, removePreview,
+    toggleUrlInput, toggleVideoInput
 };

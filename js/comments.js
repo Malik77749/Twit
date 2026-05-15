@@ -1,6 +1,6 @@
 // Comments Module
-import { ref, push, set, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { escapeHtml, formatTimestamp } from './utils.js';
+import { ref, push, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { escapeHtml } from './utils.js';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
 
 let auth, database;
@@ -12,182 +12,144 @@ function init(authInstance, databaseInstance) {
     database = databaseInstance;
 }
 
-/**
- * Add a comment or reply to a post
- */
 async function addComment(postId, parentCommentId, event) {
-    event.preventDefault();
-    event.stopPropagation();
+    event?.preventDefault();
+    event?.stopPropagation();
 
-    const commentInput = document.getElementById(`comment-input-${postId}${parentCommentId ? '-' + parentCommentId : ''}`);
-    const commentButton = commentInput?.nextElementSibling;
+    const input = document.getElementById(`comment-input-${postId}${parentCommentId ? '-' + parentCommentId : ''}`);
+    if (!input) return;
 
-    if (!commentInput) {
-        alert('خطأ: حقل التعليق غير موجود');
-        return;
-    }
+    const text = input.value.trim();
+    if (!text) return;
 
-    const commentText = commentInput.value.trim();
-    if (!commentText) {
-        alert('يرجى كتابة تعليق');
-        return;
-    }
-
-    // Cooldown check (5 seconds)
     const cooldownKey = `${postId}-${parentCommentId || 'root'}-${auth.currentUser.uid}`;
     const now = Date.now();
     if (commentCooldowns.has(cooldownKey) && now - commentCooldowns.get(cooldownKey) < 5000) {
-        alert('يرجى الانتظار قليلاً قبل إضافة تعليق آخر');
         return;
     }
 
-    if (commentButton) commentButton.disabled = true;
-
     try {
-        const commentData = {
+        await set(push(ref(database, 'comments/' + postId)), {
             userId: auth.currentUser.uid,
-            content: escapeHtml(commentText),
+            content: escapeHtml(text),
             timestamp: new Date().toISOString(),
             parentCommentId: parentCommentId
-        };
+        });
+        input.value = '';
 
-        const commentRef = push(ref(database, 'comments/' + postId));
-        await set(commentRef, commentData);
-        commentInput.value = '';
-
-        // Notify post owner
         const postSnapshot = await get(ref(database, 'posts/' + postId));
         if (postSnapshot.exists() && postSnapshot.val().userId !== auth.currentUser.uid) {
-            const commenterName = await getUserName(database, auth.currentUser.uid);
-            await addNotification(database, postSnapshot.val().userId, `قام ${commenterName} بالرد على منشورك`, postId);
+            const name = await getUserName(database, auth.currentUser.uid);
+            await addNotification(database, postSnapshot.val().userId, `رد ${name} على منشورك`, postId);
         }
 
         commentCooldowns.set(cooldownKey, now);
         loadComments(postId);
     } catch (error) {
-        alert('خطأ أثناء إضافة التعليق: ' + error.message);
-    } finally {
-        if (commentButton) commentButton.disabled = false;
+        alert('خطأ: ' + error.message);
     }
 }
 
-/**
- * Load all comments for a post (with real-time updates)
- */
 function loadComments(postId) {
-    const commentList = document.getElementById(`comment-list-${postId}`);
-    if (!commentList) return;
+    const commentSection = document.getElementById(`comments-${postId}`);
+    if (!commentSection) return;
 
-    // Unsubscribe previous listener for this post to prevent memory leak
     if (commentListeners.has(postId)) {
         commentListeners.get(postId)();
     }
 
     const unsub = onValue(ref(database, 'comments/' + postId), async snapshot => {
-        commentList.innerHTML = '';
-
-        // Update comment count on buttons
         const commentCount = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
-        document.querySelectorAll(`button[onclick="toggleComments('${postId}', event)"]`).forEach(button => {
-            button.innerHTML = `<i class="far fa-comment"></i> ${commentCount}`;
+
+        // Update comment count in tweet actions
+        document.querySelectorAll(`[data-post-id="${postId}"] .tweet-action.reply span:last-child`).forEach(el => {
+            el.textContent = commentCount;
         });
 
-        if (!snapshot.exists()) return;
+        if (!snapshot.exists()) {
+            commentSection.innerHTML = `
+                <div class="comment-input-row">
+                    <img src="https://via.placeholder.com/32" alt="">
+                    <input type="text" id="comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
+                </div>
+            `;
+            return;
+        }
 
         const comments = [];
         snapshot.forEach(child => {
             comments.push({ id: child.key, ...child.val() });
         });
 
-        const topLevelComments = comments
-            .filter(c => !c.parentCommentId)
-            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        const topLevel = comments.filter(c => !c.parentCommentId).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        for (const comment of topLevelComments) {
+        let commentsHtml = `
+            <div class="comment-input-row">
+                <img src="https://via.placeholder.com/32" alt="">
+                <input type="text" id="comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
+            </div>
+        `;
+
+        for (const comment of topLevel) {
             const userData = await getUserData(database, comment.userId);
-            const userName = userData.name || `مستخدم ${comment.userId.slice(0, 8)}`;
-            const profilePicture = userData.profilePicture || 'https://via.placeholder.com/48';
-            const commentElement = document.createElement('div');
-            commentElement.className = 'comment';
-            commentElement.innerHTML = `
-                <div class="post-header">
-                    <img src="${profilePicture}" alt="Avatar" style="width: 32px; height: 32px;" onclick="showProfile('${comment.userId}')">
-                    <span>${escapeHtml(userName)}</span>
-                    <span class="timestamp">${formatTimestamp(comment.timestamp)}</span>
+            const name = userData.name || 'مستخدم';
+            const avatar = userData.profilePicture || 'https://via.placeholder.com/32';
+
+            commentsHtml += `
+                <div class="comment">
+                    <img src="${avatar}" alt="">
+                    <div class="comment-body">
+                        <div class="comment-meta">
+                            <span class="name">${escapeHtml(name)}</span>
+                            <span class="time">${formatCommentTime(comment.timestamp)}</span>
+                        </div>
+                        <div class="comment-text">${escapeHtml(comment.content)}</div>
+                    </div>
                 </div>
-                <p>${escapeHtml(comment.content)}</p>
-                <button class="btn btn-link btn-sm" onclick="toggleReplyInput('${postId}', '${comment.id}', event)">رد</button>
-                <div id="reply-input-${postId}-${comment.id}" style="display: none;">
-                    <textarea id="comment-input-${postId}-${comment.id}" class="form-control mb-2" placeholder="أضف ردًا"></textarea>
-                    <button class="btn btn-primary btn-sm" onclick="addComment('${postId}', '${comment.id}', event)">إرسال</button>
-                </div>
-                <div id="replies-${postId}-${comment.id}"></div>
             `;
-            commentList.appendChild(commentElement);
-            await loadReplies(postId, comment.id, comments);
+
+            // Replies
+            const replies = comments.filter(c => c.parentCommentId === comment.id).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            for (const reply of replies) {
+                const replyUser = await getUserData(database, reply.userId);
+                commentsHtml += `
+                    <div class="comment reply">
+                        <img src="${replyUser.profilePicture || 'https://via.placeholder.com/32'}" alt="">
+                        <div class="comment-body">
+                            <div class="comment-meta">
+                                <span class="name">${escapeHtml(replyUser.name || 'مستخدم')}</span>
+                                <span class="time">${formatCommentTime(reply.timestamp)}</span>
+                            </div>
+                            <div class="comment-text">${escapeHtml(reply.content)}</div>
+                        </div>
+                    </div>
+                `;
+            }
         }
+
+        commentSection.innerHTML = commentsHtml;
     });
+
     commentListeners.set(postId, unsub);
 }
 
-/**
- * Load replies for a specific comment
- */
-async function loadReplies(postId, parentCommentId, allComments) {
-    const repliesContainer = document.getElementById(`replies-${postId}-${parentCommentId}`);
-    if (!repliesContainer) return;
-
-    const replies = allComments
-        .filter(c => c.parentCommentId === parentCommentId)
-        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-    for (const reply of replies) {
-        const userData = await getUserData(database, reply.userId);
-        const userName = userData.name || `مستخدم ${reply.userId.slice(0, 8)}`;
-        const profilePicture = userData.profilePicture || 'https://via.placeholder.com/48';
-        const replyElement = document.createElement('div');
-        replyElement.className = 'comment reply';
-        replyElement.innerHTML = `
-            <div class="post-header">
-                <img src="${profilePicture}" alt="Avatar" style="width: 32px; height: 32px;" onclick="showProfile('${reply.userId}')">
-                <span>${escapeHtml(userName)}</span>
-                <span class="timestamp">${formatTimestamp(reply.timestamp)}</span>
-            </div>
-            <p>${escapeHtml(reply.content)}</p>
-            <button class="btn btn-link btn-sm" onclick="toggleReplyInput('${postId}', '${reply.id}', event)">رد</button>
-            <div id="reply-input-${postId}-${reply.id}" style="display: none;">
-                <textarea id="comment-input-${postId}-${reply.id}" class="form-control mb-2" placeholder="أضف ردًا"></textarea>
-                <button class="btn btn-primary btn-sm" onclick="addComment('${postId}', '${reply.id}', event)">إرسال</button>
-            </div>
-            <div id="replies-${postId}-${reply.id}"></div>
-        `;
-        repliesContainer.appendChild(replyElement);
-        await loadReplies(postId, reply.id, allComments);
-    }
+function formatCommentTime(timestamp) {
+    const diff = Math.floor((Date.now() - new Date(timestamp)) / 1000);
+    if (diff < 60) return 'الآن';
+    if (diff < 3600) return `${Math.floor(diff / 60)}د`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}س`;
+    return `${Math.floor(diff / 86400)}ي`;
 }
 
-/**
- * Toggle reply input visibility
- */
-function toggleReplyInput(postId, commentId, event) {
-    event.preventDefault();
-    event.stopPropagation();
-    const replyInput = document.getElementById(`reply-input-${postId}-${commentId}`);
-    if (replyInput) {
-        replyInput.style.display = replyInput.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-/**
- * Toggle comment section visibility
- */
 function toggleComments(postId, event) {
-    event.preventDefault();
-    event.stopPropagation();
-    const commentSection = document.getElementById(`comments-${postId}`);
-    if (commentSection) {
-        commentSection.style.display = commentSection.style.display === 'none' ? 'block' : 'none';
+    event?.preventDefault();
+    event?.stopPropagation();
+    const section = document.getElementById(`comments-${postId}`);
+    if (section) {
+        const isHidden = section.style.display === 'none';
+        section.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) loadComments(postId);
     }
 }
 
-export { init, addComment, loadComments, toggleReplyInput, toggleComments };
+export { init, addComment, loadComments, toggleComments };

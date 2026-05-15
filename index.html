@@ -1,147 +1,204 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تغريداتي</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>X</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body dir="rtl">
+<body>
 
     <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
         <div class="spinner"></div>
     </div>
 
-    <!-- Auth Section -->
-    <div id="auth-section" class="container mt-5" style="display: none;">
-        <h2 class="text-center mb-4">
-            <img src="https://img.icons8.com/ios-filled/50/000000/bird.png" alt="Bird Logo" width="30" height="30"> تغريداتي
-        </h2>
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <!-- Login Form -->
-                        <div id="login-section">
-                            <div class="mb-3">
-                                <label for="login-email" class="form-label">البريد الإلكتروني</label>
-                                <input type="email" class="form-control" id="login-email" placeholder="أدخل بريدك الإلكتروني">
-                            </div>
-                            <div class="mb-3">
-                                <label for="login-password" class="form-label">كلمة المرور</label>
-                                <input type="password" class="form-control" id="login-password" placeholder="أدخل كلمة المرور">
-                            </div>
-                            <button class="btn btn-primary w-100 mb-3" onclick="login()">تسجيل الدخول</button>
-                            <button class="btn btn-outline-primary w-100" onclick="showSignup()">ليس لديك حساب؟ سجل الآن</button>
-                        </div>
-                        <!-- Signup Form -->
-                        <div id="signup-section" style="display: none;">
-                            <div class="mb-3">
-                                <label for="signup-name" class="form-label">الاسم الحقيقي</label>
-                                <input type="text" class="form-control" id="signup-name" placeholder="أدخل اسمك">
-                            </div>
-                            <div class="mb-3">
-                                <label for="signup-email" class="form-label">البريد الإلكتروني</label>
-                                <input type="email" class="form-control" id="signup-email" placeholder="أدخل بريدك الإلكتروني">
-                            </div>
-                            <div class="mb-3">
-                                <label for="signup-password" class="form-label">كلمة المرور</label>
-                                <input type="password" class="form-control" id="signup-password" placeholder="أدخل كلمة المرور">
-                            </div>
-                            <button class="btn btn-primary w-100 mb-3" onclick="signup()">تسجيل جديد</button>
-                            <button class="btn btn-outline-primary w-100" onclick="showLogin()">لديك حساب؟ سجل الآن</button>
-                        </div>
-                        <p id="error" class="text-danger text-center mt-3"></p>
-                    </div>
-                </div>
+    <!-- ===== AUTH SECTION ===== -->
+    <div id="auth-section" class="auth-container" style="display: none;">
+        <div class="auth-box">
+            <div class="logo">
+                <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
             </div>
+            <h2 style="font-size: 31px; font-weight: 800; margin-bottom: 24px; text-align: center;">حدث ما هو جديد</h2>
+
+            <div id="login-section">
+                <input type="email" class="auth-input" id="login-email" placeholder="البريد الإلكتروني">
+                <input type="password" class="auth-input" id="login-password" placeholder="كلمة المرور">
+                <button class="auth-btn" onclick="login()">تسجيل الدخول</button>
+                <p class="auth-link" onclick="showSignup()">ليس لديك حساب؟ <strong>سجل الآن</strong></p>
+            </div>
+
+            <div id="signup-section" style="display: none;">
+                <input type="text" class="auth-input" id="signup-name" placeholder="الاسم الكامل">
+                <input type="email" class="auth-input" id="signup-email" placeholder="البريد الإلكتروني">
+                <input type="password" class="auth-input" id="signup-password" placeholder="كلمة المرور">
+                <button class="auth-btn" onclick="signup()">إنشاء حساب</button>
+                <p class="auth-link" onclick="showLogin()">لديك حساب بالفعل؟ <strong>سجل دخول</strong></p>
+            </div>
+
+            <p id="error" class="auth-error"></p>
         </div>
     </div>
 
-    <!-- Home Section -->
-    <div id="home-section" class="container mt-4" style="display: none;">
-        <nav class="navbar navbar-expand-lg">
-            <div class="container navbar-container">
-                <button class="btn menu-icon" onclick="showMenu()"><i class="fas fa-bars"></i></button>
-                <a class="navbar-brand" href="#">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/bird.png" alt="Bird Logo" width="30" height="30"> تغريداتي
-                </a>
-                <div class="notification-icon" onclick="showNotifications()">
-                    <i class="fas fa-bell"></i>
-                    <span id="notification-count" class="badge" style="display: none;">0</span>
+    <!-- ===== MAIN APP ===== -->
+    <div id="app-section" class="app-layout" style="display: none;">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" onclick="showHome()">
+                    <i class="fas fa-home"></i><span>الرئيسية</span>
+                </button>
+                <button class="nav-item" onclick="showNotifications()">
+                    <i class="fas fa-bell"></i><span>الإشعارات</span>
+                    <span id="notif-badge" style="display:none;background:var(--accent);color:#fff;border-radius:50%;padding:1px 6px;font-size:11px;margin-right:auto;"></span>
+                </button>
+                <button class="nav-item" onclick="showProfile()">
+                    <i class="fas fa-user"></i><span>الملف الشخصي</span>
+                </button>
+                <button class="nav-item" onclick="logout()">
+                    <i class="fas fa-arrow-right-from-bracket"></i><span>الخروج</span>
+                </button>
+            </nav>
+            <button class="post-btn-sidebar" onclick="focusComposer()">نشر</button>
+            <div class="sidebar-profile" onclick="showProfile()">
+                <img id="sidebar-avatar" src="https://via.placeholder.com/40" alt="">
+                <div class="sidebar-profile-info">
+                    <div class="name" id="sidebar-name">مستخدم</div>
+                    <div class="handle" id="sidebar-handle">@user</div>
                 </div>
             </div>
-        </nav>
+        </aside>
 
-        <!-- New Post -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="post-input-container">
-                    <textarea class="form-control mb-2" id="postContent" placeholder="ما الذي يحدث؟"></textarea>
-                    <div class="post-input-actions">
+        <!-- Main Feed -->
+        <main class="main-feed">
+            <!-- Home Feed -->
+            <div id="home-view">
+                <div class="feed-header">
+                    <h2>الرئيسية</h2>
+                    <div class="feed-tabs">
+                        <button class="feed-tab active">لك</button>
+                        <button class="feed-tab">متابَعون</button>
+                    </div>
+                </div>
+
+                <!-- Composer -->
+                <div class="composer">
+                    <img class="composer-avatar" id="composer-avatar" src="https://via.placeholder.com/40" alt="">
+                    <div class="composer-body">
+                        <textarea class="composer-input" id="postContent" placeholder="ما الذي يحدث؟!" rows="1"></textarea>
+                        <div class="composer-preview" id="composer-preview">
+                            <img id="preview-img" src="" alt="">
+                            <button class="remove-btn" onclick="removePreview()"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="composer-divider"></div>
+                        <div class="composer-actions">
+                            <div class="composer-tools">
+                                <label class="composer-tool" title="صورة">
+                                    <i class="far fa-image"></i>
+                                    <input type="file" id="postImage" accept="image/*" style="display:none" onchange="handleImageSelect(this)">
+                                </label>
+                                <button class="composer-tool" title="رابط صورة" onclick="toggleUrlInput()">
+                                    <i class="fas fa-link"></i>
+                                </button>
+                                <button class="composer-tool" title="فيديو YouTube" onclick="toggleVideoInput()">
+                                    <i class="fab fa-youtube"></i>
+                                </button>
+                            </div>
+                            <button class="composer-submit" onclick="postTweet()">نشر</button>
+                        </div>
+                        <div id="url-input-row" style="display:none;margin-top:8px;">
+                            <input type="text" class="auth-input" id="postImageUrl" placeholder="الصق رابط الصورة هنا" style="margin-bottom:0;font-size:14px;padding:10px;">
+                        </div>
+                        <div id="video-input-row" style="display:none;margin-top:8px;">
+                            <input type="text" class="auth-input" id="postVideo" placeholder="الصق رابط YouTube هنا" style="margin-bottom:0;font-size:14px;padding:10px;">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="posts"></div>
+            </div>
+
+            <!-- Notifications View -->
+            <div id="notifications-view" style="display:none;">
+                <div class="feed-header">
+                    <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
+                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <h2>الإشعارات</h2>
+                    </div>
+                </div>
+                <div id="notifications-list"></div>
+            </div>
+
+            <!-- Profile View -->
+            <div id="profile-view" style="display:none;">
+                <div class="feed-header">
+                    <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
+                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
                         <div>
-                            <label for="postImage"><i class="fas fa-image"></i></label>
-                            <input type="file" class="d-none" id="postImage" accept="image/*">
+                            <h2 id="profile-view-name" style="font-size:18px;">مستخدم</h2>
+                            <span id="profile-view-count" style="color:var(--text-secondary);font-size:13px;">0 منشورات</span>
                         </div>
-                        <input type="text" class="form-control media-upload" id="postImageUrl" placeholder="أو أدخل رابط الصورة">
-                        <input type="text" class="form-control media-upload" id="postVideo" placeholder="أدخل رابط فيديو (مثل YouTube)">
-                        <button class="btn btn-primary" onclick="postTweet()">نشر</button>
                     </div>
                 </div>
+                <div class="profile-banner"></div>
+                <div class="profile-info">
+                    <img class="profile-avatar-large" id="profile-picture" src="https://via.placeholder.com/134" alt="">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;">
+                        <div>
+                            <div class="profile-name" id="profile-name">مستخدم</div>
+                            <div class="profile-handle" id="profile-handle">@user</div>
+                        </div>
+                        <div id="profile-actions"></div>
+                    </div>
+                    <div class="profile-stats">
+                        <span><strong id="profile-following">0</strong> يتابع</span>
+                        <span><strong id="profile-followers">0</strong> متابع</span>
+                    </div>
+                    <div id="profile-picture-update" style="margin-top:12px;"></div>
+                </div>
+                <div id="profile-posts"></div>
             </div>
-        </div>
+        </main>
 
-        <!-- Posts Feed -->
-        <div id="posts"></div>
+        <!-- Right Panel -->
+        <aside class="right-panel">
+            <div class="search-box">
+                <i class="fas fa-magnifying-glass"></i>
+                <input type="text" placeholder="بحث">
+            </div>
+            <div class="trending-card">
+                <h3>الأكثر تداولاً</h3>
+                <div class="trending-item">
+                    <div class="category">التكنولوجيا · الأكثر تداولاً</div>
+                    <div class="topic">#برمجة</div>
+                    <div class="count">12K منشور</div>
+                </div>
+                <div class="trending-item">
+                    <div class="category">الرياضة · الأكثر تداولاً</div>
+                    <div class="topic">#كرة_القدم</div>
+                    <div class="count">8.5K منشور</div>
+                </div>
+                <div class="trending-item">
+                    <div class="category">ترند · الأكثر تداولاً</div>
+                    <div class="topic">#السعودية</div>
+                    <div class="count">25K منشور</div>
+                </div>
+            </div>
+        </aside>
     </div>
 
-    <!-- Menu Section -->
-    <div id="menu-section" class="container menu-section" style="display: none;">
-        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i> رجوع</button>
-        <h3 class="mb-4">القائمة</h3>
-        <div class="card">
-            <div class="menu-item" onclick="showProfile()">
-                <i class="fas fa-user"></i> الملف الشخصي
-            </div>
-            <div class="menu-item" onclick="showNotifications()">
-                <i class="fas fa-bell"></i> الإشعارات
-            </div>
-            <div class="menu-item" onclick="logout()">
-                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-            </div>
-        </div>
+    <!-- Mobile Nav -->
+    <div class="mobile-nav" style="display:none;">
+        <button onclick="showHome()"><i class="fas fa-home"></i></button>
+        <button onclick="showNotifications()"><i class="fas fa-bell"></i></button>
+        <button onclick="showProfile()"><i class="fas fa-user"></i></button>
     </div>
 
-    <!-- Profile Section -->
-    <div id="profile-section" class="container profile-section" style="display: none;">
-        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i> رجوع</button>
-        <div class="profile-header">
-            <img id="profile-picture" src="https://via.placeholder.com/80" alt="Profile Avatar">
-            <div>
-                <h3 id="profile-name">مستخدم</h3>
-                <p id="profile-join-date" class="text-muted"></p>
-            </div>
-        </div>
-        <div class="profile-info">
-            <p><strong>المتابعون:</strong> <span id="profile-followers">0</span></p>
-            <p><strong>يتابع:</strong> <span id="profile-following">0</span></p>
-            <div id="profile-picture-update"></div>
-        </div>
-        <div id="profile-posts"></div>
-    </div>
-
-    <!-- Notifications Section -->
-    <div id="notifications-section" class="container mt-4" style="display: none;">
-        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i> رجوع</button>
-        <h3 class="mb-4">الإشعارات</h3>
-        <div id="notifications-list" class="card"></div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

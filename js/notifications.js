@@ -1,7 +1,7 @@
 // Notifications Module
 import { ref, update, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { formatTimestamp, escapeHtml } from './utils.js';
-import { showLoading, hideLoading, toggleSections } from './ui.js';
+import { escapeHtml } from './utils.js';
+import { showLoading, hideLoading, showView } from './ui.js';
 import { toggleComments } from './comments.js';
 
 let auth, database;
@@ -12,33 +12,30 @@ function init(authInstance, databaseInstance) {
     database = databaseInstance;
 }
 
-/**
- * Load and display notifications with real-time updates
- */
+function formatNotifTime(timestamp) {
+    const diff = Math.floor((Date.now() - new Date(timestamp)) / 1000);
+    if (diff < 60) return 'الآن';
+    if (diff < 3600) return `${Math.floor(diff / 60)}د`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}س`;
+    return `${Math.floor(diff / 86400)}ي`;
+}
+
 function loadNotifications() {
-    showLoading();
     const userId = auth.currentUser?.uid;
-    if (!userId) {
-        hideLoading();
-        return;
-    }
+    if (!userId) return;
 
-    // Unsubscribe previous listener to prevent memory leak
-    if (notificationsUnsub) {
-        notificationsUnsub();
-    }
+    if (notificationsUnsub) notificationsUnsub();
 
-    const notificationsList = document.getElementById('notifications-list');
-    const notificationCount = document.getElementById('notification-count');
-    notificationsList.innerHTML = '<p class="loading">جارٍ تحميل الإشعارات...</p>';
+    const list = document.getElementById('notifications-list');
+    const badge = document.getElementById('notif-badge');
+    list.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
     notificationsUnsub = onValue(ref(database, `notifications/${userId}`), async snapshot => {
-        notificationsList.innerHTML = '';
+        list.innerHTML = '';
 
         if (!snapshot.exists()) {
-            notificationsList.innerHTML = '<p class="text-center">لا توجد إشعارات</p>';
-            notificationCount.style.display = 'none';
-            hideLoading();
+            list.innerHTML = '<div class="empty-state"><h3>الإشعارات</h3><p>لا توجد إشعارات</p></div>';
+            badge.style.display = 'none';
             return;
         }
 
@@ -47,32 +44,35 @@ function loadNotifications() {
             notifications.push({ id: child.key, ...child.val() });
         });
 
-        const unreadCount = notifications.filter(n => !n.read).length;
-        notificationCount.textContent = unreadCount;
-        notificationCount.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+        const unread = notifications.filter(n => !n.read).length;
+        badge.textContent = unread;
+        badge.style.display = unread > 0 ? 'inline' : 'none';
 
         notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        for (const notification of notifications) {
-            const notificationElement = document.createElement('div');
-            notificationElement.className = `notification-item ${!notification.read ? 'unread' : ''}`;
-            notificationElement.innerHTML = `
-                <p style="margin: 0; ${!notification.read ? 'font-weight: bold;' : ''}">${escapeHtml(notification.message)}</p>
-                <small style="color: var(--action-color);">${formatTimestamp(notification.timestamp)}</small>
+        for (const notif of notifications) {
+            const el = document.createElement('div');
+            el.className = `notification-item ${!notif.read ? 'unread' : ''}`;
+            el.innerHTML = `
+                <p style="margin:0;${!notif.read ? 'font-weight:700;' : ''}">${escapeHtml(notif.message)}</p>
+                <small style="color:var(--text-secondary);">${formatNotifTime(notif.timestamp)}</small>
             `;
-            notificationElement.addEventListener('click', async () => {
-                if (!notification.read) {
-                    await update(ref(database, `notifications/${userId}/${notification.id}`), { read: true });
+            el.addEventListener('click', async () => {
+                if (!notif.read) {
+                    await update(ref(database, `notifications/${userId}/${notif.id}`), { read: true });
                 }
-                if (notification.postId) {
-                    toggleSections('home');
-                    toggleComments(notification.postId);
-                    document.getElementById(`comments-${notification.postId}`)?.scrollIntoView({ behavior: 'smooth' });
+                if (notif.postId) {
+                    showView('home');
+                    const section = document.getElementById(`comments-${notif.postId}`);
+                    if (section) {
+                        section.style.display = 'block';
+                        section.scrollIntoView({ behavior: 'smooth' });
+                        toggleComments(notif.postId);
+                    }
                 }
             });
-            notificationsList.appendChild(notificationElement);
+            list.appendChild(el);
         }
-        hideLoading();
     });
 }
 

@@ -1,18 +1,22 @@
 // UI State Management
 
-const sections = ['auth', 'home', 'menu', 'profile', 'notifications'];
+const views = ['home', 'notifications', 'profile'];
 
-/**
- * Toggle visibility of app sections
- */
-function toggleSections(activeSection) {
-    sections.forEach(section => {
-        const el = document.getElementById(`${section}-section`);
-        if (el) {
-            el.style.display = section === activeSection ? 'block' : 'none';
-        }
+function showView(viewName) {
+    views.forEach(v => {
+        const el = document.getElementById(`${v}-view`);
+        if (el) el.style.display = v === viewName ? 'block' : 'none';
     });
-    hideLoading();
+}
+
+function showApp() {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('app-section').style.display = 'flex';
+}
+
+function showAuth() {
+    document.getElementById('auth-section').style.display = 'flex';
+    document.getElementById('app-section').style.display = 'none';
 }
 
 function showLoading() {
@@ -23,4 +27,10 @@ function hideLoading() {
     document.getElementById('loading-overlay').style.display = 'none';
 }
 
-export { toggleSections, showLoading, hideLoading };
+function focusComposer() {
+    showView('home');
+    const input = document.getElementById('postContent');
+    if (input) input.focus();
+}
+
+export { showView, showApp, showAuth, showLoading, hideLoading, focusComposer };

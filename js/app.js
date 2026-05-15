@@ -5,7 +5,7 @@ import { getDatabase, ref, get } from 'https://www.gstatic.com/firebasejs/10.12.
 import { getStorage } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 import { firebaseConfig } from './config.js';
-import { toggleSections, showLoading, hideLoading } from './ui.js';
+import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js';
 import * as auth from './auth.js';
 import * as posts from './posts.js';
 import * as comments from './comments.js';
@@ -21,7 +21,6 @@ try {
     storage = getStorage(app);
 } catch (error) {
     console.error('Firebase initialization error:', error);
-    document.getElementById('error').innerText = 'خطأ في تهيئة Firebase. تحقق من إعدادات المشروع.';
     hideLoading();
 }
 
@@ -45,6 +44,10 @@ window.likePost = posts.likePost;
 window.retweetPost = posts.retweetPost;
 window.followUser = posts.followUser;
 window.reportPost = posts.reportPost;
+window.handleImageSelect = posts.handleImageSelect;
+window.removePreview = posts.removePreview;
+window.toggleUrlInput = posts.toggleUrlInput;
+window.toggleVideoInput = posts.toggleVideoInput;
 
 window.addComment = comments.addComment;
 window.toggleComments = comments.toggleComments;
@@ -54,74 +57,64 @@ window.showProfile = profile.showProfile;
 window.updateProfilePicture = profile.updateProfilePicture;
 
 window.showNotifications = function() {
-    toggleSections('notifications');
+    showView('notifications');
     notifications.loadNotifications();
 };
 
-window.showMenu = function() {
-    toggleSections('menu');
-};
-
 window.showHome = function() {
-    showLoading();
-    toggleSections('home');
+    showView('home');
     posts.loadPosts();
 };
 
-/**
- * Check user role and redirect admin to admin panel
- */
-async function checkUserRole() {
-    const userId = authInstance.currentUser?.uid;
-    if (!userId) {
-        toggleSections('auth');
-        return;
-    }
+window.focusComposer = focusComposer;
 
+/**
+ * Update sidebar with user info
+ */
+function updateSidebar(userData) {
+    const name = userData?.name || 'مستخدم';
+    const pic = userData?.profilePicture || 'https://via.placeholder.com/40';
+    document.getElementById('sidebar-name').textContent = name;
+    document.getElementById('sidebar-handle').textContent = '@' + name.replace(/\s/g, '').toLowerCase();
+    document.getElementById('sidebar-avatar').src = pic;
+    document.getElementById('composer-avatar').src = pic;
+}
+
+/**
+ * Check user role and load app
+ */
+async function checkUserRole(user) {
     try {
-        const snapshot = await get(ref(database, 'users/' + userId));
+        const snapshot = await get(ref(database, 'users/' + user.uid));
         const userData = snapshot.val();
 
         if (userData?.isAdmin) {
             window.location.href = 'admin.html';
-        } else {
-            toggleSections('home');
-            document.getElementById('profile-name').textContent = userData?.name || 'مستخدم';
-            document.getElementById('profile-picture').src = userData?.profilePicture || 'https://via.placeholder.com/80';
-            posts.loadPosts();
-            notifications.loadNotifications();
+            return;
         }
+
+        showApp();
+        updateSidebar(userData);
+        showView('home');
+        posts.loadPosts();
+        notifications.loadNotifications();
     } catch (error) {
-        toggleSections('auth');
+        showAuth();
     }
 }
 
 // Setup auth state listener
 auth.setupAuthStateListener(checkUserRole);
 
-// Show login on load
-showLoading();
-auth.showLogin();
-
-// Bootstrap dropdown fix
+// Auto-resize textarea
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.dropdown').forEach(dropdown => {
-        const button = dropdown.querySelector('[data-bs-toggle="dropdown"]');
-        const menu = dropdown.querySelector('.dropdown-menu');
-        if (button && menu) {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                menu.classList.toggle('show');
-            });
-        }
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.dropdown')) {
-            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                menu.classList.remove('show');
-            });
-        }
-    });
+    const textarea = document.getElementById('postContent');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    }
 });
+
+showAuth();
