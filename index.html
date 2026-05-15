@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>X</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
@@ -44,7 +44,46 @@
     <!-- ===== MAIN APP ===== -->
     <div id="app-section" class="app-layout" style="display: none;">
 
-        <!-- Sidebar -->
+        <!-- Drawer Overlay -->
+        <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+
+        <!-- Drawer Sidebar (slides in on mobile) -->
+        <div class="drawer" id="drawer">
+            <div class="drawer-header">
+                <button class="drawer-close" onclick="closeDrawer()"><i class="fas fa-times"></i></button>
+                <div class="drawer-profile" onclick="showProfile(); closeDrawer();">
+                    <img id="drawer-avatar" src="https://via.placeholder.com/40" alt="">
+                    <div>
+                        <div class="drawer-name" id="drawer-name">مستخدم</div>
+                        <div class="drawer-handle" id="drawer-handle">@user</div>
+                    </div>
+                </div>
+                <div class="drawer-stats">
+                    <span><strong id="drawer-following">0</strong> يتابع</span>
+                    <span><strong id="drawer-followers">0</strong> متابع</span>
+                </div>
+            </div>
+            <nav class="drawer-nav">
+                <button class="drawer-item" onclick="showProfile(); closeDrawer();">
+                    <i class="fas fa-user"></i><span>الملف الشخصي</span>
+                </button>
+                <button class="drawer-item" onclick="closeDrawer()">
+                    <i class="fas fa-bookmark"></i><span>المحفوظات</span>
+                </button>
+                <button class="drawer-item" onclick="closeDrawer()">
+                    <i class="fas fa-list"></i><span>القوائم</span>
+                </button>
+                <button class="drawer-item" onclick="closeDrawer()">
+                    <i class="fas fa-circle-check"></i><span>الاشتراك المميز</span>
+                </button>
+                <div class="drawer-divider"></div>
+                <button class="drawer-item" onclick="logout()">
+                    <i class="fas fa-arrow-right-from-bracket"></i><span>الخروج</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Desktop Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-logo">
                 <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -55,7 +94,7 @@
                 </button>
                 <button class="nav-item" onclick="showNotifications()">
                     <i class="fas fa-bell"></i><span>الإشعارات</span>
-                    <span id="notif-badge" style="display:none;background:var(--accent);color:#fff;border-radius:50%;padding:1px 6px;font-size:11px;margin-right:auto;"></span>
+                    <span id="notif-badge-desktop" class="notif-badge" style="display:none;"></span>
                 </button>
                 <button class="nav-item" onclick="showProfile()">
                     <i class="fas fa-user"></i><span>الملف الشخصي</span>
@@ -78,6 +117,12 @@
         <main class="main-feed">
             <!-- Home Feed -->
             <div id="home-view">
+                <!-- Mobile Header -->
+                <div class="mobile-header">
+                    <img class="mobile-header-avatar" id="mobile-avatar" src="https://via.placeholder.com/32" alt="" onclick="openDrawer()">
+                    <svg class="mobile-header-logo" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </div>
+
                 <div class="feed-header">
                     <h2>الرئيسية</h2>
                     <div class="feed-tabs">
@@ -192,12 +237,27 @@
         </aside>
     </div>
 
-    <!-- Mobile Nav -->
-    <div class="mobile-nav" style="display:none;">
-        <button onclick="showHome()"><i class="fas fa-home"></i></button>
-        <button onclick="showNotifications()"><i class="fas fa-bell"></i></button>
-        <button onclick="showProfile()"><i class="fas fa-user"></i></button>
-    </div>
+    <!-- Mobile Bottom Nav -->
+    <nav class="mobile-nav" id="mobile-nav">
+        <button class="mobile-nav-item active" onclick="showHome()" data-view="home">
+            <i class="fas fa-home"></i>
+        </button>
+        <button class="mobile-nav-item" onclick="showNotifications()" data-view="notifications">
+            <i class="fas fa-magnifying-glass"></i>
+        </button>
+        <button class="mobile-nav-item" onclick="showNotifications()" data-view="notifications">
+            <i class="fas fa-bell"></i>
+            <span class="mobile-notif-badge" id="notif-badge" style="display:none;"></span>
+        </button>
+        <button class="mobile-nav-item" onclick="showNotifications()" data-view="notifications">
+            <i class="far fa-envelope"></i>
+        </button>
+    </nav>
+
+    <!-- Mobile FAB (Compose) -->
+    <button class="mobile-fab" id="mobile-fab" onclick="focusComposer()">
+        <i class="fas fa-feather-pointed"></i>
+    </button>
 
     <script type="module" src="js/app.js"></script>
 </body>

@@ -51,7 +51,6 @@ window.toggleVideoInput = posts.toggleVideoInput;
 
 window.addComment = comments.addComment;
 window.toggleComments = comments.toggleComments;
-window.toggleReplyInput = comments.toggleReplyInput;
 
 window.showProfile = profile.showProfile;
 window.updateProfilePicture = profile.updateProfilePicture;
@@ -68,15 +67,41 @@ window.showHome = function() {
 
 window.focusComposer = focusComposer;
 
+// Drawer functions
+window.openDrawer = function() {
+    document.getElementById('drawer').classList.add('open');
+    document.getElementById('drawer-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeDrawer = function() {
+    document.getElementById('drawer').classList.remove('open');
+    document.getElementById('drawer-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+};
+
 /**
  * Update sidebar with user info
  */
 function updateSidebar(userData) {
     const name = userData?.name || 'مستخدم';
     const pic = userData?.profilePicture || 'https://via.placeholder.com/40';
+    const handle = '@' + name.replace(/\s/g, '').toLowerCase();
+
+    // Desktop sidebar
     document.getElementById('sidebar-name').textContent = name;
-    document.getElementById('sidebar-handle').textContent = '@' + name.replace(/\s/g, '').toLowerCase();
+    document.getElementById('sidebar-handle').textContent = handle;
     document.getElementById('sidebar-avatar').src = pic;
+
+    // Mobile drawer
+    document.getElementById('drawer-name').textContent = name;
+    document.getElementById('drawer-handle').textContent = handle;
+    document.getElementById('drawer-avatar').src = pic;
+    document.getElementById('drawer-followers').textContent = userData?.followers || 0;
+    document.getElementById('drawer-following').textContent = userData?.following || 0;
+
+    // Mobile header & composer
+    document.getElementById('mobile-avatar').src = pic;
     document.getElementById('composer-avatar').src = pic;
 }
 
@@ -106,7 +131,7 @@ async function checkUserRole(user) {
 // Setup auth state listener
 auth.setupAuthStateListener(checkUserRole);
 
-// Auto-resize textarea
+// Auto-resize textarea + Swipe gesture for drawer
 document.addEventListener('DOMContentLoaded', () => {
     const textarea = document.getElementById('postContent');
     if (textarea) {
@@ -115,6 +140,37 @@ document.addEventListener('DOMContentLoaded', () => {
             this.style.height = this.scrollHeight + 'px';
         });
     }
+
+    // Swipe gesture for drawer (RTL: swipe left from right edge to open)
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
+
+    document.addEventListener('touchstart', (e) => {
+        const x = e.touches[0].clientX;
+        const screenW = window.innerWidth;
+        // Only detect swipe from right edge (within 30px)
+        if (x > screenW - 30) {
+            touchStartX = x;
+            touchStartY = e.touches[0].clientY;
+            isSwiping = true;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isSwiping) return;
+        const dx = touchStartX - e.touches[0].clientX;
+        const dy = Math.abs(touchStartY - e.touches[0].clientY);
+        // Must swipe left (in RTL = open drawer) and mostly horizontal
+        if (dx > 50 && dy < 80) {
+            window.openDrawer();
+            isSwiping = false;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+        isSwiping = false;
+    }, { passive: true });
 });
 
 showAuth();

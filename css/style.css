@@ -880,26 +880,274 @@ body {
     .sidebar { display: none; }
     .main-feed { max-width: 100%; border: none; }
     .app-layout { flex-direction: column; }
-    .mobile-nav {
-        display: flex;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background-color: var(--bg-primary);
-        border-top: 1px solid var(--border-color);
-        z-index: 100;
-        justify-content: space-around;
-        padding: 8px 0;
-    }
-    .mobile-nav button {
-        background: none;
-        border: none;
-        color: var(--text-primary);
-        font-size: 24px;
-        padding: 8px 16px;
-    }
+    .mobile-header { display: flex !important; }
+    .mobile-nav { display: flex !important; }
+    .mobile-fab { display: flex !important; }
+    .feed-header h2 { display: none; }
+    body { padding-bottom: 56px; }
+    .drawer { display: flex !important; }
+    .drawer-overlay { display: block !important; }
 }
 @media (min-width: 701px) {
-    .mobile-nav { display: none; }
+    .mobile-nav { display: none !important; }
+    .mobile-fab { display: none !important; }
+    .mobile-header { display: none !important; }
+    .drawer { display: none !important; }
+    .drawer-overlay { display: none !important; }
+}
+
+/* ===== Mobile Header (X style) ===== */
+.mobile-header {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    position: sticky;
+    top: 0;
+    background-color: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(12px);
+    z-index: 10;
+    border-bottom: 1px solid var(--border-color);
+}
+.mobile-header-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    position: absolute;
+    right: 16px;
+    cursor: pointer;
+}
+.mobile-header-logo {
+    width: 24px;
+    height: 24px;
+    fill: var(--text-primary);
+}
+
+/* ===== Mobile Bottom Nav (X style — 4 icons) ===== */
+.mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    z-index: 100;
+    justify-content: space-around;
+    align-items: center;
+    height: 53px;
+    padding: 0;
+}
+.mobile-nav-item {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 22px;
+    padding: 12px 20px;
+    position: relative;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mobile-nav-item:active {
+    opacity: 0.7;
+}
+.mobile-notif-badge {
+    position: absolute;
+    top: 6px;
+    right: 14px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+/* ===== Mobile FAB (Compose button like X) ===== */
+.mobile-fab {
+    display: none;
+    position: fixed;
+    bottom: 70px;
+    left: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    font-size: 22px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 99;
+    box-shadow: 0 2px 10px rgba(29, 155, 240, 0.3);
+    transition: transform 0.2s, background-color 0.2s;
+}
+.mobile-fab:active {
+    transform: scale(0.95);
+    background-color: var(--accent-hover);
+}
+
+/* ===== Drawer (Slide-in sidebar like X) ===== */
+.drawer {
+    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100%;
+    background-color: var(--bg-primary);
+    z-index: 200;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    flex-direction: column;
+    overflow-y: auto;
+    border-left: 1px solid var(--border-color);
+}
+.drawer.open {
+    transform: translateX(0);
+}
+.drawer-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(91, 112, 131, 0.4);
+    z-index: 199;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+.drawer-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+.drawer-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+.drawer-close {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+.drawer-close:hover {
+    background-color: var(--bg-hover);
+}
+.drawer-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    cursor: pointer;
+}
+.drawer-profile img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+.drawer-name {
+    font-weight: 700;
+    font-size: 15px;
+}
+.drawer-handle {
+    color: var(--text-secondary);
+    font-size: 15px;
+}
+.drawer-stats {
+    display: flex;
+    gap: 16px;
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+.drawer-stats strong {
+    color: var(--text-primary);
+}
+.drawer-nav {
+    flex: 1;
+    padding: 8px 0;
+}
+.drawer-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 500;
+    border: none;
+    background: none;
+    width: 100%;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: right;
+}
+.drawer-item:hover {
+    background-color: var(--bg-hover);
+}
+.drawer-item i {
+    width: 24px;
+    text-align: center;
+    font-size: 20px;
+}
+.drawer-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 8px 0;
+}
+
+/* ===== Notif Badge (desktop) ===== */
+.notif-badge {
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    position: absolute;
+    top: 8px;
+    right: 12px;
+}
+
+/* ===== Touch Swipe Hint ===== */
+.swipe-hint {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 60px;
+    background: linear-gradient(to left, rgba(29, 155, 240, 0.3), transparent);
+    z-index: 50;
+    border-radius: 10px 0 0 10px;
+    pointer-events: none;
+    opacity: 0;
+    animation: swipeHint 3s ease-in-out 2s forwards;
+}
+@keyframes swipeHint {
+    0% { opacity: 0; width: 20px; }
+    30% { opacity: 1; width: 40px; }
+    70% { opacity: 1; width: 40px; }
+    100% { opacity: 0; width: 20px; }
 }
