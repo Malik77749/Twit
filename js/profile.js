@@ -68,7 +68,14 @@ async function showProfile(userId) {
 
 function editProfile() {
     const form = document.getElementById('profile-edit-form');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    if (form) {
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Make editProfile available globally
+if (typeof window !== 'undefined') {
+    window.editProfile = editProfile;
 }
 
 async function updateProfilePicture() {

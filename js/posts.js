@@ -71,7 +71,8 @@ async function postTweet() {
         content: escapeHtml(content),
         timestamp: new Date().toISOString(),
         likes: 0,
-        retweets: 0
+        retweets: 0,
+        views: 0
     };
 
     try {
@@ -103,6 +104,7 @@ async function postTweet() {
         document.getElementById('postContent').style.height = 'auto';
         removePreview();
         loadPosts();
+        showToast('تم النشر');
     } catch (error) {
         alert('خطأ: ' + error.message);
         hideLoading();
@@ -129,6 +131,7 @@ async function deletePost(postId, event) {
             }
         }
         document.querySelectorAll(`[data-post-id="${postId}"]`).forEach(el => el.remove());
+        showToast('تم حذف المنشور');
     } catch (error) {
         alert('خطأ: ' + error.message);
     } finally {
@@ -226,6 +229,7 @@ async function retweetPost(postId, event) {
         document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
             btn.innerHTML = `<span class="icon-wrap"><i class="fas fa-retweet"></i></span><span>${retweets}</span>`;
         });
+        showToast('تم إعادة النشر');
     } catch (error) {
         alert('خطأ: ' + error.message);
     }
@@ -269,6 +273,8 @@ async function followUser(userId, event) {
                 btn.textContent = 'متابَع';
             }
         });
+
+        showToast(isFollowing ? 'تم إلغاء المتابعة' : 'تمت المتابعة');
     } catch (error) {
         alert('خطأ: ' + error.message);
     } finally {
@@ -286,9 +292,54 @@ async function reportPost(postId, userId, event) {
         await set(push(ref(database, 'reports')), {
             postId, userId, reporterId: auth.currentUser.uid, reason, timestamp: new Date().toISOString()
         });
-        alert('تم الإبلاغ');
+        showToast('تم الإبلاغ');
     } catch (error) {
         alert('خطأ: ' + error.message);
+    }
+}
+
+// ===== Bookmarks =====
+
+async function toggleBookmark(postId, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const bookmarkRef = ref(database, `bookmarks/${userId}/${postId}`);
+
+    try {
+        const snapshot = await get(bookmarkRef);
+        if (snapshot.exists()) {
+            await remove(bookmarkRef);
+            showToast('تم إزالة المنشور من المحفوظات');
+        } else {
+            await set(bookmarkRef, { timestamp: new Date().toISOString() });
+            showToast('تم حفظ المنشور');
+        }
+
+        // Update bookmark icons
+        document.querySelectorAll(`[data-bookmark-id="${postId}"]`).forEach(btn => {
+            btn.classList.toggle('active', !snapshot.exists());
+        });
+    } catch (error) {
+        console.error('Bookmark error:', error);
+    }
+}
+
+// ===== Views =====
+
+async function incrementViewCount(postId) {
+    try {
+        const postRef = ref(database, `posts/${postId}`);
+        const snapshot = await get(postRef);
+        if (snapshot.exists()) {
+            const views = (snapshot.val().views || 0) + 1;
+            await update(postRef, { views });
+        }
+    } catch (error) {
+        // Silent fail
     }
 }
 
@@ -368,6 +419,13 @@ function formatTime(timestamp) {
     return date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
 }
 
+function formatViews(views) {
+    if (!views || views === 0) return '';
+    if (views < 1000) return views.toString();
+    if (views < 1000000) return (views / 1000).toFixed(1).replace('.0', '') + 'K';
+    return (views / 1000000).toFixed(1).replace('.0', '') + 'M';
+}
+
 async function renderPost(post, container) {
     const postId = post.id;
     const userId = auth.currentUser?.uid;
@@ -387,9 +445,21 @@ async function renderPost(post, container) {
         isFollowing = followSnap.exists();
     }
 
+    // Check bookmark status
+    const bookmarkSnap = await get(ref(database, `bookmarks/${userId}/${postId}`));
+    const isBookmarked = bookmarkSnap.exists();
+
     // Comment count
     const commentsSnap = await get(ref(database, 'comments/' + postId));
     const commentCount = commentsSnap.exists() ? Object.keys(commentsSnap.val()).length : 0;
+
+    // Views
+    const views = post.views || 0;
+
+    // Increment view count (only if not own post)
+    if (!isOwnPost) {
+        incrementViewCount(postId);
+    }
 
     // Media
     let mediaHtml = '';
@@ -398,6 +468,8 @@ async function renderPost(post, container) {
     } else if (post.videoUrl) {
         mediaHtml = `<div class="tweet-media"><iframe src="${post.videoUrl}" allowfullscreen></iframe></div>`;
     }
+
+    const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
 
     container.innerHTML = `
         <div class="tweet">
@@ -409,7 +481,7 @@ async function renderPost(post, container) {
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(post.timestamp)}</span>
                     ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${post.userId}" onclick="followUser('${post.userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
-                    <button class="tweet-more" onclick="event.stopPropagation()">
+                    <button class="tweet-more" onclick="openPostMenu('${postId}', '${post.userId}', ${isOwnPost}, event)">
                         <i class="fas fa-ellipsis"></i>
                     </button>
                 </div>
@@ -428,8 +500,9 @@ async function renderPost(post, container) {
                         <span class="icon-wrap"><i class="${isLiked ? 'fas' : 'far'} fa-heart"></i></span>
                         <span>${post.likes || 0}</span>
                     </button>
-                    <button class="tweet-action share">
-                        <span class="icon-wrap"><i class="far fa-bookmark"></i></span>
+                    ${viewsHtml}
+                    <button class="tweet-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
+                        <span class="icon-wrap"><i class="${isBookmarked ? 'fas' : 'far'} fa-bookmark"></i></span>
                     </button>
                 </div>
             </div>
@@ -448,8 +521,14 @@ async function renderRetweet(retweet, originalPost, container) {
 
     const likeSnapshot = await get(ref(database, `likes/${postId}/${userId}`));
     const isLiked = likeSnapshot.exists();
+
+    const bookmarkSnap = await get(ref(database, `bookmarks/${userId}/${postId}`));
+    const isBookmarked = bookmarkSnap.exists();
+
     const commentsSnap = await get(ref(database, 'comments/' + postId));
     const commentCount = commentsSnap.exists() ? Object.keys(commentsSnap.val()).length : 0;
+
+    const views = originalPost.views || 0;
 
     let mediaHtml = '';
     if (originalPost.imageUrl) {
@@ -458,23 +537,25 @@ async function renderRetweet(retweet, originalPost, container) {
         mediaHtml = `<div class="tweet-media"><iframe src="${originalPost.videoUrl}" allowfullscreen></iframe></div>`;
     }
 
+    const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
+
     container.innerHTML = `
         <div class="tweet">
             <img class="tweet-avatar" src="${retweetUser.profilePicture || 'https://via.placeholder.com/40'}" alt="" onclick="showProfile('${retweet.userId}')">
             <div class="tweet-body">
                 <div class="tweet-header">
-                    <span class="tweet-name">${escapeHtml(retweetUser.name || 'مستخدم')}</span>
+                    <span class="tweet-name" onclick="showProfile('${retweet.userId}')">${escapeHtml(retweetUser.name || 'مستخدم')}</span>
                     <span class="tweet-handle">@${escapeHtml(retweetUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(retweet.timestamp)}</span>
                 </div>
-                <div style="color:var(--text-secondary);font-size:13px;margin:4px 0;">
+                <div class="retweet-label">
                     <i class="fas fa-retweet"></i> أعاد نشر
                 </div>
                 <div style="border:1px solid var(--border-color);border-radius:16px;padding:12px;">
                     <div class="tweet-header">
                         <img class="tweet-avatar" src="${originalUser.profilePicture || 'https://via.placeholder.com/40'}" style="width:32px;height:32px;" alt="" onclick="showProfile('${originalPost.userId}')">
-                        <span class="tweet-name">${escapeHtml(originalUser.name || 'مستخدم')}</span>
+                        <span class="tweet-name" onclick="showProfile('${originalPost.userId}')">${escapeHtml(originalUser.name || 'مستخدم')}</span>
                         <span class="tweet-handle">@${escapeHtml(originalUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
                         <span class="tweet-dot">·</span>
                         <span class="tweet-time">${formatTime(originalPost.timestamp)}</span>
@@ -495,8 +576,9 @@ async function renderRetweet(retweet, originalPost, container) {
                         <span class="icon-wrap"><i class="${isLiked ? 'fas' : 'far'} fa-heart"></i></span>
                         <span>${originalPost.likes || 0}</span>
                     </button>
-                    <button class="tweet-action share">
-                        <span class="icon-wrap"><i class="far fa-bookmark"></i></span>
+                    ${viewsHtml}
+                    <button class="tweet-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
+                        <span class="icon-wrap"><i class="${isBookmarked ? 'fas' : 'far'} fa-bookmark"></i></span>
                     </button>
                 </div>
             </div>
@@ -509,6 +591,6 @@ async function renderRetweet(retweet, originalPost, container) {
 
 export {
     init, postTweet, deletePost, likePost, retweetPost, followUser,
-    reportPost, loadPosts, handleImageSelect, removePreview,
-    toggleUrlInput, toggleVideoInput
+    reportPost, loadPosts, renderPost, renderFeedItem, handleImageSelect, removePreview,
+    toggleUrlInput, toggleVideoInput, toggleBookmark
 };

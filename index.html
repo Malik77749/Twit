@@ -67,7 +67,7 @@
                 <button class="drawer-item" onclick="showProfile(); closeDrawer();">
                     <i class="fas fa-user"></i><span>الملف الشخصي</span>
                 </button>
-                <button class="drawer-item" onclick="closeDrawer()">
+                <button class="drawer-item" onclick="showBookmarks(); closeDrawer();">
                     <i class="fas fa-bookmark"></i><span>المحفوظات</span>
                 </button>
                 <button class="drawer-item" onclick="closeDrawer()">
@@ -92,9 +92,15 @@
                 <button class="nav-item active" onclick="showHome()">
                     <i class="fas fa-home"></i><span>الرئيسية</span>
                 </button>
-                <button class="nav-item" onclick="showNotifications()">
+                <button class="nav-item" onclick="openSearch()">
+                    <i class="fas fa-magnifying-glass"></i><span>استكشاف</span>
+                </button>
+                <button class="nav-item" onclick="showNotifications()" style="position:relative;">
                     <i class="fas fa-bell"></i><span>الإشعارات</span>
                     <span id="notif-badge-desktop" class="notif-badge" style="display:none;"></span>
+                </button>
+                <button class="nav-item" onclick="showMessages()">
+                    <i class="far fa-envelope"></i><span>الرسائل</span>
                 </button>
                 <button class="nav-item" onclick="showProfile()">
                     <i class="fas fa-user"></i><span>الملف الشخصي</span>
@@ -117,18 +123,35 @@
         <main class="main-feed">
             <!-- ===== HOME VIEW ===== -->
             <div id="home-view">
-                <!-- Mobile Header -->
+                <!-- Mobile Header with Tabs (like X) -->
                 <div class="mobile-header">
                     <img class="mobile-header-avatar" id="mobile-avatar" src="https://via.placeholder.com/32" alt="" onclick="openDrawer()">
-                    <svg class="mobile-header-logo" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    <div class="mobile-header-center">
+                        <svg class="mobile-header-logo" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    </div>
+                    <button class="mobile-header-settings" onclick="openDrawer()">
+                        <i class="fas fa-gear"></i>
+                    </button>
                 </div>
 
-                <div class="feed-header">
+                <!-- Mobile Feed Tabs (like X — For You / Following) -->
+                <div class="mobile-feed-tabs">
+                    <button class="mobile-feed-tab active" onclick="switchFeedTab(this, 'foryou')">لك</button>
+                    <button class="mobile-feed-tab" onclick="switchFeedTab(this, 'following')">متابَعون</button>
+                </div>
+
+                <!-- Desktop Feed Header -->
+                <div class="feed-header desktop-only">
                     <h2>الرئيسية</h2>
                     <div class="feed-tabs">
                         <button class="feed-tab active">لك</button>
                         <button class="feed-tab">متابَعون</button>
                     </div>
+                </div>
+
+                <!-- Pull to Refresh indicator -->
+                <div class="pull-to-refresh" id="pull-to-refresh">
+                    <div class="ptr-spinner"></div>
                 </div>
 
                 <!-- Composer -->
@@ -153,7 +176,7 @@
                                 <button class="composer-tool" title="استطلاع">
                                     <i class="fas fa-square-poll-horizontal"></i>
                                 </button>
-                                <button class="composer-tool" title="إيموجي">
+                                <button class="composer-tool" title="إيموجي" onclick="toggleEmojiPicker()">
                                     <i class="far fa-face-smile"></i>
                                 </button>
                                 <button class="composer-tool" title="מיקום">
@@ -185,11 +208,62 @@
                 <div id="notifications-list"></div>
             </div>
 
+            <!-- ===== SEARCH VIEW (Mobile) ===== -->
+            <div id="search-view" style="display:none;">
+                <div class="search-view-header">
+                    <div class="search-view-input-wrap">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="text" id="search-input" placeholder="بحث" oninput="handleSearch(this.value)">
+                        <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none;">
+                            <i class="fas fa-circle-xmark"></i>
+                        </button>
+                    </div>
+                    <button class="search-cancel" onclick="showHome()">إلغاء</button>
+                </div>
+                <div id="search-results">
+                    <div class="empty-state">
+                        <h3>استكشاف</h3>
+                        <p>ابحث عن أشخاص ومنشورات</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== MESSAGES VIEW (Mobile) ===== -->
+            <div id="messages-view" style="display:none;">
+                <div class="feed-header">
+                    <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
+                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <h2>الرسائل</h2>
+                    </div>
+                </div>
+                <div class="empty-state">
+                    <h3>الرسائل</h3>
+                    <p>مرحباً بك في الرسائل الخاصة</p>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-top:8px;">هذه الميزة قيد التطوير</p>
+                </div>
+            </div>
+
+            <!-- ===== BOOKMARKS VIEW ===== -->
+            <div id="bookmarks-view" style="display:none;">
+                <div class="feed-header">
+                    <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
+                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <h2>المحفوظات</h2>
+                    </div>
+                </div>
+                <div id="bookmarks-list">
+                    <div class="empty-state">
+                        <h3>المحفوظات</h3>
+                        <p>احفظ المنشورات للرجوع إليها لاحقاً</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- ===== PROFILE VIEW (X Style) ===== -->
             <div id="profile-view" style="display:none;">
                 <!-- Profile Header -->
                 <div class="profile-header-bar">
-                    <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-left"></i></button>
+                    <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
                     <div class="profile-header-info">
                         <h2 id="profile-view-name">مستخدم</h2>
                         <span id="profile-view-count">0 منشورات</span>
@@ -274,38 +348,59 @@
             </div>
 
             <!-- Who to follow -->
-            <div class="trending-card">
+            <div class="trending-card" id="who-to-follow-card">
                 <h3>من تتابع</h3>
-                <div class="trending-item" style="display:flex;align-items:center;gap:12px;">
-                    <img src="https://via.placeholder.com/40" style="width:40px;height:40px;border-radius:50%;" alt="">
-                    <div style="flex:1;">
-                        <div style="font-weight:700;font-size:15px;">مستخدم</div>
-                        <div style="color:var(--text-secondary);font-size:13px;">@user</div>
+                <div id="who-to-follow-list">
+                    <div class="trending-item" style="display:flex;align-items:center;gap:12px;">
+                        <img src="https://via.placeholder.com/40" style="width:40px;height:40px;border-radius:50%;" alt="">
+                        <div style="flex:1;">
+                            <div style="font-weight:700;font-size:15px;">مستخدم</div>
+                            <div style="color:var(--text-secondary);font-size:13px;">@user</div>
+                        </div>
+                        <button class="follow-btn" style="font-size:13px;padding:4px 12px;">متابعة</button>
                     </div>
-                    <button class="follow-btn" style="font-size:13px;padding:4px 12px;">متابعة</button>
                 </div>
             </div>
         </aside>
     </div>
 
-    <!-- Mobile Bottom Nav (X style) -->
+    <!-- Post Dropdown Menu (hidden, shown on demand) -->
+    <div class="dropdown-menu" id="post-dropdown" style="display:none;position:fixed;z-index:300;">
+        <button class="dropdown-item" id="dropdown-delete" style="display:none;">
+            <i class="fas fa-trash"></i><span>حذف</span>
+        </button>
+        <button class="dropdown-item" id="dropdown-pin" style="display:none;">
+            <i class="fas fa-thumbtack"></i><span>تثبيت</span>
+        </button>
+        <button class="dropdown-item" id="dropdown-bookmark">
+            <i class="fas fa-bookmark"></i><span>حفظ</span>
+        </button>
+        <button class="dropdown-item" id="dropdown-report">
+            <i class="fas fa-flag"></i><span>إبلاغ</span>
+        </button>
+        <button class="dropdown-item" id="dropdown-follow">
+            <i class="fas fa-user-plus"></i><span>متابعة</span>
+        </button>
+    </div>
+
+    <!-- Mobile Bottom Nav (X style — 4 icons) -->
     <nav class="mobile-nav" id="mobile-nav">
-        <button class="mobile-nav-item active" onclick="showHome()">
+        <button class="mobile-nav-item active" data-nav="home" onclick="navigateTo('home')">
             <i class="fas fa-home"></i>
         </button>
-        <button class="mobile-nav-item" onclick="">
+        <button class="mobile-nav-item" data-nav="search" onclick="navigateTo('search')">
             <i class="fas fa-magnifying-glass"></i>
         </button>
-        <button class="mobile-nav-item" onclick="showNotifications()" style="position:relative;">
+        <button class="mobile-nav-item" data-nav="notifications" onclick="navigateTo('notifications')" style="position:relative;">
             <i class="fas fa-bell"></i>
             <span class="mobile-notif-badge" id="notif-badge" style="display:none;"></span>
         </button>
-        <button class="mobile-nav-item" onclick="">
+        <button class="mobile-nav-item" data-nav="messages" onclick="navigateTo('messages')">
             <i class="far fa-envelope"></i>
         </button>
     </nav>
 
-    <!-- Mobile FAB -->
+    <!-- Mobile FAB (Compose button like X) -->
     <button class="mobile-fab" id="mobile-fab" onclick="focusComposer()">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M23 3c-6.62-.1-10.38 2.421-13.05 6.03C7.29 12.61 6 17.331 6 22h2c0-1.007.07-2.012.19-3H12c4.1 0 7.48-3.082 7.94-7.054C22.79 10.147 23.17 6.359 23 3zm-7 8h-1.5v2H16c-.63 2.06-2.45 3.5-4.5 3.5H8.19c.18 1.51.51 3.01.99 4.45C10.67 22.67 13.16 24 16 24h2c3.87 0 7-3.13 7-7 0-5.52-4.48-10-10-10H8.5C7.12 7 6 8.12 6 9.5S7.12 12 8.5 12H11v2H8.5C6.57 14 5 12.43 5 10.5S6.57 7 8.5 7H16c2.21 0 4 1.79 4 4s-1.79 4-4 4h-1.5v2H16c3.31 0 6-2.69 6-6s-2.69-6-6-6H8.5C5.46 5 3 7.46 3 10.5S5.46 16 8.5 16H11v2H8.5C4.36 18 1 14.64 1 10.5S4.36 3 8.5 3H16c4.42 0 8 3.58 8 8s-3.58 8-8 8h-1.5v2H16c5.52 0 10-4.48 10-10 0-2.13-.68-4.09-1.83-5.69"/></svg>
     </button>
