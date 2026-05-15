@@ -1560,3 +1560,201 @@ body {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
 }
+
+/* ===== Image Lightbox ===== */
+.lightbox {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    animation: fadeIn 0.2s ease;
+}
+.lightbox.open {
+    display: flex;
+}
+.lightbox img {
+    max-width: 95%;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px;
+    cursor: default;
+}
+.lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: white;
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+.lightbox-close:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* ===== Post Detail View ===== */
+.post-detail {
+    padding: 16px;
+}
+.post-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.post-detail-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+.post-detail-info {
+    flex: 1;
+}
+.post-detail-name {
+    font-weight: 800;
+    font-size: 17px;
+    cursor: pointer;
+}
+.post-detail-name:hover {
+    text-decoration: underline;
+}
+.post-detail-handle {
+    color: var(--text-secondary);
+    font-size: 15px;
+}
+.post-detail-content {
+    font-size: 23px;
+    line-height: 1.4;
+    margin: 12px 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.post-detail-media {
+    margin: 16px 0;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+}
+.post-detail-media img {
+    width: 100%;
+    display: block;
+    max-height: 510px;
+    object-fit: cover;
+}
+.post-detail-timestamp {
+    color: var(--text-secondary);
+    font-size: 15px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.post-detail-stats {
+    display: flex;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+}
+.post-detail-stats strong {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+.post-detail-stats span {
+    color: var(--text-secondary);
+}
+.post-detail-actions {
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.post-detail-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.post-detail-action:hover {
+    background-color: rgba(29, 155, 240, 0.1);
+    color: var(--accent);
+}
+.post-detail-action.like:hover {
+    background-color: rgba(249, 24, 128, 0.1);
+    color: var(--like-color);
+}
+.post-detail-action.like.active {
+    color: var(--like-color);
+}
+.post-detail-comment-input {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+.post-detail-comment-input img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+.post-detail-comment-input input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 17px;
+    outline: none;
+}
+.post-detail-comment-input input::placeholder {
+    color: var(--text-secondary);
+}
+.post-detail-comment-input button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    padding: 8px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* ===== Page Transitions ===== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes slideInRight {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+.view-enter {
+    animation: slideInRight 0.2s ease;
+}

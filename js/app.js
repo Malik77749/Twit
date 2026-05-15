@@ -35,7 +35,7 @@ profile.init(authInstance, database);
 
 // ===== Global Navigation =====
 
-const allViews = ['home', 'notifications', 'profile', 'search', 'messages', 'bookmarks'];
+const allViews = ['home', 'notifications', 'profile', 'search', 'messages', 'bookmarks', 'post-detail'];
 
 function hideAllViews() {
     allViews.forEach(v => {
@@ -469,6 +469,167 @@ document.addEventListener('click', (e) => {
 
 // ===== Toast (imported from utils, exposed globally) =====
 window.showToast = showToast;
+
+// ===== Image Lightbox =====
+
+window.openLightbox = function(imageSrc) {
+    const lightbox = document.getElementById('lightbox');
+    const img = document.getElementById('lightbox-img');
+    img.src = imageSrc;
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeLightbox = function() {
+    const lightbox = document.getElementById('lightbox');
+    lightbox.classList.remove('open');
+    document.body.style.overflow = '';
+};
+
+// Close lightbox on Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeLightbox();
+        const dropdown = document.getElementById('post-dropdown');
+        if (dropdown) dropdown.style.display = 'none';
+    }
+});
+
+// ===== Post Detail View =====
+
+window.openPostDetail = async function(postId) {
+    hideAllViews();
+    document.getElementById('post-detail-view').style.display = 'block';
+    document.getElementById('post-detail-view').classList.add('view-enter');
+
+    const container = document.getElementById('post-detail-content');
+    container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+    try {
+        const { get: dbGet } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+        const snapshot = await dbGet(ref(database, `posts/${postId}`));
+
+        if (!snapshot.exists()) {
+            container.innerHTML = '<div class="empty-state"><p>المنشور غير موجود</p></div>';
+            return;
+        }
+
+        const post = { id: postId, ...snapshot.val() };
+        const userId = authInstance.currentUser?.uid;
+        const userData = await getUserData(database, post.userId);
+        const userName = userData.name || 'مستخدم';
+        const avatar = userData.profilePicture || 'https://via.placeholder.com/40';
+        const isOwnPost = post.userId === userId;
+
+        // Like status
+        const likeSnap = await dbGet(ref(database, `likes/${postId}/${userId}`));
+        const isLiked = likeSnap.exists();
+
+        // Bookmark status
+        const bookmarkSnap = await dbGet(ref(database, `bookmarks/${userId}/${postId}`));
+        const isBookmarked = bookmarkSnap.exists();
+
+        // Full timestamp
+        const date = new Date(post.timestamp);
+        const timeStr = date.toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = date.toLocaleString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Views
+        const views = post.views || 0;
+        const likes = post.likes || 0;
+        const retweets = post.retweets || 0;
+
+        let mediaHtml = '';
+        if (post.imageUrl) {
+            mediaHtml = `<div class="post-detail-media" onclick="openLightbox('${post.imageUrl}')"><img src="${post.imageUrl}" alt=""></div>`;
+        } else if (post.videoUrl) {
+            mediaHtml = `<div class="post-detail-media"><iframe src="${post.videoUrl}" style="width:100%;height:350px;border:none;" allowfullscreen></iframe></div>`;
+        }
+
+        container.innerHTML = `
+            <div class="post-detail">
+                <div class="post-detail-header">
+                    <img class="post-detail-avatar" src="${avatar}" alt="" onclick="showProfile('${post.userId}')">
+                    <div class="post-detail-info">
+                        <div class="post-detail-name" onclick="showProfile('${post.userId}')">${escapeHtml(userName)}</div>
+                        <div class="post-detail-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</div>
+                    </div>
+                    ${!isOwnPost ? `<button class="follow-btn" data-follow-id="${post.userId}" onclick="followUser('${post.userId}', event)">متابعة</button>` : ''}
+                </div>
+                ${post.content ? `<div class="post-detail-content">${post.content}</div>` : ''}
+                ${mediaHtml}
+                <div class="post-detail-timestamp">
+                    <span>${timeStr}</span>
+                    <span>·</span>
+                    <span>${dateStr}</span>
+                </div>
+                <div class="post-detail-stats">
+                    ${retweets > 0 ? `<span><strong>${retweets}</strong> إعادة نشر</span>` : ''}
+                    ${likes > 0 ? `<span><strong>${likes}</strong> إعجاب</span>` : ''}
+                    ${views > 0 ? `<span><strong>${views}</strong> مشاهدة</span>` : ''}
+                </div>
+                <div class="post-detail-actions">
+                    <button class="post-detail-action" onclick="toggleComments('${postId}', event)">
+                        <i class="far fa-comment"></i>
+                    </button>
+                    <button class="post-detail-action" onclick="retweetPost('${postId}', event)">
+                        <i class="fas fa-retweet"></i>
+                    </button>
+                    <button class="post-detail-action like ${isLiked ? 'active' : ''}" data-like-id="${postId}" onclick="likePost('${postId}', event)">
+                        <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i>
+                    </button>
+                    <button class="post-detail-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
+                        <i class="${isBookmarked ? 'fas' : 'far'} fa-bookmark"></i>
+                    </button>
+                    <button class="post-detail-action" onclick="copyPostLink('${postId}')">
+                        <i class="fas fa-arrow-up-from-bracket"></i>
+                    </button>
+                </div>
+                <div class="post-detail-comment-input">
+                    <img src="${avatar}" alt="">
+                    <input type="text" id="detail-comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
+                    <button onclick="addComment('${postId}', null, event)">رد</button>
+                </div>
+            </div>
+            <div id="comments-${postId}" class="comment-section" style="display:block;"></div>
+        `;
+
+        // Load comments
+        comments.loadComments(postId);
+
+        // Increment view
+        if (!isOwnPost) {
+            const { update: dbUpdate } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+            await dbUpdate(ref(database, `posts/${postId}`), { views: (views || 0) + 1 });
+        }
+    } catch (error) {
+        container.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';
+    }
+};
+
+window.goBackFromPost = function() {
+    hideAllViews();
+    setActiveNav('home');
+    showView('home');
+};
+
+window.copyPostLink = function(postId) {
+    const url = window.location.origin + window.location.pathname + '#post/' + postId;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('تم نسخ الرابط');
+        });
+    } else {
+        // Fallback
+        const input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showToast('تم نسخ الرابط');
+    }
+};
 
 // ===== Update sidebar with user info =====
 

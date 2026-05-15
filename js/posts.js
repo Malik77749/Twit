@@ -472,22 +472,22 @@ async function renderPost(post, container) {
     const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
 
     container.innerHTML = `
-        <div class="tweet">
-            <img class="tweet-avatar" src="${avatar}" alt="" onclick="showProfile('${post.userId}')">
+        <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
+            <img class="tweet-avatar" src="${avatar}" alt="" onclick="event.stopPropagation(); showProfile('${post.userId}')">
             <div class="tweet-body">
                 <div class="tweet-header">
-                    <span class="tweet-name" onclick="showProfile('${post.userId}')">${escapeHtml(userName)}</span>
+                    <span class="tweet-name" onclick="event.stopPropagation(); showProfile('${post.userId}')">${escapeHtml(userName)}</span>
                     <span class="tweet-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(post.timestamp)}</span>
-                    ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${post.userId}" onclick="followUser('${post.userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
-                    <button class="tweet-more" onclick="openPostMenu('${postId}', '${post.userId}', ${isOwnPost}, event)">
+                    ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${post.userId}" onclick="event.stopPropagation(); followUser('${post.userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
+                    <button class="tweet-more" onclick="event.stopPropagation(); openPostMenu('${postId}', '${post.userId}', ${isOwnPost}, event)">
                         <i class="fas fa-ellipsis"></i>
                     </button>
                 </div>
                 ${post.content ? `<div class="tweet-content">${post.content}</div>` : ''}
-                ${mediaHtml}
-                <div class="tweet-actions">
+                ${mediaHtml ? `<div onclick="event.stopPropagation(); ${post.imageUrl ? `openLightbox('${post.imageUrl}')` : ''}" style="cursor:${post.imageUrl ? 'zoom-in' : 'default'};">${mediaHtml}</div>` : ''}
+                <div class="tweet-actions" onclick="event.stopPropagation();">
                     <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
                         <span class="icon-wrap"><i class="far fa-comment"></i></span>
                         <span>${commentCount}</span>
@@ -540,11 +540,11 @@ async function renderRetweet(retweet, originalPost, container) {
     const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
 
     container.innerHTML = `
-        <div class="tweet">
-            <img class="tweet-avatar" src="${retweetUser.profilePicture || 'https://via.placeholder.com/40'}" alt="" onclick="showProfile('${retweet.userId}')">
+        <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
+            <img class="tweet-avatar" src="${retweetUser.profilePicture || 'https://via.placeholder.com/40'}" alt="" onclick="event.stopPropagation(); showProfile('${retweet.userId}')">
             <div class="tweet-body">
                 <div class="tweet-header">
-                    <span class="tweet-name" onclick="showProfile('${retweet.userId}')">${escapeHtml(retweetUser.name || 'مستخدم')}</span>
+                    <span class="tweet-name" onclick="event.stopPropagation(); showProfile('${retweet.userId}')">${escapeHtml(retweetUser.name || 'مستخدم')}</span>
                     <span class="tweet-handle">@${escapeHtml(retweetUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(retweet.timestamp)}</span>
@@ -552,7 +552,7 @@ async function renderRetweet(retweet, originalPost, container) {
                 <div class="retweet-label">
                     <i class="fas fa-retweet"></i> أعاد نشر
                 </div>
-                <div style="border:1px solid var(--border-color);border-radius:16px;padding:12px;">
+                <div style="border:1px solid var(--border-color);border-radius:16px;padding:12px;" onclick="event.stopPropagation();">
                     <div class="tweet-header">
                         <img class="tweet-avatar" src="${originalUser.profilePicture || 'https://via.placeholder.com/40'}" style="width:32px;height:32px;" alt="" onclick="showProfile('${originalPost.userId}')">
                         <span class="tweet-name" onclick="showProfile('${originalPost.userId}')">${escapeHtml(originalUser.name || 'مستخدم')}</span>
@@ -563,7 +563,7 @@ async function renderRetweet(retweet, originalPost, container) {
                     ${originalPost.content ? `<div class="tweet-content">${originalPost.content}</div>` : ''}
                     ${mediaHtml}
                 </div>
-                <div class="tweet-actions">
+                <div class="tweet-actions" onclick="event.stopPropagation();">
                     <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
                         <span class="icon-wrap"><i class="far fa-comment"></i></span>
                         <span>${commentCount}</span>

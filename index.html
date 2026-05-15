@@ -259,6 +259,17 @@
                 </div>
             </div>
 
+            <!-- ===== POST DETAIL VIEW ===== -->
+            <div id="post-detail-view" style="display:none;">
+                <div class="feed-header">
+                    <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
+                        <button class="back-btn" onclick="goBackFromPost()"><i class="fas fa-arrow-right"></i></button>
+                        <h2>منشور</h2>
+                    </div>
+                </div>
+                <div id="post-detail-content"></div>
+            </div>
+
             <!-- ===== PROFILE VIEW (X Style) ===== -->
             <div id="profile-view" style="display:none;">
                 <!-- Profile Header -->
@@ -362,6 +373,12 @@
                 </div>
             </div>
         </aside>
+    </div>
+
+    <!-- Image Lightbox -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()"><i class="fas fa-times"></i></button>
+        <img id="lightbox-img" src="" alt="">
     </div>
 
     <!-- Post Dropdown Menu (hidden, shown on demand) -->
