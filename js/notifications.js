@@ -1,11 +1,11 @@
 // Notifications Module
-import { ref, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { formatTimestamp } from './utils.js';
-import { escapeHtml } from './utils.js';
+import { ref, update, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { formatTimestamp, escapeHtml } from './utils.js';
 import { showLoading, hideLoading, toggleSections } from './ui.js';
 import { toggleComments } from './comments.js';
 
 let auth, database;
+let notificationsUnsub = null;
 
 function init(authInstance, databaseInstance) {
     auth = authInstance;
@@ -23,11 +23,16 @@ function loadNotifications() {
         return;
     }
 
+    // Unsubscribe previous listener to prevent memory leak
+    if (notificationsUnsub) {
+        notificationsUnsub();
+    }
+
     const notificationsList = document.getElementById('notifications-list');
     const notificationCount = document.getElementById('notification-count');
     notificationsList.innerHTML = '<p class="loading">جارٍ تحميل الإشعارات...</p>';
 
-    onValue(ref(database, `notifications/${userId}`), async snapshot => {
+    notificationsUnsub = onValue(ref(database, `notifications/${userId}`), async snapshot => {
         notificationsList.innerHTML = '';
 
         if (!snapshot.exists()) {

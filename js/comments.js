@@ -1,10 +1,11 @@
 // Comments Module
 import { ref, push, set, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { escapeHtml, formatTimestamp } from './utils.js';
-import { getUserName, getUserProfilePicture, addNotification } from './firebase-helpers.js';
+import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
 
 let auth, database;
 const commentCooldowns = new Map();
+const commentListeners = new Map();
 
 function init(authInstance, databaseInstance) {
     auth = authInstance;
@@ -77,7 +78,12 @@ function loadComments(postId) {
     const commentList = document.getElementById(`comment-list-${postId}`);
     if (!commentList) return;
 
-    onValue(ref(database, 'comments/' + postId), async snapshot => {
+    // Unsubscribe previous listener for this post to prevent memory leak
+    if (commentListeners.has(postId)) {
+        commentListeners.get(postId)();
+    }
+
+    const unsub = onValue(ref(database, 'comments/' + postId), async snapshot => {
         commentList.innerHTML = '';
 
         // Update comment count on buttons
@@ -98,8 +104,9 @@ function loadComments(postId) {
             .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         for (const comment of topLevelComments) {
-            const userName = await getUserName(database, comment.userId);
-            const profilePicture = await getUserProfilePicture(database, comment.userId);
+            const userData = await getUserData(database, comment.userId);
+            const userName = userData.name || `مستخدم ${comment.userId.slice(0, 8)}`;
+            const profilePicture = userData.profilePicture || 'https://via.placeholder.com/48';
             const commentElement = document.createElement('div');
             commentElement.className = 'comment';
             commentElement.innerHTML = `
@@ -120,6 +127,7 @@ function loadComments(postId) {
             await loadReplies(postId, comment.id, comments);
         }
     });
+    commentListeners.set(postId, unsub);
 }
 
 /**
@@ -134,8 +142,9 @@ async function loadReplies(postId, parentCommentId, allComments) {
         .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
     for (const reply of replies) {
-        const userName = await getUserName(database, reply.userId);
-        const profilePicture = await getUserProfilePicture(database, reply.userId);
+        const userData = await getUserData(database, reply.userId);
+        const userName = userData.name || `مستخدم ${reply.userId.slice(0, 8)}`;
+        const profilePicture = userData.profilePicture || 'https://via.placeholder.com/48';
         const replyElement = document.createElement('div');
         replyElement.className = 'comment reply';
         replyElement.innerHTML = `

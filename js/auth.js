@@ -2,6 +2,7 @@
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { ref, get, set } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { toggleSections, showLoading, hideLoading } from './ui.js';
+import { clearUserCache } from './firebase-helpers.js';
 
 let auth, database;
 
@@ -101,6 +102,7 @@ async function signup() {
             profilePicture: 'https://via.placeholder.com/80'
         });
         errorElement.innerText = '';
+        // Auth state listener will handle the transition to home
         return userId;
     } catch (error) {
         const messages = {
@@ -121,6 +123,7 @@ async function logout() {
     showLoading();
     try {
         await signOut(auth);
+        clearUserCache();
         toggleSections('auth');
     } catch (error) {
         alert('خطأ أثناء تسجيل الخروج');

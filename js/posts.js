@@ -1,9 +1,9 @@
 // Posts Module
-import { ref, push, set, get, update, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, push, set, get, update, remove, increment } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl } from './utils.js';
 import { showLoading, hideLoading } from './ui.js';
-import { getUserName, getUserProfilePicture, addNotification, } from './firebase-helpers.js';
+import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
 import { loadComments } from './comments.js';
 
 let auth, database, storage;
@@ -53,8 +53,14 @@ async function postTweet() {
             const snapshot = await uploadBytes(imgRef, imageFile);
             postData.imageUrl = await getDownloadURL(snapshot.ref);
         } else if (imageUrl) {
-            new URL(imageUrl); // validate
-            postData.imageUrl = imageUrl;
+            try {
+                new URL(imageUrl);
+                postData.imageUrl = imageUrl;
+            } catch {
+                alert('رابط الصورة غير صالح');
+                hideLoading();
+                return;
+            }
         } else if (videoUrl) {
             const embedUrl = getYouTubeEmbedUrl(videoUrl);
             if (!embedUrl) {
@@ -255,12 +261,12 @@ async function followUser(userId, event) {
 
         if (isFollowing) {
             await remove(followRef);
-            updates[`users/${userId}/followers`] = -1;
-            updates[`users/${currentUserId}/following`] = -1;
+            updates[`users/${userId}/followers`] = increment(-1);
+            updates[`users/${currentUserId}/following`] = increment(-1);
         } else {
             await set(followRef, { timestamp: new Date().toISOString() });
-            updates[`users/${userId}/followers`] = 1;
-            updates[`users/${currentUserId}/following`] = 1;
+            updates[`users/${userId}/followers`] = increment(1);
+            updates[`users/${currentUserId}/following`] = increment(1);
             const followerName = await getUserName(database, currentUserId);
             await addNotification(database, userId, `قام ${followerName} بمتابعتك`, null);
         }
@@ -317,55 +323,55 @@ async function reportPost(postId, userId, event) {
 /**
  * Load all posts and retweets
  */
-function loadPosts() {
+async function loadPosts() {
     showLoading();
     const postsDiv = document.getElementById('posts');
     postsDiv.innerHTML = '<p class="loading">جارٍ تحميل التغريدات...</p>';
 
-    get(ref(database, 'posts')).then(postsSnapshot => {
-        get(ref(database, 'retweets')).then(retweetsSnapshot => {
-            postsDiv.innerHTML = '';
-            const posts = [];
-            const retweets = [];
+    try {
+        const [postsSnapshot, retweetsSnapshot] = await Promise.all([
+            get(ref(database, 'posts')),
+            get(ref(database, 'retweets'))
+        ]);
 
-            if (postsSnapshot.exists()) {
-                postsSnapshot.forEach(child => {
-                    posts.push({ id: child.key, ...child.val(), type: 'post' });
-                });
-            }
-            if (retweetsSnapshot.exists()) {
-                retweetsSnapshot.forEach(child => {
-                    retweets.push({ id: child.key, ...child.val(), type: 'retweet' });
-                });
-            }
+        postsDiv.innerHTML = '';
+        const posts = [];
+        const retweets = [];
 
-            if (!posts.length && !retweets.length) {
-                postsDiv.innerHTML = '<p class="loading">لا توجد تغريدات بعد.</p>';
-                hideLoading();
-                return;
-            }
-
-            const allItems = [...posts, ...retweets].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-            allItems.forEach(item => {
-                let container = postsDiv.querySelector(`[data-post-id="${item.id}"]`);
-                if (!container) {
-                    container = document.createElement('div');
-                    container.setAttribute('data-post-id', item.id);
-                    postsDiv.appendChild(container);
-                }
-                renderFeedItem(item, container);
+        if (postsSnapshot.exists()) {
+            postsSnapshot.forEach(child => {
+                posts.push({ id: child.key, ...child.val(), type: 'post' });
             });
+        }
+        if (retweetsSnapshot.exists()) {
+            retweetsSnapshot.forEach(child => {
+                retweets.push({ id: child.key, ...child.val(), type: 'retweet' });
+            });
+        }
 
+        if (!posts.length && !retweets.length) {
+            postsDiv.innerHTML = '<p class="loading">لا توجد تغريدات بعد.</p>';
             hideLoading();
-        }).catch(() => {
-            postsDiv.innerHTML = '<p class="error-message">حدث خطأ أثناء تحميل التغريدات.</p>';
-            hideLoading();
-        });
-    }).catch(() => {
+            return;
+        }
+
+        const allItems = [...posts, ...retweets].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        for (const item of allItems) {
+            let container = postsDiv.querySelector(`[data-post-id="${item.id}"]`);
+            if (!container) {
+                container = document.createElement('div');
+                container.setAttribute('data-post-id', item.id);
+                postsDiv.appendChild(container);
+            }
+            await renderFeedItem(item, container);
+        }
+
+        hideLoading();
+    } catch (error) {
         postsDiv.innerHTML = '<p class="error-message">حدث خطأ أثناء تحميل التغريدات.</p>';
         hideLoading();
-    });
+    }
 }
 
 /**
@@ -390,8 +396,9 @@ async function renderPost(post, container) {
     const postId = post.id;
     const userId = auth.currentUser?.uid;
     const postUserId = post.userId;
-    const userName = await getUserName(database, postUserId);
-    const profilePicture = await getUserProfilePicture(database, postUserId);
+    const userData = await getUserData(database, postUserId);
+    const userName = userData.name || `مستخدم ${postUserId.slice(0, 8)}`;
+    const profilePicture = userData.profilePicture || 'https://via.placeholder.com/48';
 
     container.className = 'card post-card';
     container.setAttribute('data-post-id', postId);
@@ -452,10 +459,12 @@ async function renderRetweet(retweet, originalPost, container) {
     const postId = originalPost.id;
     const retweetUserId = retweet.userId;
     const originalUserId = originalPost.userId;
-    const retweetUserName = await getUserName(database, retweetUserId);
-    const originalUserName = await getUserName(database, originalUserId);
-    const retweetProfilePicture = await getUserProfilePicture(database, retweetUserId);
-    const originalProfilePicture = await getUserProfilePicture(database, originalUserId);
+    const retweetUserData = await getUserData(database, retweetUserId);
+    const originalUserData = await getUserData(database, originalUserId);
+    const retweetUserName = retweetUserData.name || `مستخدم ${retweetUserId.slice(0, 8)}`;
+    const originalUserName = originalUserData.name || `مستخدم ${originalUserId.slice(0, 8)}`;
+    const retweetProfilePicture = retweetUserData.profilePicture || 'https://via.placeholder.com/48';
+    const originalProfilePicture = originalUserData.profilePicture || 'https://via.placeholder.com/48';
     const userId = auth.currentUser?.uid;
 
     container.className = 'card post-card';
