@@ -150,8 +150,8 @@ onAuthStateChanged(auth, async (user) => {
                 document.getElementById('admin-auth').style.display = 'none';
                 document.getElementById('admin-app').style.display = 'flex';
                 document.getElementById('admin-name').textContent = user.displayName || 'أدمن';
+                await loadAllData();
                 loadDashboard();
-                loadAllData();
             } else {
                 document.getElementById('admin-error').textContent = 'ليس لديك صلاحيات الأدمن';
                 await signOut(auth);
@@ -746,7 +746,7 @@ function renderPostsTable() {
                 </td>
                 <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml((p.content || '').substring(0, 80))}</td>
                 <td>${timeAgo(p.timestamp)}</td>
-                <td>${p.likes || 0}</td>
+                <td>${countLikes(p)}</td>
                 <td>
                     ${reportCount > 0 ? `<span class="status-badge banned" style="font-size:12px;"><i class="fas fa-flag"></i> ${reportCount}</span>` : ''}
                     <button class="action-btn outline small" onclick="event.stopPropagation();openPostModal('${p.id}')"><i class="fas fa-eye"></i></button>
@@ -783,7 +783,7 @@ window.openPostModal = (postId) => {
         <div style="font-size:18px;line-height:1.5;margin-bottom:16px;white-space:pre-wrap;">${escapeHtml(post.content)}</div>
         ${post.imageUrl ? `<img src="${post.imageUrl}" style="max-width:100%;border-radius:16px;border:1px solid var(--border-color);margin-bottom:16px;" alt="">` : ''}
         <div style="display:flex;gap:20px;padding:12px 0;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color);margin-bottom:16px;color:var(--text-secondary);">
-            <span><i class="fas fa-heart" style="color:var(--like-color);"></i> ${post.likes || 0}</span>
+            <span><i class="fas fa-heart" style="color:var(--like-color);"></i> ${countLikes(post)}</span>
             <span><i class="fas fa-comment"></i> ${post.commentCount || 0}</span>
             <span><i class="fas fa-retweet" style="color:var(--success);"></i> ${post.retweets || 0}</span>
             <span><i class="fas fa-eye"></i> ${post.views || 0}</span>
@@ -1184,10 +1184,17 @@ document.getElementById('confirm-action-btn').addEventListener('click', async ()
 });
 
 // ===== Quick Stats =====
+function countLikes(post) {
+    if (!post.likes) return 0;
+    if (typeof post.likes === 'number') return post.likes;
+    if (typeof post.likes === 'object') return Object.keys(post.likes).length;
+    return 0;
+}
+
 function updateQuickStats() {
     const todayPosts = allPosts.filter(p => isToday(p.timestamp)).length;
     const newUsers = allUsers.filter(u => isToday(u.joinDate)).length;
-    const totalLikes = allPosts.reduce((sum, p) => sum + (p.likes || 0), 0);
+    const totalLikes = allPosts.reduce((sum, p) => sum + countLikes(p), 0);
 
     document.getElementById('quick-today-posts').textContent = todayPosts;
     document.getElementById('quick-new-users').textContent = newUsers;
