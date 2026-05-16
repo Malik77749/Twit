@@ -18,18 +18,20 @@ function init(authInstance, databaseInstance) {
 
 /**
  * Convert phone number to internal email format
- * e.g., "0501234567" → "0501234567@twit.internal"
  */
-function phoneToEmail(phone) {
+function phoneToEmail(phone, countryCode) {
     // Remove spaces, dashes, and leading +
     let cleaned = phone.replace(/[\s\-+]/g, '');
 
-    // Add Saudi country code if starts with 0
+    // Remove leading 0 if present (local format)
     if (cleaned.startsWith('0')) {
-        cleaned = '966' + cleaned.substring(1);
+        cleaned = cleaned.substring(1);
     }
 
-    return `${cleaned}@twit.internal`;
+    // Combine country code + number
+    const fullNumber = countryCode + cleaned;
+
+    return `${fullNumber}@twit.internal`;
 }
 
 /**
@@ -37,23 +39,16 @@ function phoneToEmail(phone) {
  */
 function isValidPhone(phone) {
     const cleaned = phone.replace(/[\s\-+]/g, '');
-    // Saudi: 05XXXXXXXX or 9665XXXXXXXX (9 digits)
-    // International: at least 8 digits
-    return /^\d{8,15}$/.test(cleaned);
+    // At least 6 digits, max 15
+    return /^\d{6,15}$/.test(cleaned);
 }
 
 /**
  * Format phone for display
  */
-function formatPhoneDisplay(phone) {
-    const cleaned = phone.replace(/[\s\-+]/g, '');
-    if (cleaned.startsWith('966') && cleaned.length === 12) {
-        return `+${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)} ${cleaned.substring(5, 8)} ${cleaned.substring(8)}`;
-    }
-    if (cleaned.startsWith('0') && cleaned.length === 10) {
-        return `${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7)}`;
-    }
-    return phone;
+function formatPhoneDisplay(phone, countryCode) {
+    const cleaned = phone.replace(/[\s\-+]/g, '').replace(/^0+/, '');
+    return `+${countryCode} ${cleaned}`;
 }
 
 /**
@@ -88,6 +83,7 @@ async function loginWithPhone() {
     showLoading();
     const phone = document.getElementById('login-phone').value.trim();
     const password = document.getElementById('login-password-phone').value.trim();
+    const countryCode = document.getElementById('login-country-code').value;
     const errorEl = document.getElementById('error');
 
     if (!phone || !password) {
@@ -102,7 +98,7 @@ async function loginWithPhone() {
         return;
     }
 
-    const fakeEmail = phoneToEmail(phone);
+    const fakeEmail = phoneToEmail(phone, countryCode);
 
     try {
         await signInWithEmailAndPassword(auth, fakeEmail, password);
@@ -129,6 +125,7 @@ async function signupWithPhone() {
     const name = document.getElementById('signup-name-phone').value.trim();
     const phone = document.getElementById('signup-phone').value.trim();
     const password = document.getElementById('signup-password-phone').value.trim();
+    const countryCode = document.getElementById('signup-country-code').value;
     const errorEl = document.getElementById('error');
 
     if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); return; }
@@ -147,12 +144,13 @@ async function signupWithPhone() {
         return;
     }
 
-    const fakeEmail = phoneToEmail(phone);
-    const cleanedPhone = phone.replace(/[\s\-+]/g, '');
+    const fakeEmail = phoneToEmail(phone, countryCode);
+    const cleanedPhone = phone.replace(/[\s\-+]/g, '').replace(/^0+/, '');
+    const fullPhone = countryCode + cleanedPhone;
 
     try {
         // Check if phone already registered
-        const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(cleanedPhone));
+        const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(fullPhone));
         const existingSnap = await get(phoneQuery);
         if (existingSnap.exists()) {
             errorEl.innerText = 'رقم الهاتف مسجل بالفعل';
@@ -163,8 +161,9 @@ async function signupWithPhone() {
         const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
         await set(ref(database, 'users/' + cred.user.uid), {
             name: name,
-            phone: cleanedPhone,
-            phoneDisplay: formatPhoneDisplay(phone),
+            phone: fullPhone,
+            phoneDisplay: formatPhoneDisplay(phone, countryCode),
+            countryCode: countryCode,
             email: null,
             isAdmin: false,
             joinDate: new Date().toISOString(),

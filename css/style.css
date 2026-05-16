@@ -3092,6 +3092,33 @@ img[loading="lazy"]:not([src=""]) {
     border-radius: 2px;
 }
 
+/* ===== Phone Input Row ===== */
+.phone-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.auth-select {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 16px 8px;
+    color: var(--text-primary);
+    font-size: 15px;
+    outline: none;
+    cursor: pointer;
+    min-width: 110px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+.auth-select:focus {
+    border-color: var(--accent);
+}
+.phone-input-row .auth-input {
+    flex: 1;
+    margin-bottom: 0;
+}
+
 /* ===== Communities ===== */
 .communities-list {
     padding: 0;
