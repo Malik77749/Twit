@@ -533,13 +533,33 @@ body {
 .tweet-action.like.active {
     color: var(--like-color);
 }
+.tweet-action.like.active .icon-wrap {
+    background-color: rgba(249, 24, 128, 0.15);
+}
 .tweet-action.like.active .fa-heart {
-    animation: likeAnim 0.3s ease;
+    animation: likeAnim 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 @keyframes likeAnim {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.3); }
+    0% { transform: scale(0); }
+    25% { transform: scale(1.3); }
+    50% { transform: scale(0.9); }
+    75% { transform: scale(1.1); }
     100% { transform: scale(1); }
+}
+/* Like burst particles */
+.tweet-action.like.active .icon-wrap::after {
+    content: '';
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(249, 24, 128, 0.3) 0%, transparent 70%);
+    animation: likeBurst 0.5s ease-out forwards;
+    pointer-events: none;
+}
+@keyframes likeBurst {
+    0% { transform: scale(0.5); opacity: 1; }
+    100% { transform: scale(2.5); opacity: 0; }
 }
 .tweet-action.share:hover {
     color: var(--accent);
@@ -1075,6 +1095,51 @@ body {
 /* ===== Image Error State ===== */
 img[src*="data:image/svg"] {
     object-fit: cover;
+}
+
+/* ===== Feed Animations (X style) ===== */
+#posts > div {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: fadeInUp 0.35s ease forwards;
+}
+#posts > div:nth-child(1) { animation-delay: 0s; }
+#posts > div:nth-child(2) { animation-delay: 0.05s; }
+#posts > div:nth-child(3) { animation-delay: 0.1s; }
+#posts > div:nth-child(4) { animation-delay: 0.12s; }
+#posts > div:nth-child(5) { animation-delay: 0.14s; }
+#posts > div:nth-child(n+6) { animation-delay: 0.16s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* New post slide-in */
+#posts > div.new-post {
+    animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    border-left: 3px solid var(--accent);
+}
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Post hover effect like X */
+.tweet:hover {
+    background-color: var(--bg-hover);
 }
 
 /* ===== Back Button ===== */

@@ -66,7 +66,9 @@ async function postTweet() {
         return;
     }
 
-    showLoading();
+    const postBtn = document.querySelector('.composer-actions .post-btn');
+    if (postBtn) { postBtn.disabled = true; postBtn.textContent = 'جاري النشر...'; }
+
     const postRef = push(ref(database, 'posts'));
     const postData = {
         userId: auth.currentUser.uid,
@@ -88,28 +90,43 @@ async function postTweet() {
                 postData.imageUrl = imageUrl;
             } catch {
                 alert('رابط الصورة غير صالح');
-                hideLoading();
+                if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
                 return;
             }
         } else if (videoUrl) {
             const embedUrl = getYouTubeEmbedUrl(videoUrl);
             if (!embedUrl) {
                 alert('رابط YouTube غير صالح');
-                hideLoading();
+                if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
                 return;
             }
             postData.videoUrl = embedUrl;
         }
 
         await set(postRef, postData);
+
+        // Clear composer
         document.getElementById('postContent').value = '';
         document.getElementById('postContent').style.height = 'auto';
         removePreview();
-        loadPosts();
+
+        // Prepend new post to feed with animation
+        const postsDiv = document.getElementById('posts');
+        const container = document.createElement('div');
+        container.setAttribute('data-post-id', postRef.key);
+        container.classList.add('new-post');
+        if (postsDiv.firstChild) {
+            postsDiv.insertBefore(container, postsDiv.firstChild);
+        } else {
+            postsDiv.appendChild(container);
+        }
+        await renderPost({ id: postRef.key, ...postData }, container);
+
         showToast('تم النشر');
+        if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
     } catch (error) {
         alert('خطأ: ' + error.message);
-        hideLoading();
+        if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
     }
 }
 
@@ -169,10 +186,19 @@ async function likePost(postId, event) {
 
         await update(postRef, { likes });
 
-        // Update all matching buttons
+        // Update all matching buttons with animation
         document.querySelectorAll(`[data-like-id="${postId}"]`).forEach(btn => {
             btn.className = `tweet-action like ${isLiked ? '' : 'active'}`;
             btn.innerHTML = `<span class="icon-wrap"><i class="${isLiked ? 'far' : 'fas'} fa-heart"></i></span><span>${likes}</span>`;
+            if (!isLiked) {
+                // Trigger re-animation
+                const icon = btn.querySelector('.fa-heart');
+                if (icon) {
+                    icon.style.animation = 'none';
+                    icon.offsetHeight; // force reflow
+                    icon.style.animation = '';
+                }
+            }
         });
     } catch (error) {
         alert('خطأ: ' + error.message);
@@ -361,7 +387,6 @@ async function loadPosts() {
             get(ref(database, 'retweets'))
         ]);
 
-        postsDiv.innerHTML = '';
         const allItems = [];
 
         if (postsSnapshot.exists()) {
@@ -377,23 +402,29 @@ async function loadPosts() {
 
         if (!allItems.length) {
             postsDiv.innerHTML = '<div class="empty-state"><h3>لا توجد منشورات</h3><p>كن أول من ينشر!</p></div>';
-            hideLoading();
             return;
         }
 
         allItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+        // Build all containers first, then render
+        const containers = [];
+        const fragment = document.createDocumentFragment();
         for (const item of allItems) {
             const container = document.createElement('div');
             container.setAttribute('data-post-id', item.id);
-            postsDiv.appendChild(container);
+            fragment.appendChild(container);
+            containers.push({ item, container });
+        }
+        postsDiv.innerHTML = '';
+        postsDiv.appendChild(fragment);
+
+        // Render all posts
+        for (const { item, container } of containers) {
             await renderFeedItem(item, container);
         }
-
-        hideLoading();
     } catch (error) {
         postsDiv.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';
-        hideLoading();
     }
 }
 
