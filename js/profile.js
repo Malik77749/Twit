@@ -386,9 +386,30 @@ async function loadProfileLikes(userId, container) {
     }
 }
 
+async function updateProfilePicture() {
+    const url = document.getElementById('profile-picture-url')?.value.trim();
+    if (!url) { alert('أدخل رابط الصورة'); return; }
+
+    showLoading();
+    try {
+        new URL(url);
+        await update(ref(database, 'users/' + auth.currentUser.uid), { profilePicture: url });
+        document.getElementById('profile-picture').src = url;
+        document.getElementById('sidebar-avatar').src = url;
+        document.getElementById('composer-avatar').src = url;
+        document.getElementById('profile-picture-url').value = '';
+        alert('تم التحديث');
+    } catch (error) {
+        alert('رابط غير صالح');
+    } finally {
+        hideLoading();
+    }
+}
+
 export { init, showProfile, updateProfilePicture, editProfile, saveProfile };
 
 // Expose to window for HTML onclick handlers
 if (typeof window !== 'undefined') {
     window.saveProfile = saveProfile;
+    window.updateProfilePicture = updateProfilePicture;
 }
