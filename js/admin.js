@@ -87,7 +87,11 @@ function getUserAvatar(userData) {
 }
 
 function getUserName(userData) {
-    return userData.name || userData.email || userData.phoneDisplay || userData.phone || 'مستخدم بدون اسم';
+    return userData.name || 'مستخدم بدون اسم';
+}
+
+function getUserHandle(userData) {
+    return userData.email || userData.phoneDisplay || userData.phone || '';
 }
 
 // Safe timestamp comparison — handles both ISO strings and Unix numbers
@@ -478,7 +482,7 @@ function renderUsersTable() {
                         <img src="${getUserAvatar(u)}" alt="">
                         <div class="table-user-info">
                             <div class="table-user-name">${escapeHtml(getUserName(u))} ${u.verified ? '<i class="fas fa-check-circle verified-badge"></i>' : ''}</div>
-                            <div class="table-user-handle">${u.email || u.phoneDisplay || u.phone || ''}</div>
+                            <div class="table-user-handle">${escapeHtml(getUserHandle(u))}</div>
                         </div>
                     </div>
                 </td>
@@ -740,7 +744,7 @@ function renderPostsTable() {
                         <img src="${getUserAvatar(user || {})}" alt="">
                         <div class="table-user-info">
                             <div class="table-user-name">${escapeHtml(getUserName(user || {}))} ${(user || {}).verified ? '<i class="fas fa-check-circle verified-badge"></i>' : ''}</div>
-                            <div class="table-user-handle">${user?.email || ''}</div>
+                            <div class="table-user-handle">${escapeHtml(getUserHandle(user || {}))}</div>
                         </div>
                     </div>
                 </td>
