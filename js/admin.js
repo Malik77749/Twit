@@ -86,6 +86,29 @@ function getUserAvatar(userData) {
     return userData.profilePicture || DEFAULT_AVATAR;
 }
 
+function getUserName(userData) {
+    return userData.name || userData.email || userData.phoneDisplay || userData.phone || 'مستخدم بدون اسم';
+}
+
+// Safe timestamp comparison — handles both ISO strings and Unix numbers
+function isToday(ts) {
+    if (!ts) return false;
+    const today = new Date().toISOString().split('T')[0];
+    try {
+        const d = typeof ts === 'number' ? new Date(ts) : new Date(ts);
+        if (isNaN(d.getTime())) return false;
+        return d.toISOString().startsWith(today);
+    } catch { return false; }
+}
+
+function safeDate(ts) {
+    if (!ts) return null;
+    try {
+        const d = typeof ts === 'number' ? new Date(ts) : new Date(ts);
+        return isNaN(d.getTime()) ? null : d;
+    } catch { return null; }
+}
+
 // ===== Auth =====
 document.getElementById('admin-login-btn').addEventListener('click', async () => {
     const email = document.getElementById('admin-email').value.trim();
@@ -236,8 +259,7 @@ async function loadDashboard() {
         document.getElementById('stat-total-users').textContent = allUsers.length || '—';
         document.getElementById('stat-total-posts').textContent = allPosts.length || '—';
 
-        const today = new Date().toISOString().split('T')[0];
-        const todayPosts = allPosts.filter(p => p.timestamp && p.timestamp.startsWith(today)).length;
+        const todayPosts = allPosts.filter(p => isToday(p.timestamp)).length;
         document.getElementById('stat-active-users').textContent = todayPosts > 0 ? Math.min(todayPosts * 3, allUsers.length) : '—';
 
         const bannedCount = allUsers.filter(u => u.banStatus === 'banned' || u.banStatus === 'suspended').length;
@@ -269,7 +291,11 @@ function renderUsersChart() {
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
         labels.push(d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' }));
-        const count = allUsers.filter(u => u.joinDate && u.joinDate.startsWith(dateStr)).length;
+        const count = allUsers.filter(u => {
+            if (!u.joinDate) return false;
+            const d = safeDate(u.joinDate);
+            return d && d.toISOString().startsWith(dateStr);
+        }).length;
         data.push(count);
     }
 
@@ -313,7 +339,11 @@ function renderPostsChart() {
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
         labels.push(d.toLocaleDateString('ar-SA', { weekday: 'short' }));
-        const count = allPosts.filter(p => p.timestamp && p.timestamp.startsWith(dateStr)).length;
+        const count = allPosts.filter(p => {
+            if (!p.timestamp) return false;
+            const d = safeDate(p.timestamp);
+            return d && d.toISOString().startsWith(dateStr);
+        }).length;
         data.push(count);
     }
 
@@ -362,7 +392,7 @@ function renderActivityFeed() {
         const user = allUsers.find(u => u.id === post.userId);
         activities.push({
             type: 'post',
-            text: `${user?.name || 'مستخدم'} نشر: ${escapeHtml((post.content || '').substring(0, 50))}`,
+            text: `${getUserName(user || {})} نشر: ${escapeHtml((post.content || '').substring(0, 50))}`,
             time: post.timestamp,
             icon: 'post'
         });
@@ -447,13 +477,13 @@ function renderUsersTable() {
                     <div class="table-user">
                         <img src="${getUserAvatar(u)}" alt="">
                         <div class="table-user-info">
-                            <div class="table-user-name">${escapeHtml(u.name)} ${u.verified ? '<i class="fas fa-check-circle verified-badge"></i>' : ''}</div>
+                            <div class="table-user-name">${escapeHtml(getUserName(u))} ${u.verified ? '<i class="fas fa-check-circle verified-badge"></i>' : ''}</div>
                             <div class="table-user-handle">${u.email || u.phoneDisplay || u.phone || ''}</div>
                         </div>
                     </div>
                 </td>
                 <td>${formatDate(u.joinDate)}</td>
-                <td>${u.postCount || 0}</td>
+                <td>${allPosts.filter(p => p.userId === u.id).length}</td>
                 <td><span class="status-badge ${status}"><span class="dot"></span>${statusLabel}</span></td>
                 <td>
                     <button class="action-btn outline small" onclick="event.stopPropagation();openUserModal('${u.id}')"><i class="fas fa-eye"></i></button>
@@ -495,7 +525,7 @@ window.openUserModal = async (uid) => {
         <div class="user-detail-header">
             <img class="user-detail-avatar" src="${getUserAvatar(user)}" alt="">
             <div>
-                <div class="user-detail-name">${escapeHtml(user.name)} ${user.verified ? '<i class="fas fa-check-circle verified-badge"></i>' : ''}</div>
+                <div class="user-detail-name">${escapeHtml(getUserName(user))} ${user.verified ? '<i class="fas fa-check-circle verified-badge"></i>' : ''}</div>
                 <div class="user-detail-handle">${user.email || user.phoneDisplay || ''}</div>
                 <span class="status-badge ${status}"><span class="dot"></span>${statusLabel}</span>
             </div>
@@ -547,7 +577,7 @@ window.verifyUser = async (uid) => {
         await update(ref(database, `users/${uid}`), { verified: true });
         const user = allUsers.find(u => u.id === uid);
         if (user) user.verified = true;
-        await logAudit('verify', uid, user?.name, 'توثيق الحساب');
+        await logAudit('verify', uid, getUserName(user || {}), 'توثيق الحساب');
         showToast('تم توثيق الحساب', 'success');
         openUserModal(uid);
         renderUsersTable();
@@ -561,7 +591,7 @@ window.unverifyUser = async (uid) => {
         await update(ref(database, `users/${uid}`), { verified: false });
         const user = allUsers.find(u => u.id === uid);
         if (user) user.verified = false;
-        await logAudit('unverify', uid, user?.name, 'إلغاء التوثيق');
+        await logAudit('unverify', uid, getUserName(user || {}), 'إلغاء التوثيق');
         showToast('تم إلغاء التوثيق', 'success');
         openUserModal(uid);
         renderUsersTable();
@@ -572,11 +602,11 @@ window.unverifyUser = async (uid) => {
 
 window.suspendUser = async (uid) => {
     const user = allUsers.find(u => u.id === uid);
-    showConfirm('إيقاف الحساب', `هل تريد إيقاف حساب "${user?.name}" مؤقتاً؟`, async () => {
+    showConfirm('إيقاف الحساب', `هل تريد إيقاف حساب "${getUserName(user)}" مؤقتاً؟`, async () => {
         try {
             await set(ref(database, `bans/${uid}`), { status: 'suspended', reason: 'إيقاف مؤقت من الأدمن', timestamp: new Date().toISOString() });
             if (user) user.banStatus = 'suspended';
-            await logAudit('suspend', uid, user?.name, 'إيقاف الحساب مؤقتاً');
+            await logAudit('suspend', uid, getUserName(user || {}), 'إيقاف الحساب مؤقتاً');
             showToast('تم إيقاف الحساب', 'success');
             openUserModal(uid);
             renderUsersTable();
@@ -591,7 +621,7 @@ window.unsuspendUser = async (uid) => {
         await remove(ref(database, `bans/${uid}`));
         const user = allUsers.find(u => u.id === uid);
         if (user) user.banStatus = null;
-        await logAudit('unsuspend', uid, user?.name, 'إلغاء الإيقاف');
+        await logAudit('unsuspend', uid, getUserName(user || {}), 'إلغاء الإيقاف');
         showToast('تم إلغاء الإيقاف', 'success');
         openUserModal(uid);
         renderUsersTable();
@@ -602,11 +632,11 @@ window.unsuspendUser = async (uid) => {
 
 window.banUser = async (uid) => {
     const user = allUsers.find(u => u.id === uid);
-    showConfirm('حظر الحساب', `هل تريد حظر "${user?.name}" نهائياً؟ هذا الإجراء لا يمكن التراجع عنه بسهولة.`, async () => {
+    showConfirm('حظر الحساب', `هل تريد حظر "${getUserName(user)}" نهائياً؟ هذا الإجراء لا يمكن التراجع عنه بسهولة.`, async () => {
         try {
             await set(ref(database, `bans/${uid}`), { status: 'banned', reason: 'حظر دائم من الأدمن', timestamp: new Date().toISOString() });
             if (user) user.banStatus = 'banned';
-            await logAudit('ban', uid, user?.name, 'حظر الحساب');
+            await logAudit('ban', uid, getUserName(user || {}), 'حظر الحساب');
             showToast('تم حظر الحساب', 'success');
             openUserModal(uid);
             renderUsersTable();
@@ -621,7 +651,7 @@ window.unbanUser = async (uid) => {
         await remove(ref(database, `bans/${uid}`));
         const user = allUsers.find(u => u.id === uid);
         if (user) user.banStatus = null;
-        await logAudit('unban', uid, user?.name, 'إلغاء الحظر');
+        await logAudit('unban', uid, getUserName(user || {}), 'إلغاء الحظر');
         showToast('تم إلغاء الحظر', 'success');
         openUserModal(uid);
         renderUsersTable();
@@ -632,7 +662,7 @@ window.unbanUser = async (uid) => {
 
 window.deleteUser = async (uid) => {
     const user = allUsers.find(u => u.id === uid);
-    showConfirm('حذف الحساب', `⚠️ حذف "${user?.name}" — سيتم حذف جميع بياناته نهائياً. هذا الإجراء لا رجعة فيه!`, async () => {
+    showConfirm('حذف الحساب', `⚠️ حذف "${getUserName(user)}" — سيتم حذف جميع بياناته نهائياً. هذا الإجراء لا رجعة فيه!`, async () => {
         try {
             // Delete user data
             await remove(ref(database, `users/${uid}`));
@@ -645,7 +675,7 @@ window.deleteUser = async (uid) => {
             // Remove from local state
             allUsers = allUsers.filter(u => u.id !== uid);
             allPosts = allPosts.filter(p => p.userId !== uid);
-            await logAudit('delete_user', uid, user?.name, 'حذف الحساب وجميع بياناته');
+            await logAudit('delete_user', uid, getUserName(user || {}), 'حذف الحساب وجميع بياناته');
             showToast('تم حذف الحساب', 'success');
             closeUserModal();
             renderUsersTable();
@@ -657,7 +687,7 @@ window.deleteUser = async (uid) => {
 
 window.sendNotification = async (uid) => {
     const user = allUsers.find(u => u.id === uid);
-    const message = prompt(`إرسال إشعار لـ ${user?.name || 'المستخدم'}:`);
+    const message = prompt(`إرسال إشعار لـ ${getUserName(user)}:`);
     if (!message) return;
     try {
         const notifRef = push(ref(database, `notifications/${uid}`));
@@ -668,7 +698,7 @@ window.sendNotification = async (uid) => {
             read: false,
             timestamp: new Date().toISOString()
         });
-        await logAudit('send_notification', uid, user?.name, message);
+        await logAudit('send_notification', uid, getUserName(user || {}), message);
         showToast('تم إرسال الإشعار', 'success');
     } catch (e) {
         showToast('خطأ: ' + e.message, 'error');
@@ -709,7 +739,7 @@ function renderPostsTable() {
                     <div class="table-user">
                         <img src="${getUserAvatar(user || {})}" alt="">
                         <div class="table-user-info">
-                            <div class="table-user-name">${escapeHtml(user?.name || 'محذوف')}</div>
+                            <div class="table-user-name">${escapeHtml(getUserName(user || {}))} ${(user || {}).verified ? '<i class="fas fa-check-circle verified-badge"></i>' : ''}</div>
                             <div class="table-user-handle">${user?.email || ''}</div>
                         </div>
                     </div>
@@ -746,7 +776,7 @@ window.openPostModal = (postId) => {
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
             <img src="${getUserAvatar(user || {})}" style="width:48px;height:48px;border-radius:50%;" alt="">
             <div>
-                <div style="font-weight:800;font-size:17px;">${escapeHtml(user?.name || 'محذوف')}</div>
+                <div style="font-weight:800;font-size:17px;">${escapeHtml(getUserName(user || {}))}</div>
                 <div style="color:var(--text-secondary);font-size:15px;">${formatTime(post.timestamp)}</div>
             </div>
         </div>
@@ -846,7 +876,7 @@ function renderReportsList() {
                 <span style="color:var(--text-secondary);font-size:13px;">${timeAgo(r.timestamp)}</span>
             </div>
             <div class="report-reason">
-                <i class="fas fa-user"></i> ${escapeHtml(reporter?.name || 'مستخدم')} أبلغ عن:
+                <i class="fas fa-user"></i> ${escapeHtml(getUserName(reporter || {}))} أبلغ عن:
             </div>
             ${post ? `<div class="report-content">"${escapeHtml((post.content || '').substring(0, 120))}"</div>` : '<div class="report-content" style="color:var(--text-secondary);">المنشور محذوف</div>'}
             ${r.reason ? `<div style="color:var(--text-secondary);font-size:14px;margin-top:4px;">السبب: ${escapeHtml(r.reason)}</div>` : ''}
@@ -909,7 +939,7 @@ window.warnReportedUser = async (reportId, uid) => {
             timestamp: new Date().toISOString()
         });
         await update(ref(database, `reports/${reportId}`), { status: 'warned' });
-        await logAudit('warn_user', uid, user?.name, 'تحذير بسبب بلاغ');
+        await logAudit('warn_user', uid, getUserName(user || {}), 'تحذير بسبب بلاغ');
         showToast('تم إرسال تحذير', 'success');
         renderReportsList();
     } catch (e) {
@@ -919,12 +949,12 @@ window.warnReportedUser = async (reportId, uid) => {
 
 window.banReportedUser = async (reportId, uid) => {
     const user = allUsers.find(u => u.id === uid);
-    showConfirm('حظر المستخدم', `هل تريد حظر "${user?.name}"؟`, async () => {
+    showConfirm('حظر المستخدم', `هل تريد حظر "${getUserName(user)}"؟`, async () => {
         try {
             await set(ref(database, `bans/${uid}`), { status: 'banned', reason: 'حظر بسبب بلاغ', timestamp: new Date().toISOString() });
             if (user) user.banStatus = 'banned';
             await update(ref(database, `reports/${reportId}`), { status: 'resolved' });
-            await logAudit('ban_from_report', uid, user?.name, 'حظر بسبب بلاغ');
+            await logAudit('ban_from_report', uid, getUserName(user || {}), 'حظر بسبب بلاغ');
             showToast('تم حظر المستخدم', 'success');
             renderReportsList();
         } catch (e) {
@@ -1155,9 +1185,8 @@ document.getElementById('confirm-action-btn').addEventListener('click', async ()
 
 // ===== Quick Stats =====
 function updateQuickStats() {
-    const today = new Date().toISOString().split('T')[0];
-    const todayPosts = allPosts.filter(p => p.timestamp && p.timestamp.startsWith(today)).length;
-    const newUsers = allUsers.filter(u => u.joinDate && u.joinDate.startsWith(today)).length;
+    const todayPosts = allPosts.filter(p => isToday(p.timestamp)).length;
+    const newUsers = allUsers.filter(u => isToday(u.joinDate)).length;
     const totalLikes = allPosts.reduce((sum, p) => sum + (p.likes || 0), 0);
 
     document.getElementById('quick-today-posts').textContent = todayPosts;
@@ -1178,7 +1207,7 @@ function renderRecentUsers() {
         <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="openUserModal('${u.id}')">
             <img src="${getUserAvatar(u)}" style="width:40px;height:40px;border-radius:50%;" alt="">
             <div style="flex:1;min-width:0;">
-                <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(u.name)}</div>
+                <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(getUserName(u))}</div>
                 <div style="color:var(--text-secondary);font-size:13px;">${timeAgo(u.joinDate)}</div>
             </div>
         </div>
