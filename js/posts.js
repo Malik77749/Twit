@@ -184,12 +184,6 @@ async function postTweet() {
             await pollsModule.createPoll(postRef.key, question, options, duration);
         } else {
             // Handle reply setting
-            const replySetting = ['everyone', 'following', 'mentioned'][currentReplySetting || 0];
-            if (replySetting !== 'everyone') {
-                postData.replySetting = replySetting;
-            }
-
-            // Handle reply setting
             const replySettingIdx = window.currentReplySetting || 0;
             const replySetting = ['everyone', 'following', 'mentioned'][replySettingIdx];
             if (replySetting !== 'everyone') {
