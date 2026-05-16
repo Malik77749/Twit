@@ -14,6 +14,9 @@ import * as notifications from './notifications.js';
 import * as profile from './profile.js';
 import * as pagination from './pagination.js';
 import * as rateLimiter from './rate-limiter.js';
+import * as pushNotif from './push-notifications.js';
+import * as dm from './dm.js';
+import * as blockMute from './block-mute.js';
 import { getUserData } from './firebase-helpers.js';
 
 // Initialize Firebase
@@ -36,6 +39,8 @@ try {
     comments.init(authInstance, database);
     notifications.init(authInstance, database);
     profile.init(authInstance, database);
+    dm.init(authInstance, database);
+    blockMute.init(authInstance, database);
     console.log('Modules initialized OK');
 } catch (error) {
     console.error('Module initialization error:', error);
@@ -100,6 +105,7 @@ window.showMessages = function() {
     hideAllViews();
     setActiveNav('messages');
     document.getElementById('messages-view').style.display = 'block';
+    loadConversationsList();
 };
 
 window.showBookmarks = function() {
@@ -383,6 +389,154 @@ window.saveProfile = profile.saveProfile;
 
 window.focusComposer = focusComposer;
 
+// ===== DM Functions =====
+
+function loadConversationsList() {
+    const container = document.getElementById('dm-conversations-list');
+    if (!container) return;
+    container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+    dm.loadConversations((conversations) => {
+        dm.renderConversationsList(conversations, container);
+    });
+}
+
+window.openDMConversation = async function(otherUserId) {
+    const conversationId = await dm.openConversation(otherUserId);
+    if (!conversationId) return;
+
+    // Show chat view
+    document.getElementById('dm-conversations-view').style.display = 'none';
+    document.getElementById('dm-chat-view').style.display = 'flex';
+
+    // Load other user info
+    const otherUser = await getUserData(database, otherUserId);
+    document.getElementById('dm-chat-name').textContent = otherUser.name || 'مستخدم';
+    document.getElementById('dm-chat-avatar').src = otherUser.profilePicture || DEFAULT_AVATAR;
+
+    // Load messages
+    const messagesContainer = document.getElementById('dm-messages-list');
+    dm.loadMessages(conversationId, (messages) => {
+        dm.renderMessages(messages, authInstance.currentUser.uid, messagesContainer);
+    });
+
+    // Setup send button
+    const sendBtn = document.getElementById('dm-send-btn');
+    const input = document.getElementById('dm-input');
+
+    sendBtn.onclick = async () => {
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        await dm.sendMessage(conversationId, text);
+    };
+
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendBtn.click();
+        }
+    };
+};
+
+window.closeDMChat = function() {
+    document.getElementById('dm-chat-view').style.display = 'none';
+    document.getElementById('dm-conversations-view').style.display = 'block';
+    dm.cleanup();
+    loadConversationsList();
+};
+
+window.openDMWithUser = async function(userId) {
+    showMessages();
+    await openDMConversation(userId);
+};
+
+function updateDMBadge() {
+    if (!authInstance.currentUser) return;
+    dm.getUnreadCount((count) => {
+        const badge = document.getElementById('dm-badge');
+        if (badge) {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'inline' : 'none';
+        }
+    });
+}
+
+// ===== Block/Mute Functions =====
+
+window.blockUserAction = async function(userId) {
+    if (!confirm('حظر هذا المستخدم؟ لن ترى منشوراته ولن يرى منشوراتك.')) return;
+    await blockMute.blockUser(userId);
+    // Refresh feed
+    posts.loadPosts();
+};
+
+window.unblockUserAction = async function(userId) => {
+    await blockMute.unblockUser(userId);
+};
+
+window.muteUserAction = async function(userId) {
+    await blockMute.muteUser(userId);
+};
+
+window.unmuteUserAction = async function(userId) => {
+    await blockMute.unmuteUser(userId);
+};
+
+window.showBlockedUsers = async function() {
+    const blocked = await blockMute.getBlockedUsers();
+    const container = document.getElementById('settings-content');
+    if (!container) return;
+
+    if (!blocked.length) {
+        container.innerHTML = '<div class="empty-state"><p>لا يوجد مستخدمون محظورون</p></div>';
+        return;
+    }
+
+    let html = '<div style="padding:16px;"><h3 style="margin-bottom:16px;">المستخدمون المحظورون</h3>';
+    for (const uid of blocked) {
+        const userData = await getUserData(database, uid);
+        html += `
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-color);">
+                <img src="${userData.profilePicture || DEFAULT_AVATAR}" style="width:40px;height:40px;border-radius:50%;" alt="">
+                <div style="flex:1;">
+                    <div style="font-weight:700;">${escapeHtml(userData.name || 'مستخدم')}</div>
+                </div>
+                <button class="follow-btn" onclick="unblockUserAction('${uid}')" style="font-size:13px;padding:4px 12px;">إلغاء الحظر</button>
+            </div>
+        `;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+};
+
+window.showMutedUsers = async function() {
+    const muted = await blockMute.getMutedUsers();
+    const container = document.getElementById('settings-content');
+    if (!container) return;
+
+    if (!muted.length) {
+        container.innerHTML = '<div class="empty-state"><p>لا يوجد مستخدمون مكتومون</p></div>';
+        return;
+    }
+
+    let html = '<div style="padding:16px;"><h3 style="margin-bottom:16px;">المستخدمون المكتومون</h3>';
+    for (const uid of muted) {
+        const userData = await getUserData(database, uid);
+        html += `
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-color);">
+                <img src="${userData.profilePicture || DEFAULT_AVATAR}" style="width:40px;height:40px;border-radius:50%;" alt="">
+                <div style="flex:1;">
+                    <div style="font-weight:700;">${escapeHtml(userData.name || 'مستخدم')}</div>
+                </div>
+                <button class="follow-btn following" onclick="unmuteUserAction('${uid}')" style="font-size:13px;padding:4px 12px;">إلغاء الكتم</button>
+            </div>
+        `;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+};
+
 // ===== Drawer =====
 
 window.openDrawer = function() {
@@ -441,11 +595,15 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
     const bookmarkBtn = document.getElementById('dropdown-bookmark');
     const reportBtn = document.getElementById('dropdown-report');
     const followBtn = document.getElementById('dropdown-follow');
+    const muteBtn = document.getElementById('dropdown-mute');
+    const blockBtn = document.getElementById('dropdown-block');
 
     deleteBtn.style.display = isOwnPost ? 'flex' : 'none';
     pinBtn.style.display = isOwnPost ? 'flex' : 'none';
     reportBtn.style.display = isOwnPost ? 'none' : 'flex';
     followBtn.style.display = isOwnPost ? 'none' : 'flex';
+    muteBtn.style.display = isOwnPost ? 'none' : 'flex';
+    blockBtn.style.display = isOwnPost ? 'none' : 'flex';
 
     // Position dropdown
     const rect = event.currentTarget.getBoundingClientRect();
@@ -465,6 +623,8 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
     bookmarkBtn.onclick = () => { dropdown.style.display = 'none'; posts.toggleBookmark(postId); };
     reportBtn.onclick = () => { dropdown.style.display = 'none'; posts.reportPost(postId, userId); };
     followBtn.onclick = () => { dropdown.style.display = 'none'; posts.followUser(userId, { preventDefault:()=>{}, stopPropagation:()=>{} }); };
+    muteBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.muteUser(userId); };
+    blockBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.blockUser(userId).then(() => posts.loadPosts()); };
 };
 
 // Close dropdown on outside click
@@ -713,6 +873,14 @@ async function checkUserRole(user) {
         // Initialize rate limiter for this user
         rateLimiter.init(user.uid);
 
+        // Initialize push notifications
+        pushNotif.init(app, database, (payload) => {
+            // Refresh notifications on foreground message
+            notifications.loadNotifications();
+            updateDMBadge();
+        });
+        pushNotif.requestPermission(user.uid);
+
         hideLoading();
         showApp();
         updateSidebar(userData);
@@ -720,6 +888,7 @@ async function checkUserRole(user) {
         posts.loadPosts();
         notifications.loadNotifications();
         loadWhoToFollow();
+        updateDMBadge();
     } catch (error) {
         showAuth();
     }

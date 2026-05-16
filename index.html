@@ -92,6 +92,12 @@
                 <button class="drawer-item" onclick="closeDrawer()">
                     <i class="fas fa-circle-check"></i><span>الاشتراك المميز</span>
                 </button>
+                <button class="drawer-item" onclick="showBlockedUsers(); closeDrawer();">
+                    <i class="fas fa-ban"></i><span>المحظورون</span>
+                </button>
+                <button class="drawer-item" onclick="showMutedUsers(); closeDrawer();">
+                    <i class="fas fa-volume-xmark"></i><span>المكتومون</span>
+                </button>
                 <div class="drawer-divider"></div>
                 <button class="drawer-item" onclick="logout()">
                     <i class="fas fa-arrow-right-from-bracket"></i><span>الخروج</span>
@@ -117,6 +123,7 @@
                 </button>
                 <button class="nav-item" onclick="showMessages()">
                     <i class="far fa-envelope"></i><span>الرسائل</span>
+                    <span id="dm-badge-desktop" class="notif-badge" style="display:none;"></span>
                 </button>
                 <button class="nav-item" onclick="showProfile()">
                     <i class="fas fa-user"></i><span>الملف الشخصي</span>
@@ -244,7 +251,7 @@
                 </div>
             </div>
 
-            <!-- ===== MESSAGES VIEW (Mobile) ===== -->
+            <!-- ===== MESSAGES VIEW ===== -->
             <div id="messages-view" style="display:none;">
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
@@ -252,10 +259,24 @@
                         <h2>الرسائل</h2>
                     </div>
                 </div>
-                <div class="empty-state">
-                    <h3>الرسائل</h3>
-                    <p>مرحباً بك في الرسائل الخاصة</p>
-                    <p style="color:var(--text-secondary);font-size:13px;margin-top:8px;">هذه الميزة قيد التطوير</p>
+
+                <!-- Conversations List -->
+                <div id="dm-conversations-view">
+                    <div id="dm-conversations-list"></div>
+                </div>
+
+                <!-- Chat View -->
+                <div id="dm-chat-view" class="dm-chat-view" style="display:none;">
+                    <div class="dm-chat-header">
+                        <button class="back-btn" onclick="closeDMChat()"><i class="fas fa-arrow-right"></i></button>
+                        <img id="dm-chat-avatar" src="" alt="" class="dm-chat-header-avatar">
+                        <span id="dm-chat-name" class="dm-chat-header-name"></span>
+                    </div>
+                    <div id="dm-messages-list" class="dm-messages-list"></div>
+                    <div class="dm-input-bar">
+                        <input type="text" id="dm-input" placeholder="اكتب رسالة..." autocomplete="off">
+                        <button id="dm-send-btn" class="dm-send-btn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
                 </div>
             </div>
 
@@ -415,6 +436,13 @@
         <button class="dropdown-item" id="dropdown-follow">
             <i class="fas fa-user-plus"></i><span>متابعة</span>
         </button>
+        <div style="height:1px;background:var(--border-color);margin:4px 0;"></div>
+        <button class="dropdown-item" id="dropdown-mute">
+            <i class="fas fa-volume-xmark"></i><span>كتم</span>
+        </button>
+        <button class="dropdown-item" id="dropdown-block" style="color:var(--danger);">
+            <i class="fas fa-ban"></i><span>حظر</span>
+        </button>
     </div>
 
     <!-- Mobile Bottom Nav (X style — 4 icons) -->
@@ -431,6 +459,7 @@
         </button>
         <button class="mobile-nav-item" data-nav="messages" onclick="navigateTo('messages')">
             <i class="far fa-envelope"></i>
+            <span class="mobile-notif-badge" id="dm-badge" style="display:none;"></span>
         </button>
     </nav>
 

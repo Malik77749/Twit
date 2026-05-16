@@ -7,6 +7,7 @@ import { getUserName, getUserData, addNotification } from './firebase-helpers.js
 import { loadComments } from './comments.js';
 import * as rateLimiter from './rate-limiter.js';
 import * as pagination from './pagination.js';
+import * as blockMute from './block-mute.js';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -516,7 +517,10 @@ async function loadPosts() {
         pagination.resetPagination();
 
         // Load first page only
-        const posts = await pagination.loadFirstPage(database);
+        let posts = await pagination.loadFirstPage(database);
+
+        // Filter blocked/muted users
+        posts = await blockMute.filterPosts(posts);
 
         if (!posts.length) {
             postsDiv.innerHTML = '<div class="empty-state"><h3>لا توجد منشورات</h3><p>كن أول من ينشر!</p></div>';

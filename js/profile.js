@@ -62,7 +62,11 @@ async function showProfile(userId) {
         } else {
             const followSnap = await get(ref(database, `followers/${userId}/${auth.currentUser.uid}`));
             const isFollowing = followSnap.exists();
-            actionsDiv.innerHTML = `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${userId}" onclick="followUser('${userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>`;
+            actionsDiv.innerHTML = `
+                <button class="follow-btn" onclick="openDMWithUser('${userId}')" style="margin-right:8px;"><i class="far fa-envelope"></i></button>
+                <button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${userId}" onclick="followUser('${userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>
+                <button class="follow-btn" onclick="openPostMenu(null, '${userId}', false, event)" style="padding:6px 10px;"><i class="fas fa-ellipsis"></i></button>
+            `;
         }
 
         // Profile tabs — make them functional
