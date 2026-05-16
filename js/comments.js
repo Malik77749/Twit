@@ -1,12 +1,12 @@
-// Comments Module
-import { ref, push, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+// Comments Module — Upgraded with Rate Limiting + Denormalization
+import { ref, push, set, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { escapeHtml } from './utils.js';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
+import * as rateLimiter from './rate-limiter.js';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
 let auth, database;
-const commentCooldowns = new Map();
 const commentListeners = new Map();
 
 function init(authInstance, databaseInstance) {
@@ -18,37 +18,63 @@ async function addComment(postId, parentCommentId, event) {
     event?.preventDefault();
     event?.stopPropagation();
 
-    const input = document.getElementById(`comment-input-${postId}${parentCommentId ? '-' + parentCommentId : ''}`);
+    const inputId = `comment-input-${postId}${parentCommentId ? '-' + parentCommentId : ''}`;
+    const input = document.getElementById(inputId);
     if (!input) return;
 
     const text = input.value.trim();
     if (!text) return;
 
-    const cooldownKey = `${postId}-${parentCommentId || 'root'}-${auth.currentUser.uid}`;
-    const now = Date.now();
-    if (commentCooldowns.has(cooldownKey) && now - commentCooldowns.get(cooldownKey) < 5000) {
+    // Character limit
+    if (text.length > 500) {
+        if (window.showToast) window.showToast('الحد الأقصى 500 حرف');
+        return;
+    }
+
+    // Rate limit check
+    const userId = auth.currentUser.uid;
+    const limitCheck = rateLimiter.checkLimit(userId, 'comment');
+    if (!limitCheck.allowed) {
+        rateLimiter.showRateLimitToast(limitCheck.reason);
+        rateLimiter.disableWithCooldown(input.parentElement?.querySelector('button'), limitCheck.waitMs);
         return;
     }
 
     try {
+        // Denormalize: store user data with comment
+        const userData = await getUserData(database, userId);
+
         await set(push(ref(database, 'comments/' + postId)), {
-            userId: auth.currentUser.uid,
+            userId: userId,
+            userName: userData.name || 'مستخدم',
+            userAvatar: userData.profilePicture || DEFAULT_AVATAR,
             content: escapeHtml(text),
             timestamp: new Date().toISOString(),
             parentCommentId: parentCommentId
         });
+
         input.value = '';
 
-        const postSnapshot = await get(ref(database, 'posts/' + postId));
-        if (postSnapshot.exists() && postSnapshot.val().userId !== auth.currentUser.uid) {
-            const name = await getUserName(database, auth.currentUser.uid);
-            await addNotification(database, postSnapshot.val().userId, `رد ${name} على منشورك`, postId);
+        // Record rate limit
+        rateLimiter.recordAction(userId, 'comment');
+
+        // Update comment count on post
+        const postRef = ref(database, `posts/${postId}`);
+        const postSnap = await get(postRef);
+        if (postSnap.exists()) {
+            const currentCount = postSnap.val().commentCount || 0;
+            await update(postRef, { commentCount: currentCount + 1 });
+
+            // Send notification
+            if (postSnap.val().userId !== userId) {
+                const name = userData.name || await getUserName(database, userId);
+                await addNotification(database, postSnap.val().userId, `رد ${name} على منشورك`, postId);
+            }
         }
 
-        commentCooldowns.set(cooldownKey, now);
         loadComments(postId);
     } catch (error) {
-        alert('خطأ: ' + error.message);
+        if (window.showToast) window.showToast('خطأ: ' + error.message);
     }
 }
 
@@ -56,6 +82,7 @@ function loadComments(postId) {
     const commentSection = document.getElementById(`comments-${postId}`);
     if (!commentSection) return;
 
+    // Cleanup old listener
     if (commentListeners.has(postId)) {
         commentListeners.get(postId)();
     }
@@ -71,7 +98,7 @@ function loadComments(postId) {
         if (!snapshot.exists()) {
             commentSection.innerHTML = `
                 <div class="comment-input-row">
-                    <img src="DEFAULT_AVATAR" alt="">
+                    <img src="${DEFAULT_AVATAR}" alt="">
                     <input type="text" id="comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
                 </div>
             `;
@@ -87,15 +114,15 @@ function loadComments(postId) {
 
         let commentsHtml = `
             <div class="comment-input-row">
-                <img src="DEFAULT_AVATAR" alt="">
+                <img src="${DEFAULT_AVATAR}" alt="">
                 <input type="text" id="comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
             </div>
         `;
 
         for (const comment of topLevel) {
-            const userData = await getUserData(database, comment.userId);
-            const name = userData.name || 'مستخدم';
-            const avatar = userData.profilePicture || DEFAULT_AVATAR;
+            // Use denormalized data if available
+            const name = comment.userName || 'مستخدم';
+            const avatar = comment.userAvatar || DEFAULT_AVATAR;
 
             commentsHtml += `
                 <div class="comment">
@@ -113,13 +140,15 @@ function loadComments(postId) {
             // Replies
             const replies = comments.filter(c => c.parentCommentId === comment.id).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             for (const reply of replies) {
-                const replyUser = await getUserData(database, reply.userId);
+                const replyName = reply.userName || 'مستخدم';
+                const replyAvatar = reply.userAvatar || DEFAULT_AVATAR;
+
                 commentsHtml += `
                     <div class="comment reply">
-                        <img src="${replyUser.profilePicture || DEFAULT_AVATAR}" alt="">
+                        <img src="${replyAvatar}" alt="">
                         <div class="comment-body">
                             <div class="comment-meta">
-                                <span class="name">${escapeHtml(replyUser.name || 'مستخدم')}</span>
+                                <span class="name">${escapeHtml(replyName)}</span>
                                 <span class="time">${formatCommentTime(reply.timestamp)}</span>
                             </div>
                             <div class="comment-text">${escapeHtml(reply.content)}</div>

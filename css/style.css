@@ -1872,3 +1872,62 @@ img[src*="data:image/svg"] {
 .view-enter {
     animation: slideInRight 0.2s ease;
 }
+
+/* ===== Infinite Scroll — Load More Indicator ===== */
+.load-more-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    color: var(--text-secondary);
+}
+.end-of-feed {
+    color: var(--text-secondary);
+    font-size: 14px;
+    text-align: center;
+    padding: 8px 0;
+}
+
+/* ===== Character Counter ===== */
+.composer-counter {
+    color: var(--text-secondary);
+    font-size: 13px;
+    text-align: left;
+    margin-top: 4px;
+}
+.composer-counter.warning {
+    color: #ffa500;
+}
+.composer-counter.danger {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+/* ===== Edited Badge ===== */
+.edited-badge {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* ===== Rate Limit Toast ===== */
+.toast.rate-limit {
+    background-color: var(--danger);
+}
+
+/* ===== Lazy Loading Images ===== */
+img[loading="lazy"] {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+img[loading="lazy"].loaded,
+img[loading="lazy"]:not([src=""]) {
+    opacity: 1;
+}
+
+/* ===== Composer Submit Disabled State ===== */
+.composer-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--bg-secondary);
+}

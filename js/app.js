@@ -1,4 +1,4 @@
-// Main Application Entry Point
+// Main Application Entry Point — Upgraded
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref, get, update, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
@@ -12,6 +12,8 @@ import * as posts from './posts.js';
 import * as comments from './comments.js';
 import * as notifications from './notifications.js';
 import * as profile from './profile.js';
+import * as pagination from './pagination.js';
+import * as rateLimiter from './rate-limiter.js';
 import { getUserData } from './firebase-helpers.js';
 
 // Initialize Firebase
@@ -83,6 +85,7 @@ window.showHome = function() {
     hideAllViews();
     setActiveNav('home');
     showView('home');
+    pagination.resetPagination();
     posts.loadPosts();
 };
 
@@ -106,7 +109,6 @@ window.showBookmarks = function() {
 };
 
 window.openSearch = function() {
-    // Desktop: could open a modal or navigate
     if (window.innerWidth <= 700) {
         navigateTo('search');
     }
@@ -168,8 +170,8 @@ async function performSearch(queryStr) {
             });
         }
 
-        // Search posts
-        const postsSnap = await get(ref(database, 'posts'));
+        // Search posts (limited to recent 200 for performance)
+        const postsSnap = await get(query(ref(database, 'posts'), orderByChild('timestamp'), limitToLast(200)));
         const foundPosts = [];
         if (postsSnap.exists()) {
             postsSnap.forEach(child => {
@@ -185,7 +187,7 @@ async function performSearch(queryStr) {
 
         if (users.length > 0) {
             html += '<div style="padding:12px 16px;"><h3 style="font-size:18px;font-weight:800;">أشخاص</h3></div>';
-            for (const user of users) {
+            for (const user of users.slice(0, 10)) {
                 html += `
                     <div class="search-result-item" onclick="showProfile('${user.id}')">
                         <img src="${user.profilePicture || DEFAULT_AVATAR}" alt="">
@@ -258,7 +260,7 @@ async function loadBookmarks() {
             bookmarks.push(child.key);
         });
 
-        for (const postId of bookmarks) {
+        for (const postId of bookmarks.slice(0, 30)) { // Limit bookmarks display
             const postSnap = await get(ref(database, `posts/${postId}`));
             if (postSnap.exists()) {
                 const el = document.createElement('div');
@@ -288,9 +290,9 @@ window.switchFeedTab = function(btn, tabType) {
     btn.classList.add('active');
 
     if (tabType === 'following') {
-        // Load only followed users' posts
         loadFollowingFeed();
     } else {
+        pagination.resetPagination();
         posts.loadPosts();
     }
 };
@@ -303,7 +305,6 @@ async function loadFollowingFeed() {
     if (!userId) return;
 
     try {
-        // Get followed users
         const followersSnap = await get(ref(database, `followers`));
         const followingUserIds = new Set();
 
@@ -320,7 +321,7 @@ async function loadFollowingFeed() {
             return;
         }
 
-        const postsSnap = await get(ref(database, 'posts'));
+        const postsSnap = await get(query(ref(database, 'posts'), orderByChild('timestamp'), limitToLast(100)));
         const allItems = [];
 
         if (postsSnap.exists()) {
@@ -340,7 +341,7 @@ async function loadFollowingFeed() {
             return;
         }
 
-        for (const item of allItems) {
+        for (const item of allItems.slice(0, 30)) {
             const container = document.createElement('div');
             container.setAttribute('data-post-id', item.id);
             postsDiv.appendChild(container);
@@ -351,7 +352,7 @@ async function loadFollowingFeed() {
     }
 }
 
-// ===== Expose functions to global scope for HTML onclick handlers =====
+// ===== Expose functions to global scope =====
 
 window.login = auth.login;
 window.signup = auth.signup;
@@ -361,6 +362,7 @@ window.showSignup = auth.showSignup;
 
 window.postTweet = posts.postTweet;
 window.deletePost = posts.deletePost;
+window.editPost = posts.editPost;
 window.likePost = posts.likePost;
 window.retweetPost = posts.retweetPost;
 window.followUser = posts.followUser;
@@ -450,7 +452,6 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
     dropdown.style.display = 'block';
     dropdown.style.top = `${rect.bottom + 4}px`;
 
-    // RTL: show to the left of the button
     const dropdownWidth = 240;
     if (rect.left > dropdownWidth) {
         dropdown.style.left = `${rect.left - dropdownWidth + rect.width}px`;
@@ -474,7 +475,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// ===== Toast (imported from utils, exposed globally) =====
+// ===== Toast =====
 window.showToast = showToast;
 
 // ===== Image Lightbox =====
@@ -493,7 +494,6 @@ window.closeLightbox = function() {
     document.body.style.overflow = '';
 };
 
-// Close lightbox on Escape
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeLightbox();
@@ -523,24 +523,20 @@ window.openPostDetail = async function(postId) {
         const post = { id: postId, ...snapshot.val() };
         const userId = authInstance.currentUser?.uid;
         const userData = await getUserData(database, post.userId);
-        const userName = userData.name || 'مستخدم';
-        const avatar = userData.profilePicture || DEFAULT_AVATAR;
+        const userName = post.userName || userData.name || 'مستخدم';
+        const avatar = post.userAvatar || userData.profilePicture || DEFAULT_AVATAR;
         const isOwnPost = post.userId === userId;
 
-        // Like status
-        const likeSnap = await dbGet(ref(database, `likes/${postId}/${userId}`));
+        const likeSnap = await get(ref(database, `likes/${postId}/${userId}`));
         const isLiked = likeSnap.exists();
 
-        // Bookmark status
-        const bookmarkSnap = await dbGet(ref(database, `bookmarks/${userId}/${postId}`));
+        const bookmarkSnap = await get(ref(database, `bookmarks/${userId}/${postId}`));
         const isBookmarked = bookmarkSnap.exists();
 
-        // Full timestamp
         const date = new Date(post.timestamp);
         const timeStr = date.toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit' });
         const dateStr = date.toLocaleString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 
-        // Views
         const views = post.views || 0;
         const likes = post.likes || 0;
         const retweets = post.retweets || 0;
@@ -552,6 +548,8 @@ window.openPostDetail = async function(postId) {
             mediaHtml = `<div class="post-detail-media"><iframe src="${post.videoUrl}" style="width:100%;height:350px;border:none;" allowfullscreen></iframe></div>`;
         }
 
+        const editedHtml = post.edited ? '<span style="color:var(--text-secondary);font-size:12px;"> (معدّل)</span>' : '';
+
         container.innerHTML = `
             <div class="post-detail">
                 <div class="post-detail-header">
@@ -562,7 +560,7 @@ window.openPostDetail = async function(postId) {
                     </div>
                     ${!isOwnPost ? `<button class="follow-btn" data-follow-id="${post.userId}" onclick="followUser('${post.userId}', event)">متابعة</button>` : ''}
                 </div>
-                ${post.content ? `<div class="post-detail-content">${post.content}</div>` : ''}
+                ${post.content ? `<div class="post-detail-content">${post.content}${editedHtml}</div>` : ''}
                 ${mediaHtml}
                 <div class="post-detail-timestamp">
                     <span>${timeStr}</span>
@@ -600,10 +598,8 @@ window.openPostDetail = async function(postId) {
             <div id="comments-${postId}" class="comment-section" style="display:block;"></div>
         `;
 
-        // Load comments
         comments.loadComments(postId);
 
-        // Increment view
         if (!isOwnPost) {
             await update(ref(database, `posts/${postId}`), { views: (views || 0) + 1 });
         }
@@ -625,7 +621,6 @@ window.copyPostLink = function(postId) {
             showToast('تم نسخ الرابط');
         });
     } else {
-        // Fallback
         const input = document.createElement('input');
         input.value = url;
         document.body.appendChild(input);
@@ -643,24 +638,21 @@ function updateSidebar(userData) {
     const pic = userData?.profilePicture || DEFAULT_AVATAR;
     const handle = '@' + name.replace(/\s/g, '').toLowerCase();
 
-    // Desktop sidebar
     document.getElementById('sidebar-name').textContent = name;
     document.getElementById('sidebar-handle').textContent = handle;
     document.getElementById('sidebar-avatar').src = pic;
 
-    // Mobile drawer
     document.getElementById('drawer-name').textContent = name;
     document.getElementById('drawer-handle').textContent = handle;
     document.getElementById('drawer-avatar').src = pic;
     document.getElementById('drawer-followers').textContent = userData?.followers || 0;
     document.getElementById('drawer-following').textContent = userData?.following || 0;
 
-    // Mobile header & composer
     document.getElementById('mobile-avatar').src = pic;
     document.getElementById('composer-avatar').src = pic;
 }
 
-// ===== Load Who To Follow (real users) =====
+// ===== Load Who To Follow =====
 
 async function loadWhoToFollow() {
     const userId = authInstance.currentUser?.uid;
@@ -679,7 +671,6 @@ async function loadWhoToFollow() {
 
         if (users.length === 0) return;
 
-        // Shuffle and pick 3
         const shuffled = users.sort(() => 0.5 - Math.random());
         const suggestions = shuffled.slice(0, 3);
 
@@ -719,6 +710,9 @@ async function checkUserRole(user) {
             return;
         }
 
+        // Initialize rate limiter for this user
+        rateLimiter.init(user.uid);
+
         hideLoading();
         showApp();
         updateSidebar(userData);
@@ -737,29 +731,42 @@ auth.setupAuthStateListener(checkUserRole);
 // ===== DOM Ready =====
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Auth button event listeners (avoid inline onclick which fails before module loads)
+    // Auth button event listeners
     const loginBtn = document.getElementById('login-btn');
     if (loginBtn) loginBtn.addEventListener('click', () => login());
-    
+
     const signupBtn = document.getElementById('signup-btn');
     if (signupBtn) signupBtn.addEventListener('click', () => signup());
-    
+
     const showSignupBtn = document.getElementById('show-signup-btn');
     if (showSignupBtn) showSignupBtn.addEventListener('click', () => showSignup());
-    
+
     const showLoginBtn = document.getElementById('show-login-btn');
     if (showLoginBtn) showLoginBtn.addEventListener('click', () => showLogin());
 
-    // Auto-resize textarea
+    // Auto-resize textarea + character counter
     const textarea = document.getElementById('postContent');
     if (textarea) {
         textarea.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = this.scrollHeight + 'px';
+
+            // Character counter
+            const len = this.value.length;
+            const submitBtn = document.querySelector('.composer-submit');
+            if (submitBtn) {
+                if (len > 500) {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.5';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                }
+            }
         });
     }
 
-    // Swipe gesture for drawer (RTL: swipe left from right edge to open)
+    // Swipe gesture for drawer
     let touchStartX = 0;
     let touchStartY = 0;
     let isSwiping = false;
@@ -817,6 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isPulling) {
                 const ptr = document.getElementById('pull-to-refresh');
                 if (ptr && ptr.classList.contains('active')) {
+                    pagination.resetPagination();
                     posts.loadPosts();
                     setTimeout(() => {
                         ptr.classList.remove('active');

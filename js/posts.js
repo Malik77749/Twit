@@ -1,12 +1,14 @@
-// Posts Module
-import { ref, push, set, get, update, remove, increment } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+// Posts Module — Upgraded with Pagination, Rate Limiting, Denormalization
+import { ref, push, set, get, update, remove, increment, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast } from './utils.js';
 import { showLoading, hideLoading, showView } from './ui.js';
-
-const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
 import { loadComments } from './comments.js';
+import * as rateLimiter from './rate-limiter.js';
+import * as pagination from './pagination.js';
+
+const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
 let auth, database, storage;
 let selectedFile = null;
@@ -15,13 +17,31 @@ function init(authInstance, databaseInstance, storageInstance) {
     auth = authInstance;
     database = databaseInstance;
     storage = storageInstance;
+    rateLimiter.init(authInstance.currentUser?.uid);
 }
 
 // ===== Composer Helpers =====
 
 function handleImageSelect(input) {
     if (input.files && input.files[0]) {
-        selectedFile = input.files[0];
+        const file = input.files[0];
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('حجم الصورة كبير جداً (الحد الأقصى 5MB)');
+            input.value = '';
+            return;
+        }
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4'];
+        if (!validTypes.includes(file.type)) {
+            alert('نوع الملف غير مدعوم');
+            input.value = '';
+            return;
+        }
+
+        selectedFile = file;
         const reader = new FileReader();
         reader.onload = function(e) {
             document.getElementById('preview-img').src = e.target.result;
@@ -54,6 +74,12 @@ function toggleVideoInput() {
     document.getElementById('url-input-row').style.display = 'none';
 }
 
+// ===== Character Count =====
+
+function getContentLength(content) {
+    return content ? content.trim().length : 0;
+}
+
 // ===== Post Actions =====
 
 async function postTweet() {
@@ -62,21 +88,46 @@ async function postTweet() {
     const videoUrl = document.getElementById('postVideo').value.trim();
 
     if (!content && !selectedFile && !imageUrl && !videoUrl) {
-        alert('اكتب شيئاً أو أضف صورة');
+        showToast('اكتب شيئاً أو أضف صورة');
         return;
     }
 
-    const postBtn = document.querySelector('.composer-actions .post-btn');
+    // Character limit (500 chars like X)
+    if (content.length > 500) {
+        showToast(`الحد الأقصى 500 حرف (لديك ${content.length})`);
+        return;
+    }
+
+    // Rate limit check
+    const userId = auth.currentUser.uid;
+    const limitCheck = rateLimiter.checkLimit(userId, 'post');
+    if (!limitCheck.allowed) {
+        rateLimiter.showRateLimitToast(limitCheck.reason);
+        const postBtn = document.querySelector('.composer-submit');
+        rateLimiter.disableWithCooldown(postBtn, limitCheck.waitMs, 'نشر');
+        return;
+    }
+
+    const postBtn = document.querySelector('.composer-submit');
     if (postBtn) { postBtn.disabled = true; postBtn.textContent = 'جاري النشر...'; }
 
     const postRef = push(ref(database, 'posts'));
+
+    // Denormalize: store user data with post for faster loading
+    const currentUser = auth.currentUser;
+    const userData = await getUserData(database, userId);
+
     const postData = {
-        userId: auth.currentUser.uid,
+        userId: userId,
+        userName: userData.name || 'مستخدم',
+        userAvatar: userData.profilePicture || DEFAULT_AVATAR,
         content: escapeHtml(content),
         timestamp: new Date().toISOString(),
         likes: 0,
         retweets: 0,
-        views: 0
+        views: 0,
+        commentCount: 0,
+        edited: false
     };
 
     try {
@@ -89,14 +140,14 @@ async function postTweet() {
                 new URL(imageUrl);
                 postData.imageUrl = imageUrl;
             } catch {
-                alert('رابط الصورة غير صالح');
+                showToast('رابط الصورة غير صالح');
                 if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
                 return;
             }
         } else if (videoUrl) {
             const embedUrl = getYouTubeEmbedUrl(videoUrl);
             if (!embedUrl) {
-                alert('رابط YouTube غير صالح');
+                showToast('رابط YouTube غير صالح');
                 if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
                 return;
             }
@@ -104,6 +155,9 @@ async function postTweet() {
         }
 
         await set(postRef, postData);
+
+        // Record rate limit
+        rateLimiter.recordAction(userId, 'post');
 
         // Clear composer
         document.getElementById('postContent').value = '';
@@ -125,7 +179,7 @@ async function postTweet() {
         showToast('تم النشر');
         if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
     } catch (error) {
-        alert('خطأ: ' + error.message);
+        showToast('خطأ: ' + error.message);
         if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
     }
 }
@@ -137,6 +191,16 @@ async function deletePost(postId, event) {
 
     showLoading();
     try {
+        // Archive before delete (for admin review)
+        const postSnap = await get(ref(database, `posts/${postId}`));
+        if (postSnap.exists()) {
+            await set(ref(database, `deletedPosts/${postId}`), {
+                ...postSnap.val(),
+                deletedBy: auth.currentUser.uid,
+                deletedAt: new Date().toISOString()
+            });
+        }
+
         await remove(ref(database, 'posts/' + postId));
         await remove(ref(database, 'comments/' + postId));
         await remove(ref(database, 'likes/' + postId));
@@ -152,9 +216,35 @@ async function deletePost(postId, event) {
         document.querySelectorAll(`[data-post-id="${postId}"]`).forEach(el => el.remove());
         showToast('تم حذف المنشور');
     } catch (error) {
-        alert('خطأ: ' + error.message);
+        showToast('خطأ: ' + error.message);
     } finally {
         hideLoading();
+    }
+}
+
+async function editPost(postId, currentContent) {
+    const newContent = prompt('تعديل المنشور:', currentContent);
+    if (newContent === null || newContent.trim() === currentContent) return;
+
+    if (newContent.length > 500) {
+        showToast(`الحد الأقصى 500 حرف (لديك ${newContent.length})`);
+        return;
+    }
+
+    try {
+        await update(ref(database, `posts/${postId}`), {
+            content: escapeHtml(newContent.trim()),
+            edited: true,
+            editedAt: new Date().toISOString()
+        });
+
+        // Update UI
+        document.querySelectorAll(`[data-post-id="${postId}"] .tweet-content`).forEach(el => {
+            el.textContent = newContent.trim();
+        });
+        showToast('تم التعديل');
+    } catch (error) {
+        showToast('خطأ: ' + error.message);
     }
 }
 
@@ -163,6 +253,14 @@ async function likePost(postId, event) {
     event?.stopPropagation();
 
     const userId = auth.currentUser.uid;
+
+    // Rate limit check
+    const limitCheck = rateLimiter.checkLimit(userId, 'like');
+    if (!limitCheck.allowed) {
+        rateLimiter.showRateLimitToast(limitCheck.reason);
+        return;
+    }
+
     const likeRef = ref(database, `likes/${postId}/${userId}`);
 
     try {
@@ -178,6 +276,8 @@ async function likePost(postId, event) {
         } else {
             await set(likeRef, { timestamp: new Date().toISOString() });
             likes += 1;
+            rateLimiter.recordAction(userId, 'like');
+
             if (postSnapshot.exists() && postSnapshot.val().userId !== userId) {
                 const likerName = await getUserName(database, userId);
                 await addNotification(database, postSnapshot.val().userId, `أعجب ${likerName} بمنشورك`, postId);
@@ -191,17 +291,16 @@ async function likePost(postId, event) {
             btn.className = `tweet-action like ${isLiked ? '' : 'active'}`;
             btn.innerHTML = `<span class="icon-wrap"><i class="${isLiked ? 'far' : 'fas'} fa-heart"></i></span><span>${likes}</span>`;
             if (!isLiked) {
-                // Trigger re-animation
                 const icon = btn.querySelector('.fa-heart');
                 if (icon) {
                     icon.style.animation = 'none';
-                    icon.offsetHeight; // force reflow
+                    icon.offsetHeight;
                     icon.style.animation = '';
                 }
             }
         });
     } catch (error) {
-        alert('خطأ: ' + error.message);
+        showToast('خطأ: ' + error.message);
     }
 }
 
@@ -210,6 +309,14 @@ async function retweetPost(postId, event) {
     event?.stopPropagation();
 
     const userId = auth.currentUser.uid;
+
+    // Rate limit check
+    const limitCheck = rateLimiter.checkLimit(userId, 'retweet');
+    if (!limitCheck.allowed) {
+        rateLimiter.showRateLimitToast(limitCheck.reason);
+        return;
+    }
+
     const retweetsSnapshot = await get(ref(database, 'retweets'));
     let existingKey = null;
 
@@ -235,7 +342,7 @@ async function retweetPost(postId, event) {
                 btn.innerHTML = `<span class="icon-wrap"><i class="fas fa-retweet"></i></span><span>${retweets}</span>`;
             });
         } catch (error) {
-            alert('خطأ: ' + error.message);
+            showToast('خطأ: ' + error.message);
         }
         return;
     }
@@ -249,6 +356,8 @@ async function retweetPost(postId, event) {
         retweets += 1;
         await update(postRef, { retweets });
 
+        rateLimiter.recordAction(userId, 'retweet');
+
         if (postSnapshot.exists() && postSnapshot.val().userId !== userId) {
             const name = await getUserName(database, userId);
             await addNotification(database, postSnapshot.val().userId, `أعاد ${name} نشر تغريدتك`, postId);
@@ -259,7 +368,7 @@ async function retweetPost(postId, event) {
         });
         showToast('تم إعادة النشر');
     } catch (error) {
-        alert('خطأ: ' + error.message);
+        showToast('خطأ: ' + error.message);
     }
 }
 
@@ -269,6 +378,13 @@ async function followUser(userId, event) {
 
     const currentUserId = auth.currentUser.uid;
     if (userId === currentUserId) return;
+
+    // Rate limit check
+    const limitCheck = rateLimiter.checkLimit(currentUserId, 'follow');
+    if (!limitCheck.allowed) {
+        rateLimiter.showRateLimitToast(limitCheck.reason);
+        return;
+    }
 
     showLoading();
     const followRef = ref(database, `followers/${userId}/${currentUserId}`);
@@ -286,6 +402,8 @@ async function followUser(userId, event) {
             await set(followRef, { timestamp: new Date().toISOString() });
             updates[`users/${userId}/followers`] = increment(1);
             updates[`users/${currentUserId}/following`] = increment(1);
+            rateLimiter.recordAction(currentUserId, 'follow');
+
             const name = await getUserName(database, currentUserId);
             await addNotification(database, userId, `بدأ ${name} بمتابعتك`, null);
         }
@@ -304,7 +422,7 @@ async function followUser(userId, event) {
 
         showToast(isFollowing ? 'تم إلغاء المتابعة' : 'تمت المتابعة');
     } catch (error) {
-        alert('خطأ: ' + error.message);
+        showToast('خطأ: ' + error.message);
     } finally {
         hideLoading();
     }
@@ -313,16 +431,27 @@ async function followUser(userId, event) {
 async function reportPost(postId, userId, event) {
     event?.preventDefault();
     event?.stopPropagation();
+
+    const currentUserId = auth.currentUser.uid;
+
+    // Rate limit check
+    const limitCheck = rateLimiter.checkLimit(currentUserId, 'report');
+    if (!limitCheck.allowed) {
+        rateLimiter.showRateLimitToast(limitCheck.reason);
+        return;
+    }
+
     const reason = prompt('سبب الإبلاغ:');
     if (!reason) return;
 
     try {
         await set(push(ref(database, 'reports')), {
-            postId, userId, reporterId: auth.currentUser.uid, reason, timestamp: new Date().toISOString()
+            postId, userId, reporterId: currentUserId, reason, timestamp: new Date().toISOString()
         });
+        rateLimiter.recordAction(currentUserId, 'report');
         showToast('تم الإبلاغ');
     } catch (error) {
-        alert('خطأ: ' + error.message);
+        showToast('خطأ: ' + error.message);
     }
 }
 
@@ -347,7 +476,6 @@ async function toggleBookmark(postId, event) {
             showToast('تم حفظ المنشور');
         }
 
-        // Update bookmark icons
         document.querySelectorAll(`[data-bookmark-id="${postId}"]`).forEach(btn => {
             btn.classList.toggle('active', !snapshot.exists());
         });
@@ -371,10 +499,12 @@ async function incrementViewCount(postId) {
     }
 }
 
-// ===== Feed Loading =====
+// ===== Feed Loading with Pagination =====
 
 async function loadPosts() {
     const postsDiv = document.getElementById('posts');
+
+    // Show skeleton loading
     postsDiv.innerHTML = `
         <div class="skeleton-post"><div class="skeleton-avatar skeleton"></div><div class="skeleton-post-body"><div class="skeleton-line short skeleton"></div><div class="skeleton-line long skeleton"></div><div class="skeleton-line medium skeleton"></div></div></div>
         <div class="skeleton-post"><div class="skeleton-avatar skeleton"></div><div class="skeleton-post-body"><div class="skeleton-line short skeleton"></div><div class="skeleton-line long skeleton"></div><div class="skeleton-media skeleton"></div></div></div>
@@ -382,32 +512,37 @@ async function loadPosts() {
     `;
 
     try {
-        const [postsSnapshot, retweetsSnapshot] = await Promise.all([
-            get(ref(database, 'posts')),
-            get(ref(database, 'retweets'))
-        ]);
+        // Reset pagination state
+        pagination.resetPagination();
 
-        const allItems = [];
+        // Load first page only
+        const posts = await pagination.loadFirstPage(database);
 
-        if (postsSnapshot.exists()) {
-            postsSnapshot.forEach(child => {
-                allItems.push({ id: child.key, ...child.val(), type: 'post' });
-            });
-        }
-        if (retweetsSnapshot.exists()) {
-            retweetsSnapshot.forEach(child => {
-                allItems.push({ id: child.key, ...child.val(), type: 'retweet' });
-            });
-        }
-
-        if (!allItems.length) {
+        if (!posts.length) {
             postsDiv.innerHTML = '<div class="empty-state"><h3>لا توجد منشورات</h3><p>كن أول من ينشر!</p></div>';
             return;
         }
 
+        // Also load retweets for first page
+        const retweetsSnapshot = await get(ref(database, 'retweets'));
+        const allItems = [];
+
+        for (const post of posts) {
+            allItems.push({ ...post, type: 'post' });
+        }
+
+        if (retweetsSnapshot.exists()) {
+            const postIds = new Set(posts.map(p => p.id));
+            retweetsSnapshot.forEach(child => {
+                const rt = child.val();
+                // Only include retweets of posts we have, or retweets by users in our feed
+                allItems.push({ id: child.key, ...rt, type: 'retweet' });
+            });
+        }
+
         allItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        // Build all containers first, then render
+        // Build containers
         const containers = [];
         const fragment = document.createDocumentFragment();
         for (const item of allItems) {
@@ -423,8 +558,27 @@ async function loadPosts() {
         for (const { item, container } of containers) {
             await renderFeedItem(item, container);
         }
+
+        // Initialize infinite scroll with callback
+        pagination.initInfiniteScroll('.main-feed', database, loadMorePostsCallback);
+
     } catch (error) {
+        console.error('Load posts error:', error);
         postsDiv.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';
+    }
+}
+
+/**
+ * Load more posts (called by infinite scroll)
+ */
+async function loadMorePostsCallback(newPosts) {
+    const postsDiv = document.getElementById('posts');
+
+    for (const post of newPosts) {
+        const container = document.createElement('div');
+        container.setAttribute('data-post-id', post.id);
+        postsDiv.appendChild(container);
+        await renderPost(post, container);
     }
 }
 
@@ -465,16 +619,25 @@ function formatViews(views) {
 async function renderPost(post, container) {
     const postId = post.id;
     const userId = auth.currentUser?.uid;
-    const userData = await getUserData(database, post.userId);
-    const userName = userData.name || 'مستخدم';
-    const avatar = userData.profilePicture || DEFAULT_AVATAR;
+
+    // Use denormalized data if available (faster — no extra DB read)
+    let userName = post.userName || 'مستخدم';
+    let avatar = post.userAvatar || DEFAULT_AVATAR;
+
+    // Fallback: fetch user data if not denormalized
+    if (!post.userName) {
+        const userData = await getUserData(database, post.userId);
+        userName = userData.name || 'مستخدم';
+        avatar = userData.profilePicture || DEFAULT_AVATAR;
+    }
+
     const isOwnPost = post.userId === userId;
 
     // Check like status
     const likeSnapshot = await get(ref(database, `likes/${postId}/${userId}`));
     const isLiked = likeSnapshot.exists();
 
-    // Check follow status
+    // Check follow status (only for non-own posts)
     let isFollowing = false;
     if (!isOwnPost) {
         const followSnap = await get(ref(database, `followers/${post.userId}/${userId}`));
@@ -485,9 +648,8 @@ async function renderPost(post, container) {
     const bookmarkSnap = await get(ref(database, `bookmarks/${userId}/${postId}`));
     const isBookmarked = bookmarkSnap.exists();
 
-    // Comment count
-    const commentsSnap = await get(ref(database, 'comments/' + postId));
-    const commentCount = commentsSnap.exists() ? Object.keys(commentsSnap.val()).length : 0;
+    // Comment count (use denormalized if available)
+    const commentCount = post.commentCount || 0;
 
     // Views
     const views = post.views || 0;
@@ -500,12 +662,13 @@ async function renderPost(post, container) {
     // Media
     let mediaHtml = '';
     if (post.imageUrl) {
-        mediaHtml = `<div class="tweet-media"><img src="${post.imageUrl}" alt="صورة"></div>`;
+        mediaHtml = `<div class="tweet-media"><img src="${post.imageUrl}" alt="صورة" loading="lazy"></div>`;
     } else if (post.videoUrl) {
-        mediaHtml = `<div class="tweet-media"><iframe src="${post.videoUrl}" allowfullscreen></iframe></div>`;
+        mediaHtml = `<div class="tweet-media"><iframe src="${post.videoUrl}" allowfullscreen loading="lazy"></iframe></div>`;
     }
 
     const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
+    const editedHtml = post.edited ? '<span style="color:var(--text-secondary);font-size:12px;"> (معدّل)</span>' : '';
 
     container.innerHTML = `
         <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
@@ -516,6 +679,7 @@ async function renderPost(post, container) {
                     <span class="tweet-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(post.timestamp)}</span>
+                    ${editedHtml}
                     ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${post.userId}" onclick="event.stopPropagation(); followUser('${post.userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
                     <button class="tweet-more" onclick="event.stopPropagation(); openPostMenu('${postId}', '${post.userId}', ${isOwnPost}, event)">
                         <i class="fas fa-ellipsis"></i>
@@ -561,16 +725,14 @@ async function renderRetweet(retweet, originalPost, container) {
     const bookmarkSnap = await get(ref(database, `bookmarks/${userId}/${postId}`));
     const isBookmarked = bookmarkSnap.exists();
 
-    const commentsSnap = await get(ref(database, 'comments/' + postId));
-    const commentCount = commentsSnap.exists() ? Object.keys(commentsSnap.val()).length : 0;
-
+    const commentCount = originalPost.commentCount || 0;
     const views = originalPost.views || 0;
 
     let mediaHtml = '';
     if (originalPost.imageUrl) {
-        mediaHtml = `<div class="tweet-media" onclick="event.stopPropagation(); openLightbox('${originalPost.imageUrl}')" style="cursor:zoom-in;"><img src="${originalPost.imageUrl}" alt="صورة"></div>`;
+        mediaHtml = `<div class="tweet-media" onclick="event.stopPropagation(); openLightbox('${originalPost.imageUrl}')" style="cursor:zoom-in;"><img src="${originalPost.imageUrl}" alt="صورة" loading="lazy"></div>`;
     } else if (originalPost.videoUrl) {
-        mediaHtml = `<div class="tweet-media"><iframe src="${originalPost.videoUrl}" allowfullscreen></iframe></div>`;
+        mediaHtml = `<div class="tweet-media"><iframe src="${originalPost.videoUrl}" allowfullscreen loading="lazy"></iframe></div>`;
     }
 
     const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
@@ -626,7 +788,7 @@ async function renderRetweet(retweet, originalPost, container) {
 }
 
 export {
-    init, postTweet, deletePost, likePost, retweetPost, followUser,
-    reportPost, loadPosts, renderPost, renderFeedItem, renderRetweet, handleImageSelect, removePreview,
-    toggleUrlInput, toggleVideoInput, toggleBookmark
+    init, postTweet, deletePost, editPost, likePost, retweetPost, followUser,
+    reportPost, loadPosts, loadMorePostsCallback, renderPost, renderFeedItem, renderRetweet,
+    handleImageSelect, removePreview, toggleUrlInput, toggleVideoInput, toggleBookmark
 };
