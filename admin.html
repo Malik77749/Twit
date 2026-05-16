@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Twit Admin — لوحة التحكم</title>
+    <meta name="theme-color" content="#000000">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/admin.css?v=1">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+    <!-- ===== AUTH SECTION ===== -->
+    <div id="admin-auth" class="admin-auth-container">
+        <div class="admin-auth-box">
+            <div class="logo">
+                <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </div>
+            <h2>لوحة تحكم الأدمن</h2>
+            <p class="subtitle">Twit Admin Panel</p>
+            <input type="email" class="admin-auth-input" id="admin-email" placeholder="البريد الإلكتروني">
+            <input type="password" class="admin-auth-input" id="admin-password" placeholder="كلمة المرور">
+            <button class="admin-auth-btn" id="admin-login-btn">تسجيل الدخول</button>
+            <p id="admin-error" class="admin-auth-error"></p>
+        </div>
+    </div>
+
+    <!-- ===== MAIN ADMIN APP ===== -->
+    <div id="admin-app" class="admin-layout" style="display: none;">
+
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-logo">
+                <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                <span class="admin-badge">ADMIN</span>
+            </div>
+            <nav class="admin-nav">
+                <button class="admin-nav-item active" data-view="dashboard" onclick="switchAdminView('dashboard')">
+                    <i class="fas fa-chart-line"></i><span>لوحة المعلومات</span>
+                </button>
+                <button class="admin-nav-item" data-view="users" onclick="switchAdminView('users')">
+                    <i class="fas fa-users"></i><span>المستخدمين</span>
+                    <span class="nav-badge" id="users-badge" style="display:none;"></span>
+                </button>
+                <button class="admin-nav-item" data-view="posts" onclick="switchAdminView('posts')">
+                    <i class="fas fa-file-lines"></i><span>المنشورات</span>
+                </button>
+                <button class="admin-nav-item" data-view="reports" onclick="switchAdminView('reports')">
+                    <i class="fas fa-flag"></i><span>البلاغات</span>
+                    <span class="nav-badge" id="reports-badge" style="display:none;"></span>
+                </button>
+                <button class="admin-nav-item" data-view="communities" onclick="switchAdminView('communities')">
+                    <i class="fas fa-people-group"></i><span>المجتمعات</span>
+                </button>
+                <button class="admin-nav-item" data-view="settings" onclick="switchAdminView('settings')">
+                    <i class="fas fa-gear"></i><span>الإعدادات</span>
+                </button>
+                <button class="admin-nav-item" data-view="audit" onclick="switchAdminView('audit')">
+                    <i class="fas fa-clipboard-list"></i><span>سجل العمليات</span>
+                </button>
+                <div style="height:1px;background:var(--border-color);margin:8px 0;"></div>
+                <button class="admin-nav-item" onclick="window.open('/','_blank')">
+                    <i class="fas fa-arrow-up-right-from-square"></i><span>الموقع الرئيسي</span>
+                </button>
+                <button class="admin-nav-item" onclick="adminLogout()">
+                    <i class="fas fa-arrow-right-from-bracket"></i><span>الخروج</span>
+                </button>
+            </nav>
+            <div class="admin-sidebar-profile">
+                <img id="admin-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect fill='%23333' width='40' height='40' rx='20'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%23555'/%3E%3Cpath d='M8 36c0-7 5-12 12-12s12 5 12 12' fill='%23555'/%3E%3C/svg%3E" alt="">
+                <div class="admin-sidebar-profile-info">
+                    <div class="name" id="admin-name">أدمن</div>
+                    <div class="role">مدير</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+
+            <!-- ===== DASHBOARD VIEW ===== -->
+            <div id="dashboard-view">
+                <div class="admin-header">
+                    <h2>لوحة المعلومات</h2>
+                    <div class="admin-header-actions">
+                        <button class="action-btn outline small" onclick="refreshDashboard()"><i class="fas fa-refresh"></i> تحديث</button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-icon users"><i class="fas fa-users"></i></div>
+                        <div class="stat-card-value" id="stat-total-users">—</div>
+                        <div class="stat-card-label">إجمالي المستخدمين</div>
+                        <div class="stat-card-change positive" id="stat-users-change"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon posts"><i class="fas fa-file-lines"></i></div>
+                        <div class="stat-card-value" id="stat-total-posts">—</div>
+                        <div class="stat-card-label">إجمالي المنشورات</div>
+                        <div class="stat-card-change positive" id="stat-posts-change"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon active"><i class="fas fa-user-check"></i></div>
+                        <div class="stat-card-value" id="stat-active-users">—</div>
+                        <div class="stat-card-label">مستخدمين نشطين اليوم</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon banned"><i class="fas fa-ban"></i></div>
+                        <div class="stat-card-value" id="stat-banned-users">—</div>
+                        <div class="stat-card-label">محظور/معلق</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon reports"><i class="fas fa-flag"></i></div>
+                        <div class="stat-card-value" id="stat-pending-reports">—</div>
+                        <div class="stat-card-label">بلاغات معلقة</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="chart-container">
+                    <h3>نمو المستخدمين (آخر 30 يوم)</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="users-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>المنشورات يومياً (آخر 7 أيام)</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="posts-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="activity-section">
+                    <h3>آخر النشاطات</h3>
+                    <div id="activity-feed">
+                        <div class="admin-spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== USERS VIEW ===== -->
+            <div id="users-view" style="display:none;">
+                <div class="admin-header">
+                    <h2>إدارة المستخدمين</h2>
+                    <div class="admin-header-actions">
+                        <button class="action-btn outline small" onclick="exportUsersCSV()"><i class="fas fa-download"></i> تصدير</button>
+                    </div>
+                </div>
+                <div class="admin-search-bar">
+                    <input type="text" class="admin-search-input" id="users-search" placeholder="بحث بالاسم، البريد، أو الهاتف..." oninput="filterUsers()">
+                </div>
+                <div class="admin-filter-chips">
+                    <button class="filter-chip active" data-filter="all" onclick="setUsersFilter('all', this)">الكل</button>
+                    <button class="filter-chip" data-filter="active" onclick="setUsersFilter('active', this)">نشط</button>
+                    <button class="filter-chip" data-filter="suspended" onclick="setUsersFilter('suspended', this)">معلق</button>
+                    <button class="filter-chip" data-filter="banned" onclick="setUsersFilter('banned', this)">محظور</button>
+                    <button class="filter-chip" data-filter="verified" onclick="setUsersFilter('verified', this)">موثق</button>
+                </div>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>المستخدم</th>
+                                <th>التاريخ</th>
+                                <th>المنشورات</th>
+                                <th>الحالة</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr><td colspan="5"><div class="admin-spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="admin-pagination" id="users-pagination"></div>
+            </div>
+
+            <!-- ===== POSTS VIEW ===== -->
+            <div id="posts-view" style="display:none;">
+                <div class="admin-header">
+                    <h2>إدارة المنشورات</h2>
+                </div>
+                <div class="admin-search-bar">
+                    <input type="text" class="admin-search-input" id="posts-search" placeholder="بحث في المحتوى..." oninput="filterPosts()">
+                </div>
+                <div class="admin-filter-chips">
+                    <button class="filter-chip active" data-filter="all" onclick="setPostsFilter('all', this)">الكل</button>
+                    <button class="filter-chip" data-filter="reported" onclick="setPostsFilter('reported', this)">مُبلّغ</button>
+                    <button class="filter-chip" data-filter="hidden" onclick="setPostsFilter('hidden', this)">مخفي</button>
+                    <button class="filter-chip" data-filter="pinned" onclick="setPostsFilter('pinned', this)">مُثبّت</button>
+                </div>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>المستخدم</th>
+                                <th>المحتوى</th>
+                                <th>التاريخ</th>
+                                <th>الإعجابات</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="posts-table-body">
+                            <tr><td colspan="5"><div class="admin-spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="admin-pagination" id="posts-pagination"></div>
+            </div>
+
+            <!-- ===== REPORTS VIEW ===== -->
+            <div id="reports-view" style="display:none;">
+                <div class="admin-header">
+                    <h2>البلاغات</h2>
+                </div>
+                <div class="admin-filter-chips">
+                    <button class="filter-chip active" data-filter="pending" onclick="setReportsFilter('pending', this)">معلق</button>
+                    <button class="filter-chip" data-filter="all" onclick="setReportsFilter('all', this)">الكل</button>
+                    <button class="filter-chip" data-filter="content" onclick="setReportsFilter('content', this)">محتوى مخالف</button>
+                    <button class="filter-chip" data-filter="spam" onclick="setReportsFilter('spam', this)">إزعاج</button>
+                    <button class="filter-chip" data-filter="fake" onclick="setReportsFilter('fake', this)">حساب وهمي</button>
+                </div>
+                <div id="reports-list">
+                    <div class="admin-spinner"></div>
+                </div>
+            </div>
+
+            <!-- ===== COMMUNITIES VIEW ===== -->
+            <div id="communities-view" style="display:none;">
+                <div class="admin-header">
+                    <h2>المجتمعات</h2>
+                </div>
+                <div id="communities-list">
+                    <div class="admin-spinner"></div>
+                </div>
+            </div>
+
+            <!-- ===== SETTINGS VIEW ===== -->
+            <div id="settings-view" style="display:none;">
+                <div class="admin-header">
+                    <h2>إعدادات الموقع</h2>
+                </div>
+                <div id="settings-content">
+                    <div class="admin-settings-section">
+                        <h3 class="admin-settings-title">عام</h3>
+                        <div class="admin-settings-item">
+                            <i class="fas fa-font"></i>
+                            <span>اسم الموقع</span>
+                            <input type="text" class="admin-input" id="setting-site-name" style="max-width:250px;margin-right:auto;" placeholder="Twit">
+                        </div>
+                        <div class="admin-settings-item">
+                            <i class="fas fa-align-right"></i>
+                            <span>وصف الموقع</span>
+                            <input type="text" class="admin-input" id="setting-site-desc" style="max-width:250px;margin-right:auto;" placeholder="منصة تواصل اجتماعي">
+                        </div>
+                    </div>
+                    <div class="admin-settings-section">
+                        <h3 class="admin-settings-title">التسجيل</h3>
+                        <div class="admin-settings-item">
+                            <i class="fas fa-user-plus"></i>
+                            <span>التسجيل الجديد</span>
+                            <label class="admin-toggle">
+                                <input type="checkbox" id="setting-registration" checked>
+                                <span class="admin-toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="admin-settings-section">
+                        <h3 class="admin-settings-title">المحتوى</h3>
+                        <div class="admin-settings-item">
+                            <i class="fas fa-text-height"></i>
+                            <span>حد الأحرف للمنشورات</span>
+                            <select class="admin-select" id="setting-char-limit" style="margin-right:auto;">
+                                <option value="280">280</option>
+                                <option value="500" selected>500</option>
+                                <option value="1000">1000</option>
+                            </select>
+                        </div>
+                        <div class="admin-settings-item">
+                            <i class="fas fa-envelope"></i>
+                            <span>الرسائل المباشرة (DMs)</span>
+                            <label class="admin-toggle">
+                                <input type="checkbox" id="setting-dms" checked>
+                                <span class="admin-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="admin-settings-item">
+                            <i class="fas fa-square-poll-horizontal"></i>
+                            <span>الاستطلاعات</span>
+                            <label class="admin-toggle">
+                                <input type="checkbox" id="setting-polls" checked>
+                                <span class="admin-toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="admin-settings-section">
+                        <h3 class="admin-settings-title">الصيانة</h3>
+                        <div class="admin-settings-item">
+                            <i class="fas fa-wrench"></i>
+                            <span>وضع الصيانة</span>
+                            <label class="admin-toggle">
+                                <input type="checkbox" id="setting-maintenance">
+                                <span class="admin-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="admin-settings-item" style="flex-direction:column;align-items:stretch;">
+                            <span style="margin-bottom:8px;"><i class="fas fa-message"></i> رسالة الصيانة</span>
+                            <textarea class="admin-textarea" id="setting-maintenance-msg" placeholder="الموقع تحت الصيانة حالياً..."></textarea>
+                        </div>
+                    </div>
+                    <div style="padding:16px;">
+                        <button class="action-btn primary" onclick="saveSettings()"><i class="fas fa-check"></i> حفظ الإعدادات</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== AUDIT LOG VIEW ===== -->
+            <div id="audit-view" style="display:none;">
+                <div class="admin-header">
+                    <h2>سجل العمليات</h2>
+                    <div class="admin-header-actions">
+                        <button class="action-btn outline small" onclick="exportAuditCSV()"><i class="fas fa-download"></i> تصدير</button>
+                    </div>
+                </div>
+                <div class="admin-filter-chips">
+                    <button class="filter-chip active" data-filter="all" onclick="setAuditFilter('all', this)">الكل</button>
+                    <button class="filter-chip" data-filter="ban" onclick="setAuditFilter('ban', this)">حظر</button>
+                    <button class="filter-chip" data-filter="suspend" onclick="setAuditFilter('suspend', this)">إيقاف</button>
+                    <button class="filter-chip" data-filter="verify" onclick="setAuditFilter('verify', this)">توثيق</button>
+                    <button class="filter-chip" data-filter="delete" onclick="setAuditFilter('delete', this)">حذف</button>
+                    <button class="filter-chip" data-filter="settings" onclick="setAuditFilter('settings', this)">إعدادات</button>
+                </div>
+                <div id="audit-list">
+                    <div class="admin-spinner"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel -->
+        <aside class="admin-right-panel">
+            <div class="search-box" style="background:var(--bg-input);border-radius:9999px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin:8px 0 16px;">
+                <i class="fas fa-magnifying-glass" style="color:var(--text-secondary);"></i>
+                <input type="text" placeholder="بحث سريع..." style="background:none;border:none;color:var(--text-primary);font-size:15px;outline:none;flex:1;" oninput="quickSearch(this.value)">
+            </div>
+
+            <!-- Quick Stats -->
+            <div style="background:var(--bg-secondary);border-radius:16px;margin-bottom:16px;overflow:hidden;">
+                <h3 style="padding:12px 16px;font-size:18px;font-weight:800;">إحصائيات سريعة</h3>
+                <div id="quick-stats" style="padding:12px 16px;">
+                    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                        <span style="color:var(--text-secondary);">اليوم</span>
+                        <span id="quick-today-posts" style="font-weight:700;">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                        <span style="color:var(--text-secondary);">مستخدمين جدد</span>
+                        <span id="quick-new-users" style="font-weight:700;">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                        <span style="color:var(--text-secondary);">إعجابات</span>
+                        <span id="quick-likes" style="font-weight:700;">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Users -->
+            <div style="background:var(--bg-secondary);border-radius:16px;margin-bottom:16px;overflow:hidden;">
+                <h3 style="padding:12px 16px;font-size:18px;font-weight:800;">آخر المستخدمين</h3>
+                <div id="recent-users-list">
+                    <div class="admin-spinner"></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- ===== USER DETAIL MODAL ===== -->
+    <div class="admin-modal-overlay" id="user-modal">
+        <div class="admin-modal">
+            <div class="admin-modal-header">
+                <h3>تفاصيل المستخدم</h3>
+                <button class="admin-modal-close" onclick="closeUserModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body" id="user-modal-body">
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== POST DETAIL MODAL ===== -->
+    <div class="admin-modal-overlay" id="post-modal">
+        <div class="admin-modal">
+            <div class="admin-modal-header">
+                <h3>تفاصيل المنشور</h3>
+                <button class="admin-modal-close" onclick="closePostModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body" id="post-modal-body">
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CONFIRM MODAL ===== -->
+    <div class="admin-modal-overlay" id="confirm-modal">
+        <div class="admin-modal" style="max-width:400px;">
+            <div class="admin-modal-header">
+                <h3 id="confirm-title">تأكيد</h3>
+                <button class="admin-modal-close" onclick="closeConfirmModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <p id="confirm-message" style="font-size:15px;color:var(--text-secondary);"></p>
+            </div>
+            <div class="admin-modal-footer">
+                <button class="action-btn outline" onclick="closeConfirmModal()">إلغاء</button>
+                <button class="action-btn danger" id="confirm-action-btn">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="admin-toast" id="admin-toast"></div>
+
+    <script type="module" src="js/admin.js?v=1"></script>
+</body>
+</html>

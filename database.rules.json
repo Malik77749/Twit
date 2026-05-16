@@ -143,16 +143,28 @@
 
     "reports": {
       "$reportId": {
-        ".read": false,
+        ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
         ".write": "auth != null"
       }
     },
 
     "bans": {
       "$uid": {
-        ".read": "auth.uid === $uid",
-        ".write": false
+        ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('isAdmin').val() === true",
+        ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true"
       }
+    },
+
+    "auditLog": {
+      "$logId": {
+        ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
+        ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true"
+      }
+    },
+
+    "siteSettings": {
+      ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
+      ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true"
     },
 
     "rateLimits": {
