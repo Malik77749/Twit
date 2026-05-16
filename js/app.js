@@ -871,7 +871,7 @@ window.blockUserAction = async function(userId) {
     posts.loadPosts();
 };
 
-window.unblockUserAction = async function(userId) => {
+window.unblockUserAction = async function(userId) {
     await blockMute.unblockUser(userId);
 };
 
@@ -879,7 +879,7 @@ window.muteUserAction = async function(userId) {
     await blockMute.muteUser(userId);
 };
 
-window.unmuteUserAction = async function(userId) => {
+window.unmuteUserAction = async function(userId) {
     await blockMute.unmuteUser(userId);
 };
 
