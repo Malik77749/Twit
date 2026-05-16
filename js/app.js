@@ -386,10 +386,13 @@ async function loadFollowingFeed() {
 // ===== Expose functions to global scope =====
 
 window.login = auth.login;
+window.loginWithPhone = auth.loginWithPhone;
 window.signup = auth.signup;
+window.signupWithPhone = auth.signupWithPhone;
 window.logout = auth.logout;
 window.showLogin = auth.showLogin;
 window.showSignup = auth.showSignup;
+window.setLoginMethod = auth.setLoginMethod;
 
 window.postTweet = posts.postTweet;
 window.deletePost = posts.deletePost;
@@ -1307,17 +1310,23 @@ auth.setupAuthStateListener(checkUserRole);
 
 document.addEventListener('DOMContentLoaded', () => {
     // Auth button event listeners
+    const loginPhoneBtn = document.getElementById('login-phone-btn');
+    if (loginPhoneBtn) loginPhoneBtn.addEventListener('click', () => auth.loginWithPhone());
+
     const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) loginBtn.addEventListener('click', () => login());
+    if (loginBtn) loginBtn.addEventListener('click', () => auth.login());
+
+    const signupPhoneBtn = document.getElementById('signup-phone-btn');
+    if (signupPhoneBtn) signupPhoneBtn.addEventListener('click', () => auth.signupWithPhone());
 
     const signupBtn = document.getElementById('signup-btn');
-    if (signupBtn) signupBtn.addEventListener('click', () => signup());
+    if (signupBtn) signupBtn.addEventListener('click', () => auth.signup());
 
     const showSignupBtn = document.getElementById('show-signup-btn');
-    if (showSignupBtn) showSignupBtn.addEventListener('click', () => showSignup());
+    if (showSignupBtn) showSignupBtn.addEventListener('click', () => auth.showSignup());
 
     const showLoginBtn = document.getElementById('show-login-btn');
-    if (showLoginBtn) showLoginBtn.addEventListener('click', () => showLogin());
+    if (showLoginBtn) showLoginBtn.addEventListener('click', () => auth.showLogin());
 
     // Auto-resize textarea + character counter (X-style circular)
     const textarea = document.getElementById('postContent');

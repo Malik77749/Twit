@@ -1,16 +1,192 @@
-// Authentication Module
+// Authentication Module — Email + Phone + Google
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { ref, get, set } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, get, set, query, orderByChild, equalTo } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { showApp, showAuth, showLoading, hideLoading } from './ui.js';
 import { clearUserCache } from './firebase-helpers.js';
 
+const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
+
 let auth, database;
+
+// Track login method
+let loginMethod = 'phone'; // 'phone' or 'email'
 
 function init(authInstance, databaseInstance) {
     auth = authInstance;
     database = databaseInstance;
 }
 
+/**
+ * Convert phone number to internal email format
+ * e.g., "0501234567" → "0501234567@twit.internal"
+ */
+function phoneToEmail(phone) {
+    // Remove spaces, dashes, and leading +
+    let cleaned = phone.replace(/[\s\-+]/g, '');
+
+    // Add Saudi country code if starts with 0
+    if (cleaned.startsWith('0')) {
+        cleaned = '966' + cleaned.substring(1);
+    }
+
+    return `${cleaned}@twit.internal`;
+}
+
+/**
+ * Validate phone number (basic)
+ */
+function isValidPhone(phone) {
+    const cleaned = phone.replace(/[\s\-+]/g, '');
+    // Saudi: 05XXXXXXXX or 9665XXXXXXXX (9 digits)
+    // International: at least 8 digits
+    return /^\d{8,15}$/.test(cleaned);
+}
+
+/**
+ * Format phone for display
+ */
+function formatPhoneDisplay(phone) {
+    const cleaned = phone.replace(/[\s\-+]/g, '');
+    if (cleaned.startsWith('966') && cleaned.length === 12) {
+        return `+${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)} ${cleaned.substring(5, 8)} ${cleaned.substring(8)}`;
+    }
+    if (cleaned.startsWith('0') && cleaned.length === 10) {
+        return `${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7)}`;
+    }
+    return phone;
+}
+
+/**
+ * Switch between phone and email login
+ */
+function setLoginMethod(method) {
+    loginMethod = method;
+    const phoneSection = document.getElementById('phone-login-section');
+    const emailSection = document.getElementById('email-login-section');
+    const phoneTab = document.getElementById('tab-phone');
+    const emailTab = document.getElementById('tab-email');
+
+    if (method === 'phone') {
+        phoneSection.style.display = 'block';
+        emailSection.style.display = 'none';
+        phoneTab.classList.add('active');
+        emailTab.classList.remove('active');
+    } else {
+        phoneSection.style.display = 'none';
+        emailSection.style.display = 'block';
+        phoneTab.classList.remove('active');
+        emailTab.classList.add('active');
+    }
+
+    document.getElementById('error').innerText = '';
+}
+
+/**
+ * Login with phone number + password
+ */
+async function loginWithPhone() {
+    showLoading();
+    const phone = document.getElementById('login-phone').value.trim();
+    const password = document.getElementById('login-password-phone').value.trim();
+    const errorEl = document.getElementById('error');
+
+    if (!phone || !password) {
+        errorEl.innerText = 'يرجى إدخال رقم الهاتف وكلمة المرور';
+        hideLoading();
+        return;
+    }
+
+    if (!isValidPhone(phone)) {
+        errorEl.innerText = 'رقم الهاتف غير صالح';
+        hideLoading();
+        return;
+    }
+
+    const fakeEmail = phoneToEmail(phone);
+
+    try {
+        await signInWithEmailAndPassword(auth, fakeEmail, password);
+        errorEl.innerText = '';
+    } catch (error) {
+        const messages = {
+            'auth/user-not-found': 'رقم الهاتف غير مسجل',
+            'auth/wrong-password': 'كلمة المرور غير صحيحة',
+            'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
+            'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
+            'auth/network-request-failed': 'تحقق من اتصال الإنترنت',
+            'auth/user-disabled': 'هذا الحساب معطل'
+        };
+        errorEl.innerText = messages[error.code] || error.message;
+        hideLoading();
+    }
+}
+
+/**
+ * Signup with phone number + name + password
+ */
+async function signupWithPhone() {
+    showLoading();
+    const name = document.getElementById('signup-name-phone').value.trim();
+    const phone = document.getElementById('signup-phone').value.trim();
+    const password = document.getElementById('signup-password-phone').value.trim();
+    const errorEl = document.getElementById('error');
+
+    if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); return; }
+    if (!phone) { errorEl.innerText = 'أدخل رقم الهاتف'; hideLoading(); return; }
+    if (!password) { errorEl.innerText = 'أدخل كلمة المرور'; hideLoading(); return; }
+
+    if (!isValidPhone(phone)) {
+        errorEl.innerText = 'رقم الهاتف غير صالح';
+        hideLoading();
+        return;
+    }
+
+    if (password.length < 6) {
+        errorEl.innerText = 'كلمة المرور 6 أحرف على الأقل';
+        hideLoading();
+        return;
+    }
+
+    const fakeEmail = phoneToEmail(phone);
+    const cleanedPhone = phone.replace(/[\s\-+]/g, '');
+
+    try {
+        // Check if phone already registered
+        const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(cleanedPhone));
+        const existingSnap = await get(phoneQuery);
+        if (existingSnap.exists()) {
+            errorEl.innerText = 'رقم الهاتف مسجل بالفعل';
+            hideLoading();
+            return;
+        }
+
+        const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
+        await set(ref(database, 'users/' + cred.user.uid), {
+            name: name,
+            phone: cleanedPhone,
+            phoneDisplay: formatPhoneDisplay(phone),
+            email: null,
+            isAdmin: false,
+            joinDate: new Date().toISOString(),
+            followers: 0,
+            following: 0,
+            profilePicture: DEFAULT_AVATAR,
+            provider: 'phone'
+        });
+        errorEl.innerText = '';
+    } catch (error) {
+        const messages = {
+            'auth/email-already-in-use': 'رقم الهاتف مسجل بالفعل',
+            'auth/weak-password': 'كلمة المرور ضعيفة'
+        };
+        errorEl.innerText = messages[error.code] || error.message;
+        hideLoading();
+    }
+}
+
+/**
+ * Login with email + password (legacy)
+ */
 async function login() {
     showLoading();
     const email = document.getElementById('login-email').value.trim();
@@ -26,7 +202,6 @@ async function login() {
     try {
         await signInWithEmailAndPassword(auth, email, password);
         errorEl.innerText = '';
-        // Auth state listener handles the rest
     } catch (error) {
         const messages = {
             'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
@@ -42,6 +217,9 @@ async function login() {
     }
 }
 
+/**
+ * Signup with email (legacy)
+ */
 async function signup() {
     showLoading();
     const name = document.getElementById('signup-name').value.trim();
@@ -57,14 +235,15 @@ async function signup() {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         await set(ref(database, 'users/' + cred.user.uid), {
             name: name,
+            email: email,
             isAdmin: false,
             joinDate: new Date().toISOString(),
             followers: 0,
             following: 0,
-            profilePicture: DEFAULT_AVATAR
+            profilePicture: DEFAULT_AVATAR,
+            provider: 'email'
         });
         errorEl.innerText = '';
-        // Auth state listener handles the rest
     } catch (error) {
         const messages = {
             'auth/email-already-in-use': 'البريد مستخدم بالفعل',
@@ -130,4 +309,4 @@ function showSignup() {
     document.getElementById('error').innerText = '';
 }
 
-export { init, login, signup, logout, setupAuthStateListener, showLogin, showSignup };
+export { init, login, loginWithPhone, signup, signupWithPhone, logout, setupAuthStateListener, showLogin, showSignup, setLoginMethod };

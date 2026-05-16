@@ -3053,6 +3053,45 @@ img[loading="lazy"]:not([src=""]) {
     background-color: var(--border-color);
 }
 
+/* ===== Auth Tabs ===== */
+.auth-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 16px;
+}
+.auth-tab {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    border: none;
+    background: none;
+    position: relative;
+    font-family: inherit;
+}
+.auth-tab:hover {
+    background-color: var(--bg-hover);
+}
+.auth-tab.active {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+.auth-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 4px;
+    background-color: var(--accent);
+    border-radius: 2px;
+}
+
 /* ===== Communities ===== */
 .communities-list {
     padding: 0;
