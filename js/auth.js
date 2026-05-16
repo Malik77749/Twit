@@ -14,6 +14,145 @@ let loginMethod = 'phone'; // 'phone' or 'email'
 function init(authInstance, databaseInstance) {
     auth = authInstance;
     database = databaseInstance;
+    setupHandleValidation();
+}
+
+// ===== Handle (Username) Validation =====
+let handleCheckTimeout = null;
+let lastCheckedHandle = '';
+let lastCheckedResult = '';
+
+function validateHandleFormat(handle) {
+    // Only allow: letters, numbers, underscore, dot. 3-20 chars.
+    return /^[a-zA-Z0-9_.]{3,20}$/.test(handle);
+}
+
+async function checkHandleAvailability(handle) {
+    const lower = handle.toLowerCase();
+    try {
+        const snap = await get(ref(database, `handles/${lower}`));
+        return !snap.exists();
+    } catch (e) {
+        console.error('Handle check error:', e);
+        return false;
+    }
+}
+
+function updateHandleUI(inputId, feedbackId, status, message) {
+    const input = document.getElementById(inputId);
+    const feedback = document.getElementById(feedbackId);
+    const wrap = input?.closest('.handle-input-wrap');
+    if (!wrap || !feedback) return;
+
+    wrap.classList.remove('available', 'taken', 'checking');
+    feedback.classList.remove('available', 'taken', 'checking', 'hint');
+
+    if (status === 'available') {
+        wrap.classList.add('available');
+        feedback.classList.add('available');
+        feedback.textContent = message || '✓ الاسم متاح';
+    } else if (status === 'taken') {
+        wrap.classList.add('taken');
+        feedback.classList.add('taken');
+        feedback.textContent = message || '✗ هذا الاسم مسجل مسبقاً';
+    } else if (status === 'checking') {
+        wrap.classList.add('checking');
+        feedback.classList.add('checking');
+        feedback.textContent = 'جاري التحقق...';
+    } else if (status === 'hint') {
+        feedback.classList.add('hint');
+        feedback.textContent = message || '';
+    } else {
+        feedback.textContent = '';
+    }
+}
+
+function setupHandleValidation() {
+    // Phone signup handle
+    const phoneHandle = document.getElementById('signup-handle-phone');
+    const emailHandle = document.getElementById('signup-handle-email');
+
+    if (phoneHandle) {
+        phoneHandle.addEventListener('input', () => handleInputLive(phoneHandle, 'handle-feedback-phone'));
+    }
+    if (emailHandle) {
+        emailHandle.addEventListener('input', () => handleInputLive(emailHandle, 'handle-feedback-email'));
+    }
+}
+
+function handleInputLive(input, feedbackId) {
+    const raw = input.value.trim();
+    const inputId = input.id;
+
+    // Clear previous timeout
+    if (handleCheckTimeout) clearTimeout(handleCheckTimeout);
+
+    // Empty
+    if (!raw) {
+        updateHandleUI(inputId, feedbackId, 'hint', 'اختر اسماً مستخدم فريداً');
+        lastCheckedHandle = '';
+        lastCheckedResult = '';
+        return;
+    }
+
+    // Format check
+    if (!validateHandleFormat(raw)) {
+        updateHandleUI(inputId, feedbackId, 'taken', '✗ الأحرف المسموحة: إنجليزية، أرقام، _ و . (3-20 حرف)');
+        lastCheckedHandle = '';
+        lastCheckedResult = '';
+        return;
+    }
+
+    // Show checking state
+    updateHandleUI(inputId, feedbackId, 'checking');
+
+    // Debounce — wait 500ms after user stops typing
+    handleCheckTimeout = setTimeout(async () => {
+        const lower = raw.toLowerCase();
+
+        // Skip if already checked this exact handle
+        if (lower === lastCheckedHandle) {
+            updateHandleUI(inputId, feedbackId, lastCheckedResult);
+            return;
+        }
+
+        const available = await checkHandleAvailability(raw);
+        lastCheckedHandle = lower;
+        lastCheckedResult = available ? 'available' : 'taken';
+
+        // Make sure the input still has the same value
+        if (input.value.trim().toLowerCase() === lower) {
+            updateHandleUI(inputId, feedbackId, lastCheckedResult);
+        }
+    }, 500);
+}
+
+/**
+ * Get the handle value from the active signup form
+ */
+function getActiveHandle() {
+    const phoneForm = document.getElementById('signup-phone-form');
+    if (phoneForm && phoneForm.style.display !== 'none') {
+        return document.getElementById('signup-handle-phone')?.value?.trim() || '';
+    }
+    return document.getElementById('signup-handle-email')?.value?.trim() || '';
+}
+
+/**
+ * Validate handle before signup — returns { valid, handle, error }
+ */
+async function validateHandleForSignup(handle) {
+    if (!handle) {
+        return { valid: false, error: 'أدخل اسم المستخدم' };
+    }
+    if (!validateHandleFormat(handle)) {
+        return { valid: false, error: 'اسم المستخدم: إنجليزية، أرقام، _ و . (3-20 حرف)' };
+    }
+    const available = await checkHandleAvailability(handle);
+    if (!available) {
+        return { valid: false, error: 'هذا الاسم مسجل مسبقاً، اختر اسماً آخر' };
+    }
+    return { valid: true, handle: handle.toLowerCase() };
 }
 
 /**
@@ -126,11 +265,20 @@ async function signupWithPhone() {
     const phone = document.getElementById('signup-phone').value.trim();
     const password = document.getElementById('signup-password-phone').value.trim();
     const countryCode = document.getElementById('signup-country-code').value;
+    const handle = document.getElementById('signup-handle-phone')?.value?.trim() || '';
     const errorEl = document.getElementById('error');
 
     if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); return; }
     if (!phone) { errorEl.innerText = 'أدخل رقم الهاتف'; hideLoading(); return; }
     if (!password) { errorEl.innerText = 'أدخل كلمة المرور'; hideLoading(); return; }
+
+    // Validate handle
+    const handleResult = await validateHandleForSignup(handle);
+    if (!handleResult.valid) {
+        errorEl.innerText = handleResult.error;
+        hideLoading();
+        return;
+    }
 
     if (!isValidPhone(phone)) {
         errorEl.innerText = 'رقم الهاتف غير صالح';
@@ -163,8 +311,11 @@ async function signupWithPhone() {
         }
 
         const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
+
+        // Save user profile
         await set(ref(database, 'users/' + cred.user.uid), {
             name: name,
+            handle: handleResult.handle,
             phone: fullPhone,
             phoneDisplay: formatPhoneDisplay(phone, countryCode),
             countryCode: countryCode,
@@ -175,6 +326,10 @@ async function signupWithPhone() {
             profilePicture: DEFAULT_AVATAR,
             provider: 'phone'
         });
+
+        // Reserve handle
+        await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+
         errorEl.innerText = '';
         hideLoading();
     } catch (error) {
@@ -228,10 +383,20 @@ async function signup() {
     const name = document.getElementById('signup-name').value.trim();
     const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value.trim();
+    const handle = document.getElementById('signup-handle-email')?.value?.trim() || '';
     const errorEl = document.getElementById('error');
 
     if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); return; }
     if (!email || !password) { errorEl.innerText = 'أدخل البريد وكلمة المرور'; hideLoading(); return; }
+
+    // Validate handle
+    const handleResult = await validateHandleForSignup(handle);
+    if (!handleResult.valid) {
+        errorEl.innerText = handleResult.error;
+        hideLoading();
+        return;
+    }
+
     if (password.length < 6) { errorEl.innerText = 'كلمة المرور 6 أحرف على الأقل'; hideLoading(); return; }
 
     try {
@@ -240,6 +405,7 @@ async function signup() {
         try { await sendEmailVerification(cred.user); } catch(e) { console.warn('Email verification failed:', e); }
         await set(ref(database, 'users/' + cred.user.uid), {
             name: name,
+            handle: handleResult.handle,
             email: email,
             joinDate: new Date().toISOString(),
             followers: 0,
@@ -248,6 +414,10 @@ async function signup() {
             provider: 'email',
             emailVerified: false
         });
+
+        // Reserve handle
+        await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+
         errorEl.innerText = '';
         hideLoading();
     } catch (error) {

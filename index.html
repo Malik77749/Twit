@@ -147,6 +147,11 @@
                 <!-- Phone Signup -->
                 <div id="signup-phone-form">
                     <input type="text" class="auth-input" id="signup-name-phone" placeholder="الاسم الكامل">
+                    <div class="handle-input-wrap">
+                        <span class="handle-prefix">@</span>
+                        <input type="text" class="auth-input handle-input" id="signup-handle-phone" placeholder="اسم المستخدم" dir="ltr" style="text-align:left;margin-bottom:0;" maxlength="20" autocomplete="off">
+                    </div>
+                    <div class="handle-feedback" id="handle-feedback-phone"></div>
                     <input type="password" class="auth-input" id="signup-password-phone" placeholder="كلمة المرور (6 أحرف على الأقل)">
                     <div class="phone-input-row">
                         <select class="auth-select" id="signup-country-code">
@@ -180,6 +185,11 @@
                 <!-- Email Signup -->
                 <div id="signup-email-form" style="display:none;">
                     <input type="text" class="auth-input" id="signup-name" placeholder="الاسم الكامل">
+                    <div class="handle-input-wrap">
+                        <span class="handle-prefix">@</span>
+                        <input type="text" class="auth-input handle-input" id="signup-handle-email" placeholder="اسم المستخدم" dir="ltr" style="text-align:left;margin-bottom:0;" maxlength="20" autocomplete="off">
+                    </div>
+                    <div class="handle-feedback" id="handle-feedback-email"></div>
                     <input type="email" class="auth-input" id="signup-email" placeholder="البريد الإلكتروني">
                     <input type="password" class="auth-input" id="signup-password" placeholder="كلمة المرور (6 أحرف على الأقل)">
                     <button class="auth-btn" id="signup-btn">إنشاء حساب</button>

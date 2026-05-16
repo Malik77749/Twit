@@ -30,7 +30,7 @@ async function showProfile(userId) {
         const protectedIcon = userData.isProtected ? ' <i class="fas fa-lock" style="font-size:14px;color:var(--text-secondary);"></i>' : '';
         document.getElementById('profile-name').innerHTML = escapeHtml(userData.name || 'مستخدم') + protectedIcon;
         document.getElementById('profile-view-name').innerHTML = escapeHtml(userData.name || 'مستخدم') + protectedIcon;
-        document.getElementById('profile-handle').textContent = '@' + (userData.name || 'user').replace(/\s/g, '').toLowerCase();
+        document.getElementById('profile-handle').textContent = '@' + (userData.handle || (userData.name || 'user').replace(/\s/g, '').toLowerCase());
         document.getElementById('profile-followers').textContent = userData.followers || 0;
         document.getElementById('profile-following').textContent = userData.following || 0;
         document.getElementById('profile-picture').src = userData.profilePicture || DEFAULT_AVATAR;
@@ -183,7 +183,9 @@ async function saveProfile() {
         // Update UI
         document.getElementById('profile-name').textContent = name;
         document.getElementById('profile-view-name').textContent = name;
-        document.getElementById('profile-handle').textContent = '@' + name.replace(/\s/g, '').toLowerCase();
+        // Keep existing handle if set, otherwise generate from name
+        const currentHandle = document.getElementById('profile-handle').textContent.replace('@', '');
+        document.getElementById('profile-handle').textContent = '@' + (currentHandle || name.replace(/\s/g, '').toLowerCase());
 
         if (picUrl) {
             document.getElementById('profile-picture').src = picUrl;

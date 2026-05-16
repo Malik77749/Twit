@@ -126,6 +126,7 @@ async function postTweet() {
         userId: userId,
         userName: userData.name || 'مستخدم',
         userAvatar: userData.profilePicture || DEFAULT_AVATAR,
+        userHandle: userData.handle || '',
         content: escapeHtml(content),
         timestamp: new Date().toISOString(),
         likes: 0,
@@ -751,12 +752,14 @@ async function renderPost(post, container) {
     // Use denormalized data if available (faster — no extra DB read)
     let userName = post.userName || 'مستخدم';
     let avatar = post.userAvatar || DEFAULT_AVATAR;
+    let userHandle = post.userHandle || '';
 
     // Fallback: fetch user data if not denormalized
     if (!post.userName) {
         const userData = await getUserData(database, post.userId);
         userName = userData.name || 'مستخدم';
         avatar = userData.profilePicture || DEFAULT_AVATAR;
+        userHandle = userData.handle || '';
     }
 
     const isOwnPost = post.userId === userId;
@@ -793,7 +796,7 @@ async function renderPost(post, container) {
                         <div class="tweet-header">
                             <span class="tweet-name">${escapeHtml(userName)}</span>
                             <span class="protected-lock-icon"><i class="fas fa-lock"></i></span>
-                            <span class="tweet-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
+                            <span class="tweet-handle">@${userHandle || escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
                         </div>
                         <div class="tweet-content" style="color:var(--text-secondary);">هذا الحساب خاص. تابعه لرؤية منشوراته.</div>
                     </div>
@@ -842,7 +845,7 @@ async function renderPost(post, container) {
                 ${pinnedHtml}
                 <div class="tweet-header">
                     <span class="tweet-name" onclick="event.stopPropagation(); showProfile('${post.userId}')">${escapeHtml(userName)}</span>${protectedBadge}
-                    <span class="tweet-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
+                    <span class="tweet-handle">@${userHandle || escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(post.timestamp)}</span>
                     ${editedHtml}

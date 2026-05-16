@@ -233,7 +233,7 @@ async function performSearch(queryStr) {
                             <img src="${user.profilePicture || DEFAULT_AVATAR}" alt="">
                             <div class="search-result-info">
                                 <div class="search-result-name">${escapeHtml(user.name || 'مستخدم')}${protectedIcon}</div>
-                                <div class="search-result-handle">@${escapeHtml((user.name || '').replace(/\s/g, '').toLowerCase())}</div>
+                                <div class="search-result-handle">@${escapeHtml(user.handle || (user.name || '').replace(/\s/g, '').toLowerCase())}</div>
                             </div>
                         </div>
                     `;
@@ -1298,6 +1298,7 @@ window.openPostDetail = async function(postId) {
         const userData = await getUserData(database, post.userId);
         const userName = post.userName || userData.name || 'مستخدم';
         const avatar = post.userAvatar || userData.profilePicture || DEFAULT_AVATAR;
+        const userHandle = userData.handle || '';
         const isOwnPost = post.userId === userId;
 
         const likeSnap = await get(ref(database, `likes/${postId}/${userId}`));
@@ -1329,7 +1330,7 @@ window.openPostDetail = async function(postId) {
                     <img class="post-detail-avatar" src="${avatar}" alt="" onclick="showProfile('${post.userId}')">
                     <div class="post-detail-info">
                         <div class="post-detail-name" onclick="showProfile('${post.userId}')">${escapeHtml(userName)}</div>
-                        <div class="post-detail-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</div>
+                        <div class="post-detail-handle">@${userHandle || escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</div>
                     </div>
                     ${!isOwnPost ? `<button class="follow-btn" data-follow-id="${post.userId}" onclick="followUser('${post.userId}', event)">متابعة</button>` : ''}
                 </div>
@@ -1409,7 +1410,7 @@ window.copyPostLink = function(postId) {
 function updateSidebar(userData) {
     const name = userData?.name || 'مستخدم';
     const pic = userData?.profilePicture || DEFAULT_AVATAR;
-    const handle = '@' + name.replace(/\s/g, '').toLowerCase();
+    const handle = '@' + (userData?.handle || name.replace(/\s/g, '').toLowerCase());
 
     document.getElementById('sidebar-name').textContent = name;
     document.getElementById('sidebar-handle').textContent = handle;
@@ -1460,7 +1461,7 @@ async function loadWhoToFollow() {
                 <img src="${user.profilePicture || DEFAULT_AVATAR}" alt="" onclick="showProfile('${user.id}')">
                 <div class="who-to-follow-info" onclick="showProfile('${user.id}')">
                     <div class="who-to-follow-name">${escapeHtml(user.name || 'مستخدم')}</div>
-                    <div class="who-to-follow-handle">@${escapeHtml((user.name || '').replace(/\s/g, '').toLowerCase())}</div>
+                    <div class="who-to-follow-handle">@${escapeHtml(user.handle || (user.name || '').replace(/\s/g, '').toLowerCase())}</div>
                 </div>
                 <button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${user.id}" onclick="followUser('${user.id}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>
             `;

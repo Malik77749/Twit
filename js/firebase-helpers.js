@@ -115,4 +115,19 @@ async function searchUserByName(nameLower) {
     }
 }
 
-export { getUserName, getUserProfilePicture, getUserData, addNotification, clearUserCache, searchUserByName };
+/**
+ * Search user by handle (case-insensitive) — returns userId or null
+ */
+async function searchUserByHandle(handleLower) {
+    try {
+        const snapshot = await get(ref(database, `handles/${handleLower}`));
+        if (snapshot.exists()) {
+            return snapshot.val(); // returns the uid
+        }
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+export { getUserName, getUserProfilePicture, getUserData, addNotification, clearUserCache, searchUserByName, searchUserByHandle };

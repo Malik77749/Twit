@@ -96,17 +96,25 @@ function parseContent(text) {
 }
 
 /**
- * Search for a user by name and show their profile
+ * Search for a user by handle and show their profile
  */
 function searchAndShowUser(username) {
     const lower = username.toLowerCase();
-    // Search in database for user with matching name
-    import('./firebase-helpers.js?v=3').then(({ searchUserByName }) => {
-        searchUserByName(lower).then(userId => {
+    import('./firebase-helpers.js?v=3').then(({ searchUserByHandle }) => {
+        searchUserByHandle(lower).then(userId => {
             if (userId) {
                 window.showProfile(userId);
             } else {
-                showToast('لم يتم العثور على المستخدم');
+                // Fallback: search by name
+                import('./firebase-helpers.js?v=3').then(({ searchUserByName }) => {
+                    searchUserByName(lower).then(nameId => {
+                        if (nameId) {
+                            window.showProfile(nameId);
+                        } else {
+                            showToast('لم يتم العثور على المستخدم');
+                        }
+                    });
+                });
             }
         });
     });

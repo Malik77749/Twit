@@ -26,9 +26,21 @@ async function signInWithGoogle() {
         // Check if new user
         const userSnap = await get(ref(database, 'users/' + user.uid));
         if (!userSnap.exists()) {
+            // Generate unique handle from name
+            let handle = (user.displayName || 'user').replace(/\s/g, '').toLowerCase().replace(/[^a-z0-9_.]/g, '');
+            if (handle.length < 3) handle = 'user' + Math.floor(Math.random() * 99999);
+            if (handle.length > 20) handle = handle.substring(0, 20);
+
+            // Check if handle exists, add number if so
+            const handleSnap = await get(ref(database, `handles/${handle}`));
+            if (handleSnap.exists()) {
+                handle = handle + Math.floor(Math.random() * 9999);
+            }
+
             // Create user profile
             await set(ref(database, 'users/' + user.uid), {
                 name: user.displayName || 'مستخدم',
+                handle: handle,
                 email: user.email,
                 profilePicture: user.photoURL || DEFAULT_AVATAR,
                 isAdmin: false,
@@ -38,6 +50,9 @@ async function signInWithGoogle() {
                 bio: '',
                 provider: 'google'
             });
+
+            // Reserve handle
+            await set(ref(database, `handles/${handle}`), user.uid);
         } else {
             // Update last login
             await update(ref(database, 'users/' + user.uid), {
