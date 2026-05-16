@@ -149,13 +149,17 @@ async function signupWithPhone() {
     const fullPhone = countryCode + cleanedPhone;
 
     try {
-        // Check if phone already registered
-        const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(fullPhone));
-        const existingSnap = await get(phoneQuery);
-        if (existingSnap.exists()) {
-            errorEl.innerText = 'رقم الهاتف مسجل بالفعل';
-            hideLoading();
-            return;
+        // Check if phone already registered (non-blocking — index may be missing)
+        try {
+            const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(fullPhone));
+            const existingSnap = await get(phoneQuery);
+            if (existingSnap.exists()) {
+                errorEl.innerText = 'رقم الهاتف مسجل بالفعل';
+                hideLoading();
+                return;
+            }
+        } catch (indexErr) {
+            console.warn('Phone uniqueness check skipped:', indexErr.message);
         }
 
         const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
