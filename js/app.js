@@ -28,6 +28,8 @@ import * as a11y from './accessibility.js';
 import * as undoTweet from './undo-tweet.js';
 import * as verified from './verified.js';
 import * as trending from './trending.js';
+import * as googleAuth from './google-auth.js';
+import * as communities from './communities.js';
 import { getUserData } from './firebase-helpers.js';
 
 // Initialize Firebase
@@ -59,6 +61,8 @@ try {
     lists.init(authInstance, database);
     verified.init(database);
     trending.init(database);
+    googleAuth.init(authInstance, database);
+    communities.init(authInstance, database);
     theme.init();
     shortcuts.init();
     a11y.init();
@@ -486,6 +490,101 @@ function updateDMBadge() {
 // ===== Poll Functions =====
 
 window.undoPost = undoTweet.undoPost;
+
+// ===== Google Sign-In =====
+
+window.signInWithGoogle = async function() {
+    const result = await googleAuth.signInWithGoogle();
+    if (!result.success) {
+        const errorEl = document.getElementById('error');
+        if (errorEl) errorEl.innerText = result.message;
+    }
+    // Auth state listener handles the rest
+};
+
+// ===== Communities =====
+
+window.showCommunities = async function() {
+    hideAllViews();
+    document.getElementById('communities-view').style.display = 'block';
+
+    const container = document.getElementById('communities-content');
+    container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+    const allComms = await communities.getAllCommunities();
+    const userId = authInstance.currentUser?.uid;
+    const userComms = await communities.getUserCommunities(userId);
+    container.innerHTML = communities.renderCommunities(allComms, userComms);
+};
+
+window.createCommunityAction = async function() {
+    const name = prompt('اسم المجتمع:');
+    if (!name) return;
+    const desc = prompt('وصف (اختياري):');
+    const category = prompt('الفئة (تقنية/رياضة/فن/علوم/أعمال/عام):') || 'عام';
+    const isPrivate = confirm('هل تريد مجتمع خاص؟');
+
+    const commId = await communities.createCommunity(name, desc, category, isPrivate);
+    if (commId) {
+        showToast('تم إنشاء المجتمع');
+        showCommunities();
+    }
+};
+
+window.toggleCommunityMembership = async function(commId, isMember) {
+    if (isMember) {
+        if (!confirm('مغادرة المجتمع؟')) return;
+        await communities.leaveCommunity(commId);
+        showToast('تمت المغادرة');
+    } else {
+        await communities.joinCommunity(commId);
+        showToast('تم الانضمام');
+    }
+    showCommunities();
+};
+
+window.showCommunityDetail = async function(commId) {
+    // For now just show community feed
+    hideAllViews();
+    const commSnap = await get(ref(database, `communities/${commId}`));
+    if (!commSnap.exists()) return;
+
+    const comm = commSnap.val();
+    const container = document.getElementById('communities-content');
+
+    let html = `
+        <div class="community-detail-header">
+            <h3>${escapeHtml(comm.name)}</h3>
+            <p style="color:var(--text-secondary);font-size:14px;">${escapeHtml(comm.description || '')}</p>
+            <div style="display:flex;gap:16px;color:var(--text-secondary);font-size:13px;margin-top:8px;">
+                <span>${comm.memberCount || 0} عضو</span>
+                <span>${comm.postCount || 0} منشور</span>
+                <span>${comm.isPrivate ? 'خاص' : 'عام'}</span>
+            </div>
+        </div>
+        <div id="community-posts"></div>
+    `;
+    container.innerHTML = html;
+
+    // Load community posts
+    const postIds = await communities.getCommunityFeed(commId);
+    const postsDiv = document.getElementById('community-posts');
+
+    if (!postIds.length) {
+        postsDiv.innerHTML = '<div class="empty-state"><p>لا توجد منشورات بعد</p></div>';
+        return;
+    }
+
+    for (const postId of postIds.slice(0, 20)) {
+        const postSnap = await get(ref(database, `posts/${postId}`));
+        if (postSnap.exists()) {
+            const el = document.createElement('div');
+            el.setAttribute('data-post-id', postId);
+            postsDiv.appendChild(el);
+            await posts.renderPost({ id: postId, ...postSnap.val() }, el);
+        }
+    }
+};
 
 let pollOptionCount = 2;
 let isPollActive = false;
