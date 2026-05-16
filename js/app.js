@@ -17,6 +17,9 @@ import * as rateLimiter from './rate-limiter.js';
 import * as pushNotif from './push-notifications.js';
 import * as dm from './dm.js';
 import * as blockMute from './block-mute.js';
+import * as polls from './polls.js';
+import * as theme from './theme.js';
+import * as drafts from './drafts.js';
 import { getUserData } from './firebase-helpers.js';
 
 // Initialize Firebase
@@ -41,6 +44,9 @@ try {
     profile.init(authInstance, database);
     dm.init(authInstance, database);
     blockMute.init(authInstance, database);
+    polls.init(authInstance, database);
+    drafts.init(authInstance, database);
+    theme.init();
     console.log('Modules initialized OK');
 } catch (error) {
     console.error('Module initialization error:', error);
@@ -462,6 +468,202 @@ function updateDMBadge() {
     });
 }
 
+// ===== Poll Functions =====
+
+let pollOptionCount = 2;
+let isPollActive = false;
+
+window.togglePoll = function() {
+    const composer = document.getElementById('poll-composer');
+    isPollActive = !isPollActive;
+    composer.style.display = isPollActive ? 'block' : 'none';
+};
+
+window.removePoll = function() {
+    isPollActive = false;
+    document.getElementById('poll-composer').style.display = 'none';
+    document.getElementById('poll-question').value = '';
+    document.getElementById('poll-opt1').value = '';
+    document.getElementById('poll-opt2').value = '';
+    document.getElementById('poll-extra-options').innerHTML = '';
+    pollOptionCount = 2;
+};
+
+window.addPollOption = function() {
+    if (pollOptionCount >= 4) {
+        showToast('الحد الأقصى 4 خيارات');
+        return;
+    }
+    pollOptionCount++;
+    const container = document.getElementById('poll-extra-options');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'poll-input';
+    input.id = `poll-opt${pollOptionCount}`;
+    input.placeholder = `الخيار ${pollOptionCount}`;
+    input.maxLength = 100;
+    container.appendChild(input);
+};
+
+window.votePoll = async function(postId, optionKey) {
+    const success = await polls.vote(postId, optionKey);
+    if (success) {
+        // Reload the post to show results
+        showToast('تم التصويت');
+    }
+};
+
+// ===== Reply Setting =====
+
+const replySettings = [
+    { icon: 'fa-earth-americas', text: 'الجميع يمكنه الرد', value: 'everyone' },
+    { icon: 'fa-user-check', text: 'المتابَعون يمكنهم الرد', value: 'following' },
+    { icon: 'fa-at', text: 'المذكورون فقط يمكنهم الرد', value: 'mentioned' }
+];
+let currentReplySetting = 0;
+
+window.cycleReplySetting = function() {
+    currentReplySetting = (currentReplySetting + 1) % replySettings.length;
+    const setting = replySettings[currentReplySetting];
+    document.getElementById('reply-setting-text').textContent = setting.text;
+    document.querySelector('.reply-selector-btn i').className = `fas ${setting.icon}`;
+};
+
+window.toggleReplySelector = function() {
+    const selector = document.getElementById('reply-selector');
+    selector.style.display = selector.style.display === 'none' ? 'flex' : 'none';
+};
+
+// ===== Theme Functions =====
+
+window.setThemeAction = function(themeName) {
+    theme.setTheme(themeName);
+    // Update active states
+    document.querySelectorAll('.theme-btn, .settings-theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === themeName);
+    });
+};
+
+window.cycleTheme = function() {
+    const next = theme.cycleTheme();
+    document.querySelectorAll('.theme-btn, .settings-theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === next);
+    });
+};
+
+// ===== Draft Functions =====
+
+window.saveDraftAction = async function() {
+    const content = document.getElementById('postContent').value.trim();
+    const imageUrl = document.getElementById('postImageUrl').value.trim();
+    const videoUrl = document.getElementById('postVideo').value.trim();
+
+    if (!content && !imageUrl && !videoUrl) {
+        showToast('لا شيء لحفظه');
+        return;
+    }
+
+    const draftId = await drafts.saveDraft(content, imageUrl, videoUrl);
+    if (draftId) {
+        showToast('تم حفظ المسودة');
+        // Clear composer
+        document.getElementById('postContent').value = '';
+        document.getElementById('postContent').style.height = 'auto';
+        removePreview();
+    }
+};
+
+window.showDrafts = async function() {
+    hideAllViews();
+    document.getElementById('drafts-view').style.display = 'block';
+
+    const container = document.getElementById('drafts-list');
+    container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+    const draftList = await drafts.getDrafts();
+    container.innerHTML = drafts.renderDraftsList(draftList);
+};
+
+window.loadDraft = function(draftId) {
+    // Load draft content back to composer
+    showHome();
+    showToast('تم تحميل المسودة');
+};
+
+window.deleteDraftAction = async function(draftId) {
+    if (!confirm('حذف هذه المسودة؟')) return;
+    await drafts.deleteDraft(draftId);
+    showDrafts(); // Refresh list
+    showToast('تم حذف المسودة');
+};
+
+// ===== Settings =====
+
+window.showSettings = function() {
+    hideAllViews();
+    document.getElementById('settings-view').style.display = 'block';
+};
+
+window.showMutedWords = async function() {
+    const words = await blockMute.getMutedWords();
+    const container = document.getElementById('settings-content');
+
+    let html = `
+        <div style="padding:16px;">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                <button class="back-btn" onclick="showSettings()"><i class="fas fa-arrow-right"></i></button>
+                <h3>الكلمات المكتومة</h3>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:16px;">
+                <input type="text" class="auth-input" id="new-muted-word" placeholder="أضف كلمة..." style="margin-bottom:0;font-size:14px;padding:10px;flex:1;">
+                <button class="follow-btn" onclick="addMutedWordAction()" style="background:var(--accent);color:white;padding:8px 16px;">إضافة</button>
+            </div>
+    `;
+
+    if (words.length) {
+        for (const word of words) {
+            html += `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-color);">
+                    <span>${escapeHtml(word)}</span>
+                    <button class="follow-btn following" onclick="removeMutedWordAction('${escapeHtml(word)}')" style="font-size:12px;padding:4px 8px;">إزالة</button>
+                </div>
+            `;
+        }
+    } else {
+        html += '<div class="empty-state"><p>لا توجد كلمات مكتومة</p></div>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+};
+
+window.addMutedWordAction = async function() {
+    const input = document.getElementById('new-muted-word');
+    const word = input.value.trim();
+    if (!word) return;
+    await blockMute.addMutedWord(word);
+    input.value = '';
+    showMutedWords();
+};
+
+window.removeMutedWordAction = async function(word) {
+    await blockMute.removeMutedWord(word);
+    showMutedWords();
+};
+
+window.togglePushNotif = async function() {
+    const toggle = document.getElementById('push-notif-toggle');
+    if (toggle.checked) {
+        const token = await pushNotif.requestPermission(authInstance.currentUser.uid);
+        if (!token) {
+            toggle.checked = false;
+            showToast('لم يتم منح إذن الإشعارات');
+        }
+    } else {
+        await pushNotif.removeToken(authInstance.currentUser.uid);
+    }
+};
+
 // ===== Block/Mute Functions =====
 
 window.blockUserAction = async function(userId) {
@@ -593,6 +795,7 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
     const deleteBtn = document.getElementById('dropdown-delete');
     const pinBtn = document.getElementById('dropdown-pin');
     const bookmarkBtn = document.getElementById('dropdown-bookmark');
+    const quoteBtn = document.getElementById('dropdown-quote');
     const reportBtn = document.getElementById('dropdown-report');
     const followBtn = document.getElementById('dropdown-follow');
     const muteBtn = document.getElementById('dropdown-mute');
@@ -621,10 +824,21 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
     // Bind actions
     deleteBtn.onclick = () => { dropdown.style.display = 'none'; posts.deletePost(postId); };
     bookmarkBtn.onclick = () => { dropdown.style.display = 'none'; posts.toggleBookmark(postId); };
+    quoteBtn.onclick = () => { dropdown.style.display = 'none'; quoteTweet(postId); };
     reportBtn.onclick = () => { dropdown.style.display = 'none'; posts.reportPost(postId, userId); };
     followBtn.onclick = () => { dropdown.style.display = 'none'; posts.followUser(userId, { preventDefault:()=>{}, stopPropagation:()=>{} }); };
     muteBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.muteUser(userId); };
     blockBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.blockUser(userId).then(() => posts.loadPosts()); };
+
+// Quote Tweet
+function quoteTweet(postId) {
+    showHome();
+    const composer = document.getElementById('postContent');
+    composer.focus();
+    composer.value = `\n\nاقتباس منشور: ${window.location.origin}${window.location.pathname}#post/${postId}`;
+    composer.style.height = 'auto';
+    composer.style.height = composer.scrollHeight + 'px';
+}
 };
 
 // Close dropdown on outside click
@@ -913,24 +1127,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const showLoginBtn = document.getElementById('show-login-btn');
     if (showLoginBtn) showLoginBtn.addEventListener('click', () => showLogin());
 
-    // Auto-resize textarea + character counter
+    // Auto-resize textarea + character counter (X-style circular)
     const textarea = document.getElementById('postContent');
     if (textarea) {
         textarea.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = this.scrollHeight + 'px';
 
-            // Character counter
             const len = this.value.length;
+            const maxLen = 500;
+            const counter = document.getElementById('char-counter');
+            const ringFill = document.getElementById('char-ring-fill');
+            const countText = document.getElementById('char-count-text');
             const submitBtn = document.querySelector('.composer-submit');
-            if (submitBtn) {
-                if (len > 500) {
-                    submitBtn.disabled = true;
-                    submitBtn.style.opacity = '0.5';
-                } else {
-                    submitBtn.disabled = false;
-                    submitBtn.style.opacity = '1';
-                }
+
+            // Show counter when typing
+            if (len > 0) {
+                counter.style.display = 'flex';
+            } else {
+                counter.style.display = 'none';
+            }
+
+            // Update circular progress
+            const circumference = 2 * Math.PI * 8; // r=8
+            const progress = Math.min(len / maxLen, 1);
+            const offset = circumference - (progress * circumference);
+            ringFill.style.strokeDashoffset = offset;
+
+            // Color changes
+            ringFill.classList.remove('warning', 'danger');
+            countText.classList.remove('danger');
+
+            if (len > maxLen) {
+                ringFill.classList.add('danger');
+                countText.classList.add('danger');
+                countText.textContent = maxLen - len;
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+            } else if (len > maxLen * 0.9) {
+                ringFill.classList.add('warning');
+                countText.textContent = maxLen - len;
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+            } else {
+                countText.textContent = '';
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
             }
         });
     }

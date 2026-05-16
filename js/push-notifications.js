@@ -130,7 +130,7 @@ function onForegroundMessage(callback) {
 
             const notification = new Notification(title || 'Twit', {
                 body: body || 'لديك إشعار جديد',
-                icon: icon || '/icon-192.png',
+                icon: icon || '/icon-192.svg',
                 tag: payload.data?.tag || 'twit-notification',
                 data: { url: click_action || '/' }
             });

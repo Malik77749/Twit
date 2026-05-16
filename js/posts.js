@@ -8,6 +8,7 @@ import { loadComments } from './comments.js';
 import * as rateLimiter from './rate-limiter.js';
 import * as pagination from './pagination.js';
 import * as blockMute from './block-mute.js';
+import * as pollsModule from './polls.js';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -155,7 +156,44 @@ async function postTweet() {
             postData.videoUrl = embedUrl;
         }
 
-        await set(postRef, postData);
+        // Handle poll
+        const isPollActive = document.getElementById('poll-composer')?.style.display !== 'none';
+        if (isPollActive) {
+            const question = document.getElementById('poll-question')?.value.trim();
+            const opt1 = document.getElementById('poll-opt1')?.value.trim();
+            const opt2 = document.getElementById('poll-opt2')?.value.trim();
+            const opt3 = document.getElementById('poll-opt3')?.value.trim();
+            const opt4 = document.getElementById('poll-opt4')?.value.trim();
+            const duration = parseInt(document.getElementById('poll-duration')?.value || 24);
+
+            if (!question || !opt1 || !opt2) {
+                showToast('أكمل بيانات الاستطلاع');
+                if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
+                return;
+            }
+
+            const options = [opt1, opt2];
+            if (opt3) options.push(opt3);
+            if (opt4) options.push(opt4);
+
+            await set(postRef, postData);
+            await pollsModule.createPoll(postRef.key, question, options, duration);
+        } else {
+            // Handle reply setting
+            const replySetting = ['everyone', 'following', 'mentioned'][currentReplySetting || 0];
+            if (replySetting !== 'everyone') {
+                postData.replySetting = replySetting;
+            }
+
+            // Handle reply setting
+            const replySettingIdx = window.currentReplySetting || 0;
+            const replySetting = ['everyone', 'following', 'mentioned'][replySettingIdx];
+            if (replySetting !== 'everyone') {
+                postData.replySetting = replySetting;
+            }
+
+            await set(postRef, postData);
+        }
 
         // Record rate limit
         rateLimiter.recordAction(userId, 'post');
@@ -671,6 +709,16 @@ async function renderPost(post, container) {
         mediaHtml = `<div class="tweet-media"><iframe src="${post.videoUrl}" allowfullscreen loading="lazy"></iframe></div>`;
     }
 
+    // Poll
+    let pollHtml = '';
+    try {
+        const pollData = await pollsModule.getPoll(postId);
+        if (pollData) {
+            const userVote = await pollsModule.getUserVote(postId);
+            pollHtml = pollsModule.renderPollHTML(pollData, userVote);
+        }
+    } catch (e) { /* no poll */ }
+
     const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
     const editedHtml = post.edited ? '<span style="color:var(--text-secondary);font-size:12px;"> (معدّل)</span>' : '';
 
@@ -691,6 +739,7 @@ async function renderPost(post, container) {
                 </div>
                 ${post.content ? `<div class="tweet-content">${post.content}</div>` : ''}
                 ${mediaHtml ? `<div onclick="event.stopPropagation(); ${post.imageUrl ? `openLightbox('${post.imageUrl}')` : ''}" style="cursor:${post.imageUrl ? 'zoom-in' : 'default'};">${mediaHtml}</div>` : ''}
+                ${pollHtml}
                 <div class="tweet-actions" onclick="event.stopPropagation();">
                     <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
                         <span class="icon-wrap"><i class="far fa-comment"></i></span>
