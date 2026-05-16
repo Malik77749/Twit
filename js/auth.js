@@ -1,5 +1,5 @@
 // Authentication Module — Email + Phone + Google
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { ref, get, set, query, orderByChild, equalTo } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { showApp, showAuth, showLoading, hideLoading } from './ui.js';
 import { clearUserCache } from './firebase-helpers.js';
@@ -232,6 +232,8 @@ async function signup() {
 
     try {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
+        // Send verification email
+        try { await sendEmailVerification(cred.user); } catch(e) { console.warn('Email verification failed:', e); }
         await set(ref(database, 'users/' + cred.user.uid), {
             name: name,
             email: email,
@@ -240,7 +242,8 @@ async function signup() {
             followers: 0,
             following: 0,
             profilePicture: DEFAULT_AVATAR,
-            provider: 'email'
+            provider: 'email',
+            emailVerified: false
         });
         errorEl.innerText = '';
     } catch (error) {
@@ -308,4 +311,57 @@ function showSignup() {
     document.getElementById('error').innerText = '';
 }
 
-export { init, login, loginWithPhone, signup, signupWithPhone, logout, setupAuthStateListener, showLogin, showSignup, setLoginMethod };
+/**
+ * Send password reset email
+ */
+async function forgotPassword() {
+    const errorEl = document.getElementById('error');
+
+    // Determine which method is active
+    if (loginMethod === 'phone') {
+        const phone = document.getElementById('login-phone').value.trim();
+        const countryCode = document.getElementById('login-country-code').value;
+
+        if (!phone) {
+            errorEl.innerText = 'أدخل رقم الهاتف أولاً';
+            return;
+        }
+
+        if (!isValidPhone(phone)) {
+            errorEl.innerText = 'رقم الهاتف غير صالح';
+            return;
+        }
+
+        const fakeEmail = phoneToEmail(phone, countryCode);
+        try {
+            await sendPasswordResetEmail(auth, fakeEmail);
+            errorEl.style.color = '#00ba7c';
+            errorEl.innerText = 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك';
+            setTimeout(() => { errorEl.style.color = ''; }, 5000);
+        } catch (error) {
+            errorEl.innerText = error.code === 'auth/user-not-found'
+                ? 'رقم الهاتف غير مسجل'
+                : 'خطأ: ' + error.message;
+        }
+    } else {
+        const email = document.getElementById('login-email').value.trim();
+
+        if (!email) {
+            errorEl.innerText = 'أدخل البريد الإلكتروني أولاً';
+            return;
+        }
+
+        try {
+            await sendPasswordResetEmail(auth, email);
+            errorEl.style.color = '#00ba7c';
+            errorEl.innerText = 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك';
+            setTimeout(() => { errorEl.style.color = ''; }, 5000);
+        } catch (error) {
+            errorEl.innerText = error.code === 'auth/user-not-found'
+                ? 'البريد الإلكتروني غير مسجل'
+                : 'خطأ: ' + error.message;
+        }
+    }
+}
+
+export { init, login, loginWithPhone, signup, signupWithPhone, logout, setupAuthStateListener, showLogin, showSignup, setLoginMethod, forgotPassword };

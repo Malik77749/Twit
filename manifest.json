@@ -2,12 +2,12 @@
     "name": "Twit - منصة تواصل اجتماعي",
     "short_name": "Twit",
     "description": "منصة تواصل اجتماعي بالعربية",
-    "start_url": "/",
+    "start_url": "./",
     "display": "standalone",
     "background_color": "#000000",
     "theme_color": "#000000",
     "orientation": "portrait-primary",
-    "scope": "/",
+    "scope": "./",
     "lang": "ar",
     "dir": "rtl",
     "icons": [
@@ -29,12 +29,12 @@
     "shortcuts": [
         {
             "name": "إنشاء منشور",
-            "url": "/?action=compose",
+            "url": "./?action=compose",
             "icons": []
         },
         {
             "name": "الإشعارات",
-            "url": "/?view=notifications",
+            "url": "./?view=notifications",
             "icons": []
         }
     ]

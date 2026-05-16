@@ -1,8 +1,5 @@
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null",
-
     "users": {
       "$uid": {
         ".read": true,
@@ -24,6 +21,9 @@
         },
         "following": {
           ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": true
         }
       }
     },
@@ -78,6 +78,9 @@
           },
           "timestamp": {
             ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
           }
         }
       }

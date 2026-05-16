@@ -1306,87 +1306,116 @@ async function checkUserRole(user) {
 // Setup auth state listener
 auth.setupAuthStateListener(checkUserRole);
 
-// ===== DOM Ready =====
+// ===== Auth Button Binding (bulletproof) =====
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Auth button event listeners
-    const loginPhoneBtn = document.getElementById('login-phone-btn');
-    if (loginPhoneBtn) loginPhoneBtn.addEventListener('click', () => auth.loginWithPhone());
+function bindAuthButtons() {
+    const bindings = [
+        ['login-phone-btn', () => auth.loginWithPhone()],
+        ['login-btn', () => auth.login()],
+        ['signup-phone-btn', () => auth.signupWithPhone()],
+        ['signup-btn', () => auth.signup()],
+        ['show-signup-btn', () => auth.showSignup()],
+        ['show-login-btn', () => auth.showLogin()],
+        ['forgot-password-btn', () => auth.forgotPassword()],
+        ['forgot-password-email-btn', () => auth.forgotPassword()],
+    ];
+    bindings.forEach(([id, fn]) => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.bound) {
+            el.addEventListener('click', fn);
+            el.dataset.bound = 'true';
+        }
+    });
 
-    const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) loginBtn.addEventListener('click', () => auth.login());
+    // Enter key on auth inputs
+    [
+        ['login-phone', auth.loginWithPhone],
+        ['login-password-phone', auth.loginWithPhone],
+        ['login-email', auth.login],
+        ['login-password', auth.login],
+        ['signup-name-phone', auth.signupWithPhone],
+        ['signup-phone', auth.signupWithPhone],
+        ['signup-password-phone', auth.signupWithPhone],
+        ['signup-name', auth.signup],
+        ['signup-email', auth.signup],
+        ['signup-password', auth.signup],
+    ].forEach(([id, fn]) => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.enterBound) {
+            el.addEventListener('keydown', e => { if (e.key === 'Enter') fn(); });
+            el.dataset.enterBound = 'true';
+        }
+    });
+}
 
-    const signupPhoneBtn = document.getElementById('signup-phone-btn');
-    if (signupPhoneBtn) signupPhoneBtn.addEventListener('click', () => auth.signupWithPhone());
+// Bind NOW + on DOMContentLoaded + on load (covers all timing scenarios)
+bindAuthButtons();
+document.addEventListener('DOMContentLoaded', bindAuthButtons);
+window.addEventListener('load', bindAuthButtons);
 
-    const signupBtn = document.getElementById('signup-btn');
-    if (signupBtn) signupBtn.addEventListener('click', () => auth.signup());
+// ===== Composer Textarea Setup =====
 
-    const showSignupBtn = document.getElementById('show-signup-btn');
-    if (showSignupBtn) showSignupBtn.addEventListener('click', () => auth.showSignup());
-
-    const showLoginBtn = document.getElementById('show-login-btn');
-    if (showLoginBtn) showLoginBtn.addEventListener('click', () => auth.showLogin());
-
-    // Auto-resize textarea + character counter (X-style circular)
+function setupComposerTextarea() {
     const textarea = document.getElementById('postContent');
-    if (textarea) {
-        textarea.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = this.scrollHeight + 'px';
+    if (!textarea || textarea.dataset.setup) return;
+    textarea.dataset.setup = 'true';
 
-            const len = this.value.length;
-            const maxLen = 500;
-            const counter = document.getElementById('char-counter');
-            const ringFill = document.getElementById('char-ring-fill');
-            const countText = document.getElementById('char-count-text');
-            const submitBtn = document.querySelector('.composer-submit');
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
 
-            // Show counter when typing
-            if (len > 0) {
-                counter.style.display = 'flex';
-            } else {
-                counter.style.display = 'none';
-            }
+        const len = this.value.length;
+        const maxLen = 500;
+        const counter = document.getElementById('char-counter');
+        const ringFill = document.getElementById('char-ring-fill');
+        const countText = document.getElementById('char-count-text');
+        const submitBtn = document.querySelector('.composer-submit');
 
-            // Update circular progress
-            const circumference = 2 * Math.PI * 8; // r=8
-            const progress = Math.min(len / maxLen, 1);
-            const offset = circumference - (progress * circumference);
-            ringFill.style.strokeDashoffset = offset;
+        if (len > 0) {
+            counter.style.display = 'flex';
+        } else {
+            counter.style.display = 'none';
+        }
 
-            // Color changes
-            ringFill.classList.remove('warning', 'danger');
-            countText.classList.remove('danger');
+        const circumference = 2 * Math.PI * 8;
+        const progress = Math.min(len / maxLen, 1);
+        const offset = circumference - (progress * circumference);
+        ringFill.style.strokeDashoffset = offset;
 
-            if (len > maxLen) {
-                ringFill.classList.add('danger');
-                countText.classList.add('danger');
-                countText.textContent = maxLen - len;
-                submitBtn.disabled = true;
-                submitBtn.style.opacity = '0.5';
-            } else if (len > maxLen * 0.9) {
-                ringFill.classList.add('warning');
-                countText.textContent = maxLen - len;
-                submitBtn.disabled = false;
-                submitBtn.style.opacity = '1';
-            } else {
-                countText.textContent = '';
-                submitBtn.disabled = false;
-                submitBtn.style.opacity = '1';
-            }
-        });
-    }
+        ringFill.classList.remove('warning', 'danger');
+        countText.classList.remove('danger');
 
-    // Swipe gesture for drawer
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let isSwiping = false;
+        if (len > maxLen) {
+            ringFill.classList.add('danger');
+            countText.classList.add('danger');
+            countText.textContent = maxLen - len;
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+        } else if (len > maxLen * 0.9) {
+            ringFill.classList.add('warning');
+            countText.textContent = maxLen - len;
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+        } else {
+            countText.textContent = '';
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+        }
+    });
+}
+
+setupComposerTextarea();
+document.addEventListener('DOMContentLoaded', setupComposerTextarea);
+
+// ===== Touch Gestures (Swipe + Pull-to-Refresh) =====
+
+(function initTouchGestures() {
+    // Swipe for drawer
+    let touchStartX = 0, touchStartY = 0, isSwiping = false;
 
     document.addEventListener('touchstart', (e) => {
         const x = e.touches[0].clientX;
-        const screenW = window.innerWidth;
-        if (x > screenW - 30) {
+        if (x > window.innerWidth - 30) {
             touchStartX = x;
             touchStartY = e.touches[0].clientY;
             isSwiping = true;
@@ -1403,51 +1432,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: true });
 
-    document.addEventListener('touchend', () => {
-        isSwiping = false;
-    }, { passive: true });
+    document.addEventListener('touchend', () => { isSwiping = false; }, { passive: true });
 
     // Pull-to-refresh
-    let ptrStartY = 0;
-    let isPulling = false;
+    let ptrStartY = 0, isPulling = false;
     const mainFeed = document.querySelector('.main-feed');
+    if (!mainFeed) return;
 
-    if (mainFeed) {
-        mainFeed.addEventListener('touchstart', (e) => {
-            if (mainFeed.scrollTop === 0) {
-                ptrStartY = e.touches[0].clientY;
-                isPulling = true;
-            }
-        }, { passive: true });
+    mainFeed.addEventListener('touchstart', (e) => {
+        if (mainFeed.scrollTop === 0) {
+            ptrStartY = e.touches[0].clientY;
+            isPulling = true;
+        }
+    }, { passive: true });
 
-        mainFeed.addEventListener('touchmove', (e) => {
-            if (!isPulling) return;
-            const dy = e.touches[0].clientY - ptrStartY;
-            if (dy > 60) {
-                const ptr = document.getElementById('pull-to-refresh');
-                if (ptr) {
-                    ptr.style.display = 'flex';
-                    ptr.classList.add('active');
-                }
-            }
-        }, { passive: true });
+    mainFeed.addEventListener('touchmove', (e) => {
+        if (!isPulling) return;
+        if (e.touches[0].clientY - ptrStartY > 60) {
+            const ptr = document.getElementById('pull-to-refresh');
+            if (ptr) { ptr.style.display = 'flex'; ptr.classList.add('active'); }
+        }
+    }, { passive: true });
 
-        mainFeed.addEventListener('touchend', () => {
-            if (isPulling) {
-                const ptr = document.getElementById('pull-to-refresh');
-                if (ptr && ptr.classList.contains('active')) {
-                    pagination.resetPagination();
-                    posts.loadPosts();
-                    setTimeout(() => {
-                        ptr.classList.remove('active');
-                        setTimeout(() => ptr.style.display = 'none', 300);
-                    }, 1000);
-                }
-                isPulling = false;
-            }
-        }, { passive: true });
-    }
-});
+    mainFeed.addEventListener('touchend', () => {
+        if (!isPulling) return;
+        const ptr = document.getElementById('pull-to-refresh');
+        if (ptr?.classList.contains('active')) {
+            pagination.resetPagination();
+            posts.loadPosts();
+            setTimeout(() => {
+                ptr.classList.remove('active');
+                setTimeout(() => ptr.style.display = 'none', 300);
+            }, 1000);
+        }
+        isPulling = false;
+    }, { passive: true });
+})();
 
 try {
     showAuth();

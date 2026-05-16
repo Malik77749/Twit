@@ -46,7 +46,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('SW registered'))
                     .catch(err => console.log('SW registration failed'));
             });
@@ -119,6 +119,7 @@
                     </div>
                     <input type="password" class="auth-input" id="login-password-phone" placeholder="كلمة المرور">
                     <button class="auth-btn" id="login-phone-btn">تسجيل الدخول</button>
+                    <p class="auth-link" id="forgot-password-btn" style="cursor:pointer;margin-top:8px;font-size:13px;"><strong>نسيت كلمة المرور؟</strong></p>
                 </div>
 
                 <!-- Email Login -->
@@ -126,6 +127,7 @@
                     <input type="email" class="auth-input" id="login-email" placeholder="البريد الإلكتروني">
                     <input type="password" class="auth-input" id="login-password" placeholder="كلمة المرور">
                     <button class="auth-btn" id="login-btn">تسجيل الدخول</button>
+                    <p class="auth-link" id="forgot-password-email-btn" style="cursor:pointer;margin-top:8px;font-size:13px;"><strong>نسيت كلمة المرور؟</strong></p>
                 </div>
 
                 <div class="auth-divider"><span>أو</span></div>
