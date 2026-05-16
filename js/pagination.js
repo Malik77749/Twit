@@ -109,6 +109,7 @@ async function loadFirstPage(database, renderCallback) {
         return posts;
     } catch (error) {
         console.error('Pagination error (first page):', error);
+        // Non-blocking: return empty but don't break the feed
         return [];
     }
 }

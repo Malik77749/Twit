@@ -30,6 +30,7 @@
     },
 
     "posts": {
+      ".indexOn": ["timestamp"],
       "$postId": {
         ".read": true,
         ".write": "auth != null",
@@ -68,6 +69,7 @@
 
     "comments": {
       "$postId": {
+        ".indexOn": ["timestamp"],
         "$commentId": {
           ".read": true,
           ".write": "auth != null",
