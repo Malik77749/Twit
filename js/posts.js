@@ -591,6 +591,6 @@ async function renderRetweet(retweet, originalPost, container) {
 
 export {
     init, postTweet, deletePost, likePost, retweetPost, followUser,
-    reportPost, loadPosts, renderPost, renderFeedItem, handleImageSelect, removePreview,
+    reportPost, loadPosts, renderPost, renderFeedItem, renderRetweet, handleImageSelect, removePreview,
     toggleUrlInput, toggleVideoInput, toggleBookmark
 };
