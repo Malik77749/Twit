@@ -440,12 +440,20 @@
                     </div>
                     <button class="search-cancel" onclick="showHome()">إلغاء</button>
                 </div>
-                <div id="search-results">
-                    <div class="empty-state">
-                        <h3>استكشاف</h3>
-                        <p>ابحث عن أشخاص ومنشورات</p>
-                    </div>
+                <!-- Search Filters -->
+                <div class="search-filters" id="search-filters" style="display:none;">
+                    <button class="search-filter-chip active" data-filter="all" onclick="setSearchFilter('all', this)">الكل</button>
+                    <button class="search-filter-chip" data-filter="people" onclick="setSearchFilter('people', this)">أشخاص</button>
+                    <button class="search-filter-chip" data-filter="posts" onclick="setSearchFilter('posts', this)">منشورات</button>
+                    <button class="search-filter-chip" data-filter="hashtags" onclick="setSearchFilter('hashtags', this)">هاشتاقات</button>
+                    <button class="search-filter-chip" data-filter="media" onclick="setSearchFilter('media', this)">وسائط</button>
                 </div>
+                <!-- Trending in Search -->
+                <div id="search-trending" style="display:block;">
+                    <div style="padding:12px 16px;"><h3 style="font-size:18px;font-weight:800;">الأكثر تداولاً</h3></div>
+                    <div id="search-trending-list"></div>
+                </div>
+                <div id="search-results"></div>
             </div>
 
             <!-- ===== MESSAGES VIEW ===== -->
@@ -589,6 +597,17 @@
                             </label>
                         </div>
                     </div>
+                    <div class="settings-section">
+                        <h3 class="settings-title">الأمان</h3>
+                        <div class="settings-item" id="twofa-settings-item">
+                            <i class="fas fa-shield-halved"></i><span>المصادقة الثنائية (2FA)</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="twofa-toggle" onchange="toggle2FA()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div id="twofa-status-msg" style="padding:8px 16px;font-size:13px;color:var(--text-secondary);display:none;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -646,7 +665,7 @@
         <aside class="right-panel">
             <div class="search-box">
                 <i class="fas fa-magnifying-glass"></i>
-                <input type="text" placeholder="بحث">
+                <input type="text" placeholder="بحث" oninput="handleSearch(this.value)" onfocus="navigateTo('search')">
             </div>
 
             <!-- Theme Toggle -->
@@ -668,28 +687,11 @@
                 </div>
             </div>
 
-            <!-- Trending -->
-            <div class="trending-card">
+            <!-- Trending (Dynamic) -->
+            <div class="trending-card" id="trending-card">
                 <h3>الأكثر تداولاً</h3>
-                <div class="trending-item">
-                    <div class="category">التكنولوجيا · الأكثر تداولاً</div>
-                    <div class="topic">#برمجة</div>
-                    <div class="count">12K منشور</div>
-                </div>
-                <div class="trending-item">
-                    <div class="category">الرياضة · الأكثر تداولاً</div>
-                    <div class="topic">#كرة_القدم</div>
-                    <div class="count">8.5K منشور</div>
-                </div>
-                <div class="trending-item">
-                    <div class="category">ترند</div>
-                    <div class="topic">#السعودية</div>
-                    <div class="count">25K منشور</div>
-                </div>
-                <div class="trending-item">
-                    <div class="category">ترند في السعودية</div>
-                    <div class="topic">#رؤية_2030</div>
-                    <div class="count">18K منشور</div>
+                <div id="trending-list">
+                    <div class="trending-item"><div class="category">جاري التحميل...</div></div>
                 </div>
             </div>
 

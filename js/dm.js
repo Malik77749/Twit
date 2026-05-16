@@ -166,21 +166,37 @@ function loadConversations(callback) {
         // Get other user info for each conversation
         const enrichedConversations = [];
         for (const conv of conversations) {
-            const otherUserId = Object.keys(conv.participants).find(id => id !== userId);
-            if (!otherUserId) continue;
-
-            const otherUserInfo = conv.participantInfo?.[otherUserId] || await getUserData(database, otherUserId);
             const unreadCount = conv.unreadCounts?.[userId] || 0;
 
-            enrichedConversations.push({
-                id: conv.id,
-                otherUserId: otherUserId,
-                otherUserName: otherUserInfo.name || 'مستخدم',
-                otherUserAvatar: otherUserInfo.profilePicture || DEFAULT_AVATAR,
-                lastMessage: conv.lastMessage || 'لا توجد رسائل',
-                lastMessageTime: conv.lastMessageTime || conv.createdAt,
-                unreadCount: unreadCount
-            });
+            if (conv.isGroup) {
+                // Group conversation
+                enrichedConversations.push({
+                    id: conv.id,
+                    isGroup: true,
+                    groupName: conv.groupName || 'مجموعة',
+                    participants: conv.participants,
+                    participantInfo: conv.participantInfo,
+                    lastMessage: conv.lastMessage || 'لا توجد رسائل',
+                    lastMessageTime: conv.lastMessageTime || conv.createdAt,
+                    unreadCount: unreadCount
+                });
+            } else {
+                // 1-on-1 conversation
+                const otherUserId = Object.keys(conv.participants).find(id => id !== userId);
+                if (!otherUserId) continue;
+
+                const otherUserInfo = conv.participantInfo?.[otherUserId] || await getUserData(database, otherUserId);
+
+                enrichedConversations.push({
+                    id: conv.id,
+                    otherUserId: otherUserId,
+                    otherUserName: otherUserInfo.name || 'مستخدم',
+                    otherUserAvatar: otherUserInfo.profilePicture || DEFAULT_AVATAR,
+                    lastMessage: conv.lastMessage || 'لا توجد رسائل',
+                    lastMessageTime: conv.lastMessageTime || conv.createdAt,
+                    unreadCount: unreadCount
+                });
+            }
         }
 
         callback(enrichedConversations);
@@ -361,17 +377,34 @@ function renderConversationsList(conversations, container, onConversationClick) 
     }
 
     let html = '';
+
+    // Add "New Group" button
+    html += `
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border-color);">
+            <button class="dm-create-group-btn" onclick="showCreateGroupUI()"><i class="fas fa-users"></i> إنشاء مجموعة جديدة</button>
+        </div>
+    `;
+
     for (const conv of conversations) {
         const hasUnread = conv.unreadCount > 0;
+        const isGroup = conv.isGroup || false;
+        const displayName = isGroup ? (conv.groupName || 'مجموعة') : escapeHtml(conv.otherUserName);
+        const avatarHtml = isGroup
+            ? `<div class="dm-group-avatar"><i class="fas fa-users"></i></div>`
+            : `<img class="dm-avatar" src="${conv.otherUserAvatar}" alt="">`;
+        const membersHtml = isGroup ? `<div class="dm-group-members">${Object.keys(conv.participants || {}).length} أعضاء</div>` : '';
+        const clickAction = isGroup ? `openDMConversation('${conv.id}', true)` : `openDMConversation('${conv.otherUserId}')`;
+
         html += `
-            <div class="dm-conversation-item ${hasUnread ? 'unread' : ''}" onclick="openDMConversation('${conv.otherUserId}')">
-                <img class="dm-avatar" src="${conv.otherUserAvatar}" alt="">
+            <div class="dm-conversation-item ${hasUnread ? 'unread' : ''}" onclick="${clickAction}">
+                ${avatarHtml}
                 <div class="dm-info">
                     <div class="dm-header-row">
-                        <span class="dm-name">${escapeHtml(conv.otherUserName)}</span>
+                        <span class="dm-name">${displayName}</span>
                         <span class="dm-time">${formatMessageTime(conv.lastMessageTime)}</span>
                     </div>
-                    <div class="dm-preview ${hasUnread ? 'dm-unread-text' : ''}">${escapeHtml(conv.lastMessage).substring(0, 50)}</div>
+                    ${membersHtml}
+                    <div class="dm-preview ${hasUnread ? 'dm-unread-text' : ''}">${escapeHtml(conv.lastMessage || '').substring(0, 50)}</div>
                 </div>
                 ${hasUnread ? `<span class="dm-unread-badge">${conv.unreadCount}</span>` : ''}
             </div>
@@ -441,6 +474,109 @@ function renderMessages(messages, currentUserId, container) {
     container.scrollTop = container.scrollHeight;
 }
 
+// ===== Group DMs =====
+
+/**
+ * Create a group conversation
+ */
+async function createGroupConversation(name, memberIds) {
+    const currentUserId = auth.currentUser.uid;
+    if (!name || memberIds.length < 1) return null;
+
+    const groupRef = push(ref(database, 'conversations'));
+    const groupId = groupRef.key;
+
+    const participants = { [currentUserId]: true };
+    const participantInfo = {};
+    const currentUserData = await getUserData(database, currentUserId);
+    participantInfo[currentUserId] = {
+        name: currentUserData.name || 'مستخدم',
+        avatar: currentUserData.profilePicture || DEFAULT_AVATAR
+    };
+
+    for (const mid of memberIds) {
+        participants[mid] = true;
+        const mData = await getUserData(database, mid);
+        participantInfo[mid] = {
+            name: mData.name || 'مستخدم',
+            avatar: mData.profilePicture || DEFAULT_AVATAR
+        };
+    }
+
+    await set(groupRef, {
+        isGroup: true,
+        groupName: name,
+        participants,
+        participantInfo,
+        admins: { [currentUserId]: true },
+        createdAt: new Date().toISOString(),
+        createdBy: currentUserId,
+        lastMessage: null,
+        lastMessageTime: null
+    });
+
+    return groupId;
+}
+
+/**
+ * Add member to group
+ */
+async function addGroupMember(conversationId, userId) {
+    const currentUserId = auth.currentUser.uid;
+
+    // Check if current user is admin
+    const convSnap = await get(ref(database, `conversations/${conversationId}`));
+    if (!convSnap.exists() || !convSnap.val().admins?.[currentUserId]) return false;
+
+    const userData = await getUserData(database, userId);
+    await update(ref(database, `conversations/${conversationId}`), {
+        [`participants/${userId}`]: true,
+        [`participantInfo/${userId}`]: {
+            name: userData.name || 'مستخدم',
+            avatar: userData.profilePicture || DEFAULT_AVATAR
+        }
+    });
+    return true;
+}
+
+/**
+ * Remove member from group
+ */
+async function removeGroupMember(conversationId, userId) {
+    const currentUserId = auth.currentUser.uid;
+
+    const convSnap = await get(ref(database, `conversations/${conversationId}`));
+    if (!convSnap.exists() || !convSnap.val().admins?.[currentUserId]) return false;
+
+    await update(ref(database, `conversations/${conversationId}`), {
+        [`participants/${userId}`]: null,
+        [`participantInfo/${userId}`]: null
+    });
+    return true;
+}
+
+/**
+ * Leave a group
+ */
+async function leaveGroup(conversationId) {
+    const userId = auth.currentUser.uid;
+    await update(ref(database, `conversations/${conversationId}`), {
+        [`participants/${userId}`]: null,
+        [`participantInfo/${userId}`]: null
+    });
+}
+
+/**
+ * Get group members
+ */
+async function getGroupMembers(conversationId) {
+    const convSnap = await get(ref(database, `conversations/${conversationId}`));
+    if (!convSnap.exists()) return [];
+    const conv = convSnap.val();
+    if (!conv.isGroup) return [];
+    return Object.keys(conv.participants || {});
+}
+
 export {
     init,
     getOrCreateConversation,
@@ -454,5 +590,10 @@ export {
     cleanup,
     formatMessageTime,
     renderConversationsList,
-    renderMessages
+    renderMessages,
+    createGroupConversation,
+    addGroupMember,
+    removeGroupMember,
+    leaveGroup,
+    getGroupMembers
 };

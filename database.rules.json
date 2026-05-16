@@ -167,6 +167,60 @@
         ".read": false,
         ".write": "auth != null"
       }
+    },
+
+    "hashtags": {
+      "$tag": {
+        ".read": true,
+        ".write": "auth != null",
+        "$postId": {
+          ".validate": "newData.isBoolean()"
+        }
+      }
+    },
+
+    "fcmTokens": {
+      "$uid": {
+        ".read": "auth.uid === $uid",
+        ".write": "auth.uid === $uid"
+      }
+    },
+
+    "conversations": {
+      "$convId": {
+        ".read": "data.child('participants').hasChild(auth.uid)",
+        ".write": "auth != null",
+        "participants": {
+          ".validate": true
+        },
+        "isGroup": {
+          ".validate": "newData.isBoolean()"
+        },
+        "groupName": {
+          ".validate": "newData.isString() && newData.val().length <= 50"
+        },
+        "$other": {
+          ".validate": true
+        }
+      }
+    },
+
+    "messages": {
+      "$convId": {
+        ".read": "root.child('conversations').child($convId).child('participants').hasChild(auth.uid)",
+        ".write": "root.child('conversations').child($convId).child('participants').hasChild(auth.uid)",
+        "$msgId": {
+          "senderId": {
+            ".validate": "newData.isString() && newData.val() === auth.uid"
+          },
+          "text": {
+            ".validate": "newData.isString() && newData.val().length <= 1000"
+          },
+          "$other": {
+            ".validate": true
+          }
+        }
+      }
     }
   }
 }

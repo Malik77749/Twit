@@ -30,6 +30,7 @@ import * as verified from './verified.js?v=3';
 import * as trending from './trending.js?v=3';
 import * as googleAuth from './google-auth.js?v=3';
 import * as communities from './communities.js?v=3';
+import * as twoFactor from './two-factor.js?v=3';
 import { getUserData } from './firebase-helpers.js?v=3';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
@@ -65,6 +66,7 @@ try {
     trending.init(database);
     googleAuth.init(authInstance, database);
     communities.init(authInstance, database);
+    twoFactor.init(authInstance, database);
     theme.init();
     shortcuts.init();
     a11y.init();
@@ -102,6 +104,7 @@ window.navigateTo = function(view) {
         case 'search':
             document.getElementById('search-view').style.display = 'block';
             setTimeout(() => document.getElementById('search-input')?.focus(), 100);
+            loadSearchTrending();
             break;
         case 'notifications':
             showView('notifications');
@@ -151,19 +154,32 @@ window.openSearch = function() {
 
 let searchTimeout = null;
 
+// Search filter state
+let currentSearchFilter = 'all';
+
+window.setSearchFilter = function(filter, btn) {
+    currentSearchFilter = filter;
+    document.querySelectorAll('.search-filter-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    // Re-trigger search with current query
+    const query = document.getElementById('search-input')?.value.trim();
+    if (query) performSearch(query);
+};
+
 window.handleSearch = function(query) {
     const clearBtn = document.getElementById('search-clear');
+    const filtersEl = document.getElementById('search-filters');
+    const trendingEl = document.getElementById('search-trending');
     clearBtn.style.display = query ? 'flex' : 'none';
+    filtersEl.style.display = query ? 'flex' : 'none';
+    trendingEl.style.display = query ? 'none' : 'block';
 
     if (searchTimeout) clearTimeout(searchTimeout);
 
     if (!query.trim()) {
-        document.getElementById('search-results').innerHTML = `
-            <div class="empty-state">
-                <h3>استكشاف</h3>
-                <p>ابحث عن أشخاص ومنشورات</p>
-            </div>
-        `;
+        document.getElementById('search-results').innerHTML = '';
+        filtersEl.style.display = 'none';
+        trendingEl.style.display = 'block';
         return;
     }
 
@@ -189,66 +205,116 @@ async function performSearch(queryStr) {
 
     try {
         const lowerQuery = queryStr.toLowerCase();
-
-        // Search users
-        const usersSnap = await get(ref(database, 'users'));
-        const users = [];
-        if (usersSnap.exists()) {
-            usersSnap.forEach(child => {
-                const userData = child.val();
-                const name = (userData.name || '').toLowerCase();
-                if (name.includes(lowerQuery)) {
-                    users.push({ id: child.key, ...userData });
-                }
-            });
-        }
-
-        // Search posts (limited to recent 200 for performance)
-        const postsSnap = await get(query(ref(database, 'posts'), orderByChild('timestamp'), limitToLast(200)));
-        const foundPosts = [];
-        if (postsSnap.exists()) {
-            postsSnap.forEach(child => {
-                const postData = child.val();
-                const content = (postData.content || '').toLowerCase();
-                if (content.includes(lowerQuery)) {
-                    foundPosts.push({ id: child.key, ...postData });
-                }
-            });
-        }
+        const isHashtagSearch = queryStr.startsWith('#');
+        const searchTerm = isHashtagSearch ? queryStr.substring(1).toLowerCase() : lowerQuery;
 
         let html = '';
 
-        if (users.length > 0) {
-            html += '<div style="padding:12px 16px;"><h3 style="font-size:18px;font-weight:800;">أشخاص</h3></div>';
-            for (const user of users.slice(0, 10)) {
-                html += `
-                    <div class="search-result-item" onclick="showProfile('${user.id}')">
-                        <img src="${user.profilePicture || DEFAULT_AVATAR}" alt="">
-                        <div class="search-result-info">
-                            <div class="search-result-name">${escapeHtml(user.name || 'مستخدم')}</div>
-                            <div class="search-result-handle">@${escapeHtml((user.name || '').replace(/\s/g, '').toLowerCase())}</div>
+        // Search users (unless filter is posts/hashtags/media)
+        if (currentSearchFilter === 'all' || currentSearchFilter === 'people') {
+            const usersSnap = await get(ref(database, 'users'));
+            const users = [];
+            if (usersSnap.exists()) {
+                usersSnap.forEach(child => {
+                    const userData = child.val();
+                    const name = (userData.name || '').toLowerCase();
+                    if (name.includes(searchTerm)) {
+                        users.push({ id: child.key, ...userData });
+                    }
+                });
+            }
+
+            if (users.length > 0) {
+                html += '<div style="padding:12px 16px;"><h3 style="font-size:18px;font-weight:800;">أشخاص</h3></div>';
+                for (const user of users.slice(0, 10)) {
+                    const protectedIcon = user.isProtected ? '<i class="fas fa-lock" style="font-size:12px;color:var(--text-secondary);margin-right:4px;"></i>' : '';
+                    html += `
+                        <div class="search-result-item" onclick="showProfile('${user.id}')">
+                            <img src="${user.profilePicture || DEFAULT_AVATAR}" alt="">
+                            <div class="search-result-info">
+                                <div class="search-result-name">${escapeHtml(user.name || 'مستخدم')}${protectedIcon}</div>
+                                <div class="search-result-handle">@${escapeHtml((user.name || '').replace(/\s/g, '').toLowerCase())}</div>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             }
         }
 
-        if (foundPosts.length > 0) {
-            html += '<div style="padding:12px 16px;border-top:1px solid var(--border-color);"><h3 style="font-size:18px;font-weight:800;">منشورات</h3></div>';
+        // Search posts
+        if (currentSearchFilter === 'all' || currentSearchFilter === 'posts' || currentSearchFilter === 'hashtags' || currentSearchFilter === 'media') {
+            const postsSnap = await get(query(ref(database, 'posts'), orderByChild('timestamp'), limitToLast(500)));
+            let foundPosts = [];
+            if (postsSnap.exists()) {
+                postsSnap.forEach(child => {
+                    const postData = child.val();
+                    const content = (postData.content || '').toLowerCase();
+
+                    let matches = false;
+                    if (isHashtagSearch) {
+                        // Hashtag search: match #tag in content
+                        matches = content.includes(searchTerm);
+                    } else if (currentSearchFilter === 'hashtags') {
+                        matches = content.includes('#') && content.includes(searchTerm);
+                    } else if (currentSearchFilter === 'media') {
+                        matches = (postData.imageUrl || postData.videoUrl) && content.includes(searchTerm);
+                    } else {
+                        matches = content.includes(searchTerm);
+                    }
+
+                    if (matches) {
+                        foundPosts.push({ id: child.key, ...postData });
+                    }
+                });
+            }
+
+            // Also search hashtags collection
+            if (isHashtagSearch || currentSearchFilter === 'hashtags') {
+                const hashtagsSnap = await get(ref(database, 'hashtags'));
+                if (hashtagsSnap.exists()) {
+                    hashtagsSnap.forEach(child => {
+                        const tag = child.key.toLowerCase();
+                        if (tag.includes(searchTerm) || searchTerm.includes(tag)) {
+                            const postIds = Object.keys(child.val() || {});
+                            // Add matching posts
+                            for (const pid of postIds.slice(0, 5)) {
+                                if (!foundPosts.find(p => p.id === pid)) {
+                                    foundPosts.push({ id: pid, _fromHashtag: true, _tag: child.key });
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
             foundPosts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            for (const post of foundPosts.slice(0, 10)) {
-                html += `
-                    <div class="search-result-item" onclick="showHome()">
-                        <div style="flex:1;">
-                            <div style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(post.content || '').substring(0, 80)}</div>
-                            <div style="color:var(--text-secondary);font-size:13px;">${formatSearchTime(post.timestamp)}</div>
+
+            if (foundPosts.length > 0) {
+                const sectionTitle = isHashtagSearch ? 'هاشتاق' : currentSearchFilter === 'media' ? 'وسائط' : 'منشورات';
+                html += `<div style="padding:12px 16px;border-top:1px solid var(--border-color);"><h3 style="font-size:18px;font-weight:800;">${sectionTitle}</h3></div>`;
+                for (const post of foundPosts.slice(0, 15)) {
+                    if (post._fromHashtag) {
+                        // Load actual post data
+                        const postSnap = await get(ref(database, `posts/${post.id}`));
+                        if (!postSnap.exists()) continue;
+                        Object.assign(post, postSnap.val());
+                    }
+                    const postContent = escapeHtml(post.content || '').substring(0, 100);
+                    const postTime = post.timestamp ? formatSearchTime(post.timestamp) : '';
+                    html += `
+                        <div class="search-result-item" onclick="openPostDetail('${post.id}')">
+                            <div style="flex:1;">
+                                <div style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${parseContent(postContent)}</div>
+                                <div style="color:var(--text-secondary);font-size:13px;">${postTime} · ${post.likes || 0} إعجاب</div>
+                            </div>
+                            ${post.imageUrl ? '<i class="far fa-image" style="color:var(--text-secondary);"></i>' : ''}
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             }
         }
 
-        if (!users.length && !foundPosts.length) {
+        if (!html) {
             html = '<div class="empty-state"><p>لا توجد نتائج</p></div>';
         }
 
@@ -435,18 +501,29 @@ function loadConversationsList() {
     });
 }
 
-window.openDMConversation = async function(otherUserId) {
-    const conversationId = await dm.openConversation(otherUserId);
-    if (!conversationId) return;
+window.openDMConversation = async function(targetId, isGroup) {
+    let conversationId;
+
+    if (isGroup) {
+        conversationId = targetId;
+        const convSnap = await get(ref(database, `conversations/${conversationId}`));
+        if (convSnap.exists()) {
+            document.getElementById('dm-chat-name').textContent = convSnap.val().groupName || 'مجموعة';
+            document.getElementById('dm-chat-avatar').src = DEFAULT_AVATAR;
+        }
+    } else {
+        conversationId = await dm.openConversation(targetId);
+        if (!conversationId) return;
+
+        // Load other user info
+        const otherUser = await getUserData(database, targetId);
+        document.getElementById('dm-chat-name').textContent = otherUser.name || 'مستخدم';
+        document.getElementById('dm-chat-avatar').src = otherUser.profilePicture || DEFAULT_AVATAR;
+    }
 
     // Show chat view
     document.getElementById('dm-conversations-view').style.display = 'none';
     document.getElementById('dm-chat-view').style.display = 'flex';
-
-    // Load other user info
-    const otherUser = await getUserData(database, otherUserId);
-    document.getElementById('dm-chat-name').textContent = otherUser.name || 'مستخدم';
-    document.getElementById('dm-chat-avatar').src = otherUser.profilePicture || DEFAULT_AVATAR;
 
     // Load messages
     const messagesContainer = document.getElementById('dm-messages-list');
@@ -471,6 +548,47 @@ window.openDMConversation = async function(otherUserId) {
             sendBtn.click();
         }
     };
+};
+
+window.showCreateGroupUI = async function() {
+    const name = prompt('اسم المجموعة:');
+    if (!name) return;
+
+    // Get all users for selection
+    const usersSnap = await get(ref(database, 'users'));
+    const currentUserId = authInstance.currentUser.uid;
+    const users = [];
+
+    if (usersSnap.exists()) {
+        usersSnap.forEach(child => {
+            if (child.key !== currentUserId) {
+                users.push({ id: child.key, ...child.val() });
+            }
+        });
+    }
+
+    if (users.length === 0) {
+        showToast('لا يوجد مستخدمون للإضافة');
+        return;
+    }
+
+    // Simple selection via prompt (can be improved with UI later)
+    const userList = users.map((u, i) => `${i + 1}. ${u.name}`).join('\n');
+    const selection = prompt(`اختر أعضاء المجموعة (أرقام مفصولة بفاصلة):\n${userList}`);
+    if (!selection) return;
+
+    const indices = selection.split(',').map(s => parseInt(s.trim()) - 1).filter(i => i >= 0 && i < users.length);
+    if (indices.length === 0) {
+        showToast('لم تختر أي عضو');
+        return;
+    }
+
+    const memberIds = indices.map(i => users[i].id);
+    const groupId = await dm.createGroupConversation(name, memberIds);
+    if (groupId) {
+        showToast('تم إنشاء المجموعة');
+        showMessages();
+    }
 };
 
 window.closeDMChat = function() {
@@ -725,11 +843,37 @@ window.deleteListAction = async function(listId) {
 
 // ===== Trending (update right panel) =====
 
+async function loadSearchTrending() {
+    const trends = await trending.getTrendingTopics(8);
+    const container = document.getElementById('search-trending-list');
+    if (!container) return;
+
+    if (trends.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>لا توجد ترندات</p></div>';
+        return;
+    }
+
+    container.innerHTML = trends.map((t, i) => {
+        const countStr = t.count >= 1000 ? (t.count / 1000).toFixed(1).replace('.0', '') + 'K' : t.count;
+        return `
+            <div class="trending-item" onclick="searchTrend('${t.topic}')">
+                <div style="color:var(--text-secondary);font-size:13px;">${i + 1} · ترند</div>
+                <div class="topic" style="font-weight:700;font-size:15px;">${t.topic}</div>
+                <div class="count" style="color:var(--text-secondary);font-size:13px;">${countStr} منشور</div>
+            </div>
+        `;
+    }).join('');
+}
+
 async function updateTrending() {
     const trends = await trending.getTrendingTopics(5);
-    const container = document.querySelector('.trending-card:nth-child(3)');
+    const container = document.getElementById('trending-list');
     if (container) {
-        container.innerHTML = `<h3>الأكثر تداولاً</h3>` + trends.map(t => {
+        if (trends.length === 0) {
+            container.innerHTML = '<div class="trending-item"><div class="category">لا توجد ترندات بعد</div></div>';
+            return;
+        }
+        container.innerHTML = trends.map(t => {
             const countStr = t.count >= 1000 ? (t.count / 1000).toFixed(1).replace('.0', '') + 'K' : t.count;
             return `
                 <div class="trending-item" onclick="searchTrend('${t.topic}')">
@@ -802,6 +946,7 @@ window.deleteDraftAction = async function(draftId) {
 window.showSettings = function() {
     hideAllViews();
     document.getElementById('settings-view').style.display = 'block';
+    load2FAStatus();
 };
 
 window.showMutedWords = async function() {
@@ -850,6 +995,59 @@ window.removeMutedWordAction = async function(word) {
     await blockMute.removeMutedWord(word);
     showMutedWords();
 };
+
+// ===== 2FA Functions =====
+window.toggle2FA = async function() {
+    const toggle = document.getElementById('twofa-toggle');
+    const statusMsg = document.getElementById('twofa-status-msg');
+
+    if (toggle.checked) {
+        const result = await twoFactor.enable2FA();
+        if (!result.success) {
+            toggle.checked = false;
+            statusMsg.textContent = result.message;
+            statusMsg.style.display = 'block';
+            statusMsg.style.color = 'var(--danger)';
+            if (result.needsVerification) {
+                setTimeout(() => {
+                    statusMsg.style.display = 'none';
+                }, 8000);
+            }
+        } else {
+            statusMsg.textContent = result.message;
+            statusMsg.style.display = 'block';
+            statusMsg.style.color = 'var(--success)';
+        }
+    } else {
+        const result = await twoFactor.disable2FA();
+        statusMsg.textContent = result.message || 'تم إيقاف المصادقة الثنائية';
+        statusMsg.style.display = 'block';
+        statusMsg.style.color = 'var(--text-secondary)';
+    }
+};
+
+async function load2FAStatus() {
+    const userId = authInstance.currentUser?.uid;
+    if (!userId) return;
+
+    const status = await twoFactor.get2FAStatus(userId);
+    const toggle = document.getElementById('twofa-toggle');
+    const statusMsg = document.getElementById('twofa-status-msg');
+
+    if (toggle) {
+        toggle.checked = status.enabled;
+    }
+
+    if (!status.hasEmail) {
+        statusMsg.textContent = 'أضف بريد إلكتروني لتفعيل المصادقة الثنائية';
+        statusMsg.style.display = 'block';
+        statusMsg.style.color = 'var(--text-secondary)';
+    } else if (!status.emailVerified && !status.enabled) {
+        statusMsg.textContent = 'تحقق من بريدك الإلكتروني أولاً';
+        statusMsg.style.display = 'block';
+        statusMsg.style.color = 'var(--text-secondary)';
+    }
+}
 
 window.togglePushNotif = async function() {
     const toggle = document.getElementById('push-notif-toggle');
@@ -1277,6 +1475,17 @@ async function loadWhoToFollow() {
 
 async function checkUserRole(user) {
     try {
+        // 2FA verification
+        const twoFA = await twoFactor.verify2FAOnLogin(user);
+        if (!twoFA.allowed) {
+            alert(twoFA.message);
+            const { signOut } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+            await signOut(authInstance);
+            showAuth();
+            hideLoading();
+            return;
+        }
+
         const snapshot = await get(ref(database, 'users/' + user.uid));
         const userData = snapshot.val();
 

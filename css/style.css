@@ -3174,3 +3174,159 @@ img[loading="lazy"]:not([src=""]) {
     padding: 16px;
     border-bottom: 1px solid var(--border-color);
 }
+
+/* ===== Real-time New Post Animation ===== */
+.new-post-realtime {
+    animation: slideDown 0.4s ease-out;
+    border-bottom: 2px solid var(--accent);
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); max-height: 0; }
+    to { opacity: 1; transform: translateY(0); max-height: 500px; }
+}
+
+/* ===== Protected Tweets ===== */
+.tweet-protected-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-right: 4px;
+}
+.tweet-protected-badge i {
+    font-size: 11px;
+}
+.protected-lock-icon {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-right: 4px;
+}
+
+/* ===== 2FA Section ===== */
+.twofa-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+.twofa-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+.twofa-status.enabled {
+    background: rgba(0, 186, 124, 0.1);
+    color: var(--success);
+}
+.twofa-status.disabled {
+    background: rgba(244, 33, 46, 0.1);
+    color: var(--danger);
+}
+
+/* ===== Advanced Search ===== */
+.search-filters {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.search-filter-chip {
+    padding: 6px 14px;
+    border-radius: 9999px;
+    border: 1px solid var(--border-color);
+    background: none;
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.search-filter-chip:hover,
+.search-filter-chip.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+.search-filter-row {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px;
+    align-items: center;
+}
+.search-filter-input {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: inherit;
+}
+.search-filter-input:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+/* ===== Group DMs ===== */
+.dm-group-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+.dm-group-members {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+.dm-create-group-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s;
+}
+.dm-create-group-btn:hover {
+    background: var(--accent-hover);
+}
+
+/* ===== Image Optimization ===== */
+.tweet-media img {
+    max-width: 100%;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    object-fit: cover;
+    transition: opacity 0.3s;
+}
+.tweet-media img[loading] {
+    opacity: 0;
+}
+.tweet-media img.loaded {
+    opacity: 1;
+}
+
+/* ===== Profile Banner Enhancement ===== */
+.profile-banner {
+    position: relative;
+    height: 200px;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    overflow: hidden;
+}
+.profile-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}

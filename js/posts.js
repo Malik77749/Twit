@@ -1,5 +1,5 @@
 // Posts Module — Upgraded with Pagination, Rate Limiting, Denormalization
-import { ref, push, set, get, update, remove, increment, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, push, set, get, update, remove, increment, query, orderByChild, limitToLast, onValue, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js?v=3';
 import { showLoading, hideLoading, showView } from './ui.js?v=3';
@@ -11,6 +11,7 @@ import * as blockMute from './block-mute.js?v=3';
 import * as pollsModule from './polls.js?v=3';
 import * as imageCompress from './image-compress.js?v=3';
 import * as undoTweetModule from './undo-tweet.js?v=3';
+import * as imageCdn from './image-cdn.js?v=3';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -136,8 +137,8 @@ async function postTweet() {
 
     try {
         if (selectedFile) {
-            // Compress image before upload
-            const compressedFile = await imageCompress.compressImage(selectedFile);
+            // Compress image before upload (CDN module)
+            const compressedFile = await imageCdn.compressImageFile(selectedFile, 1200, 0.8);
             const imgRef = storageRef(storage, `posts/${postRef.key}/${compressedFile.name}`);
             const snapshot = await uploadBytes(imgRef, compressedFile);
             postData.imageUrl = await getDownloadURL(snapshot.ref);
@@ -195,6 +196,21 @@ async function postTweet() {
 
         // Record rate limit
         rateLimiter.recordAction(userId, 'post');
+
+        // Track hashtags
+        if (content) {
+            const hashtags = content.match(/#[\u0600-\u06FFa-zA-Z0-9_]+/g);
+            if (hashtags) {
+                for (const tag of hashtags) {
+                    const tagKey = tag.substring(1).toLowerCase().replace(/[^\u0600-\u06FFa-zA-Z0-9_]/g, '');
+                    if (tagKey) {
+                        try {
+                            await set(ref(database, `hashtags/${tagKey}/${postRef.key}`), true);
+                        } catch (e) { /* non-blocking */ }
+                    }
+                }
+            }
+        }
 
         // Clear composer
         document.getElementById('postContent').value = '';
@@ -605,9 +621,78 @@ async function loadPosts() {
         // Initialize infinite scroll with callback
         pagination.initInfiniteScroll('.main-feed', database, loadMorePostsCallback);
 
+        // Start real-time subscription for new posts
+        if (posts.length > 0) {
+            lastKnownPostId = posts[0].id;
+        }
+        subscribeToFeed();
+
     } catch (error) {
         console.error('Load posts error:', error);
         postsDiv.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';
+    }
+}
+
+// ===== Real-time Feed Subscription =====
+let feedListener = null;
+let lastKnownPostId = null;
+
+/**
+ * Subscribe to real-time feed updates (new posts appear instantly)
+ */
+function subscribeToFeed() {
+    if (feedListener) {
+        feedListener();
+        feedListener = null;
+    }
+
+    const postsRef = ref(database, 'posts');
+    const postsQuery = query(postsRef, orderByChild('timestamp'), limitToLast(1));
+
+    feedListener = onValue(postsQuery, async (snapshot) => {
+        if (!snapshot.exists()) return;
+
+        let newestPost = null;
+        snapshot.forEach(child => {
+            newestPost = { id: child.key, ...child.val() };
+        });
+
+        if (!newestPost) return;
+
+        // If this is a new post we haven't seen
+        if (lastKnownPostId && newestPost.id !== lastKnownPostId) {
+            const postsDiv = document.getElementById('posts');
+            // Only prepend if we're on the home view and near the top
+            const homeView = document.getElementById('home-view');
+            if (homeView && homeView.style.display !== 'none' && postsDiv) {
+                const container = document.createElement('div');
+                container.setAttribute('data-post-id', newestPost.id);
+                container.classList.add('new-post-realtime');
+                postsDiv.insertBefore(container, postsDiv.firstChild);
+
+                // Check if blocked/muted
+                const filtered = await blockMute.filterPosts([newestPost]);
+                if (filtered.length > 0) {
+                    await renderFeedItem({ ...newestPost, type: 'post' }, container);
+                } else {
+                    container.remove();
+                }
+            }
+        }
+
+        if (newestPost) {
+            lastKnownPostId = newestPost.id;
+        }
+    });
+}
+
+/**
+ * Unsubscribe from feed updates
+ */
+function unsubscribeFeed() {
+    if (feedListener) {
+        feedListener();
+        feedListener = null;
     }
 }
 
@@ -697,15 +782,41 @@ async function renderPost(post, container) {
     // Views
     const views = post.views || 0;
 
+    // Protected tweets: only visible to followers
+    if (isProtected && !isOwnPost) {
+        const followCheck = await get(ref(database, `followers/${post.userId}/${userId}`));
+        if (!followCheck.exists()) {
+            container.innerHTML = `
+                <div class="tweet" style="opacity:0.6;cursor:default;">
+                    <img class="tweet-avatar" src="${avatar}" alt="">
+                    <div class="tweet-body">
+                        <div class="tweet-header">
+                            <span class="tweet-name">${escapeHtml(userName)}</span>
+                            <span class="protected-lock-icon"><i class="fas fa-lock"></i></span>
+                            <span class="tweet-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
+                        </div>
+                        <div class="tweet-content" style="color:var(--text-secondary);">هذا الحساب خاص. تابعه لرؤية منشوراته.</div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+    }
+
     // Increment view count (only if not own post)
     if (!isOwnPost) {
         incrementViewCount(postId);
     }
 
-    // Media
+    // Protected tweet check
+    const authorData = post.userName ? null : await getUserData(database, post.userId);
+    const isProtected = authorData?.isProtected || false;
+    const protectedBadge = isProtected ? '<span class="tweet-protected-badge"><i class="fas fa-lock"></i></span>' : '';
+
+    // Media (optimized)
     let mediaHtml = '';
     if (post.imageUrl) {
-        mediaHtml = `<div class="tweet-media"><img src="${post.imageUrl}" alt="صورة" loading="lazy"></div>`;
+        mediaHtml = `<div class="tweet-media">${imageCdn.createResponsiveImage(post.imageUrl, 'صورة')}</div>`;
     } else if (post.videoUrl) {
         mediaHtml = `<div class="tweet-media"><iframe src="${post.videoUrl}" allowfullscreen loading="lazy"></iframe></div>`;
     }
@@ -730,7 +841,7 @@ async function renderPost(post, container) {
             <div class="tweet-body">
                 ${pinnedHtml}
                 <div class="tweet-header">
-                    <span class="tweet-name" onclick="event.stopPropagation(); showProfile('${post.userId}')">${escapeHtml(userName)}</span>
+                    <span class="tweet-name" onclick="event.stopPropagation(); showProfile('${post.userId}')">${escapeHtml(userName)}</span>${protectedBadge}
                     <span class="tweet-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(post.timestamp)}</span>
@@ -877,5 +988,5 @@ export {
     init, postTweet, deletePost, editPost, likePost, retweetPost, followUser,
     reportPost, loadPosts, loadMorePostsCallback, renderPost, renderFeedItem, renderRetweet,
     handleImageSelect, removePreview, toggleUrlInput, toggleVideoInput, toggleBookmark,
-    pinPost, unpinPost
+    pinPost, unpinPost, subscribeToFeed, unsubscribeFeed
 };

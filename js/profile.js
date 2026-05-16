@@ -27,8 +27,9 @@ async function showProfile(userId) {
         const userData = await getUserData(database, userId);
         const isOwnProfile = userId === auth.currentUser?.uid;
 
-        document.getElementById('profile-name').textContent = userData.name || 'مستخدم';
-        document.getElementById('profile-view-name').textContent = userData.name || 'مستخدم';
+        const protectedIcon = userData.isProtected ? ' <i class="fas fa-lock" style="font-size:14px;color:var(--text-secondary);"></i>' : '';
+        document.getElementById('profile-name').innerHTML = escapeHtml(userData.name || 'مستخدم') + protectedIcon;
+        document.getElementById('profile-view-name').innerHTML = escapeHtml(userData.name || 'مستخدم') + protectedIcon;
         document.getElementById('profile-handle').textContent = '@' + (userData.name || 'user').replace(/\s/g, '').toLowerCase();
         document.getElementById('profile-followers').textContent = userData.followers || 0;
         document.getElementById('profile-following').textContent = userData.following || 0;
@@ -95,6 +96,10 @@ async function showProfile(userId) {
                     <input type="text" class="auth-input" id="profile-bio-input" placeholder="نبذة عنك" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.bio || '')}">
                     <input type="text" class="auth-input" id="profile-website-input" placeholder="الموقع الإلكتروني" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.website || '')}">
                     <input type="text" class="auth-input" id="profile-location-input" placeholder="الموقع الجغرافي" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.location || '')}">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <input type="checkbox" id="profile-protected-input" ${userData.isProtected ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--accent);">
+                        <label for="profile-protected-input" style="font-size:14px;color:var(--text-primary);cursor:pointer;"><i class="fas fa-lock"></i> حساب خاص (المنشورات تظهر للمتابعين فقط)</label>
+                    </div>
                     <button class="follow-btn" onclick="saveProfile()" style="font-size:13px;padding:4px 12px;background:var(--accent);color:white;">حفظ</button>
                 </div>
             `;
@@ -152,12 +157,13 @@ async function saveProfile() {
     const bio = bioInput?.value.trim();
     const website = websiteInput?.value.trim();
     const location = locationInput?.value.trim();
+    const isProtected = document.getElementById('profile-protected-input')?.checked || false;
 
     if (!name) { alert('أدخل اسمك'); return; }
 
     showLoading();
     try {
-        const updates = { name };
+        const updates = { name, isProtected };
         if (bio !== undefined) updates.bio = bio;
         if (website !== undefined) updates.website = website;
         if (location !== undefined) updates.location = location;

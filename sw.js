@@ -22,6 +22,8 @@ const STATIC_ASSETS = [
     '/js/polls.js',
     '/js/theme.js',
     '/js/drafts.js',
+    '/js/two-factor.js',
+    '/js/image-cdn.js',
     '/manifest.json',
     '/icon-192.svg',
     '/icon-512.svg'
