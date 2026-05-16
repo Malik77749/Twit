@@ -736,6 +736,19 @@ auth.setupAuthStateListener(checkUserRole);
 // ===== DOM Ready =====
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Auth button event listeners (avoid inline onclick which fails before module loads)
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) loginBtn.addEventListener('click', () => login());
+    
+    const signupBtn = document.getElementById('signup-btn');
+    if (signupBtn) signupBtn.addEventListener('click', () => signup());
+    
+    const showSignupBtn = document.getElementById('show-signup-btn');
+    if (showSignupBtn) showSignupBtn.addEventListener('click', () => showSignup());
+    
+    const showLoginBtn = document.getElementById('show-login-btn');
+    if (showLoginBtn) showLoginBtn.addEventListener('click', () => showLogin());
+
     // Auto-resize textarea
     const textarea = document.getElementById('postContent');
     if (textarea) {

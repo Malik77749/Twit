@@ -34,16 +34,16 @@
             <div id="login-section">
                 <input type="email" class="auth-input" id="login-email" placeholder="البريد الإلكتروني">
                 <input type="password" class="auth-input" id="login-password" placeholder="كلمة المرور">
-                <button class="auth-btn" onclick="login()">تسجيل الدخول</button>
-                <p class="auth-link" onclick="showSignup()">ليس لديك حساب؟ <strong>سجل الآن</strong></p>
+                <button class="auth-btn" id="login-btn">تسجيل الدخول</button>
+                <p class="auth-link" id="show-signup-btn">ليس لديك حساب؟ <strong>سجل الآن</strong></p>
             </div>
 
             <div id="signup-section" style="display: none;">
                 <input type="text" class="auth-input" id="signup-name" placeholder="الاسم الكامل">
                 <input type="email" class="auth-input" id="signup-email" placeholder="البريد الإلكتروني">
                 <input type="password" class="auth-input" id="signup-password" placeholder="كلمة المرور">
-                <button class="auth-btn" onclick="signup()">إنشاء حساب</button>
-                <p class="auth-link" onclick="showLogin()">لديك حساب بالفعل؟ <strong>سجل دخول</strong></p>
+                <button class="auth-btn" id="signup-btn">إنشاء حساب</button>
+                <p class="auth-link" id="show-login-btn">لديك حساب بالفعل؟ <strong>سجل دخول</strong></p>
             </div>
 
             <p id="error" class="auth-error"></p>
