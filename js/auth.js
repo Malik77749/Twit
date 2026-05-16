@@ -165,7 +165,6 @@ async function signupWithPhone() {
             phoneDisplay: formatPhoneDisplay(phone, countryCode),
             countryCode: countryCode,
             email: null,
-            isAdmin: false,
             joinDate: new Date().toISOString(),
             followers: 0,
             following: 0,
@@ -173,6 +172,7 @@ async function signupWithPhone() {
             provider: 'phone'
         });
         errorEl.innerText = '';
+        hideLoading();
     } catch (error) {
         const messages = {
             'auth/email-already-in-use': 'رقم الهاتف مسجل بالفعل',
@@ -237,7 +237,6 @@ async function signup() {
         await set(ref(database, 'users/' + cred.user.uid), {
             name: name,
             email: email,
-            isAdmin: false,
             joinDate: new Date().toISOString(),
             followers: 0,
             following: 0,
@@ -246,6 +245,7 @@ async function signup() {
             emailVerified: false
         });
         errorEl.innerText = '';
+        hideLoading();
     } catch (error) {
         const messages = {
             'auth/email-already-in-use': 'البريد مستخدم بالفعل',
