@@ -60,4 +60,66 @@ function showToast(message) {
     setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-export { escapeHtml, formatTimestamp, formatJoinDate, getYouTubeEmbedUrl, showToast };
+/**
+ * Parse post content: linkify @mentions, #hashtags, and URLs
+ * NOTE: Content in DB is already HTML-escaped, so this does NOT escape again.
+ * For new content, escapeHtml() first, then pass to parseContent().
+ */
+function parseContent(text) {
+    if (!text) return '';
+
+    let html = text;
+
+    // 1. URLs → clickable links
+    html = html.replace(
+        /(https?:\/\/[^\s<]+)/g,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:var(--text-link);">$1</a>'
+    );
+
+    // 2. @mentions → clickable profile links
+    html = html.replace(
+        /@([a-zA-Z0-9_\u0600-\u06FF]{1,30})/g,
+        (match, username) => {
+            return `<span class="mention" onclick="searchAndShowUser('${username}')" style="color:var(--text-link);cursor:pointer;">@${username}</span>`;
+        }
+    );
+
+    // 3. #hashtags → clickable search links
+    html = html.replace(
+        /#([a-zA-Z0-9_\u0600-\u06FF]{1,50})/g,
+        (match, tag) => {
+            return `<span class="hashtag" onclick="searchHashtag('${tag}')" style="color:var(--text-link);cursor:pointer;">#${tag}</span>`;
+        }
+    );
+
+    return html;
+}
+
+/**
+ * Search for a user by name and show their profile
+ */
+function searchAndShowUser(username) {
+    const lower = username.toLowerCase();
+    // Search in database for user with matching name
+    import('./firebase-helpers.js').then(({ searchUserByName }) => {
+        searchUserByName(lower).then(userId => {
+            if (userId) {
+                window.showProfile(userId);
+            } else {
+                showToast('لم يتم العثور على المستخدم');
+            }
+        });
+    });
+}
+
+/**
+ * Search for a hashtag
+ */
+function searchHashtag(tag) {
+    if (window.handleSearch) {
+        window.handleSearch('#' + tag);
+        if (window.navigateTo) window.navigateTo('search');
+    }
+}
+
+export { escapeHtml, formatTimestamp, formatJoinDate, getYouTubeEmbedUrl, showToast, parseContent, searchAndShowUser, searchHashtag };

@@ -619,12 +619,14 @@
                     <div class="profile-name" id="profile-name">مستخدم</div>
                     <div class="profile-handle" id="profile-handle">@user</div>
                     <div class="profile-bio" id="profile-bio" style="display:none;color:var(--text-primary);font-size:15px;margin-top:8px;"></div>
+                    <div id="profile-website" style="display:none;color:var(--text-secondary);font-size:14px;margin-top:4px;"></div>
+                    <div id="profile-location" style="display:none;color:var(--text-secondary);font-size:14px;margin-top:4px;"></div>
                     <div class="profile-join-date" id="profile-join-date">
                         <i class="far fa-calendar"></i> انضم في يناير ٢٠٢٦
                     </div>
                     <div class="profile-stats">
-                        <span class="profile-stat"><strong id="profile-following">0</strong> يتابع</span>
-                        <span class="profile-stat"><strong id="profile-followers">0</strong> متابع</span>
+                        <span class="profile-stat" onclick="showFollowingList(currentProfileUserId || '')" style="cursor:pointer;"><strong id="profile-following">0</strong> يتابع</span>
+                        <span class="profile-stat" onclick="showFollowersList(currentProfileUserId || '')" style="cursor:pointer;"><strong id="profile-followers">0</strong> متابع</span>
                     </div>
                 </div>
 

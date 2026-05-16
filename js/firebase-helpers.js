@@ -94,4 +94,25 @@ async function addNotification(database, toUserId, message, postId) {
     }
 }
 
-export { getUserName, getUserProfilePicture, getUserData, addNotification, clearUserCache };
+/**
+ * Search user by name (case-insensitive) — returns userId or null
+ */
+async function searchUserByName(nameLower) {
+    try {
+        const snapshot = await get(ref(database, 'users'));
+        if (!snapshot.exists()) return null;
+
+        let foundId = null;
+        snapshot.forEach(child => {
+            const userData = child.val();
+            if (userData.name && userData.name.replace(/\s/g, '').toLowerCase() === nameLower) {
+                foundId = child.key;
+            }
+        });
+        return foundId;
+    } catch (error) {
+        return null;
+    }
+}
+
+export { getUserName, getUserProfilePicture, getUserData, addNotification, clearUserCache, searchUserByName };

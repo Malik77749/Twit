@@ -21,6 +21,7 @@ async function showProfile(userId) {
     if (!userId) { hideLoading(); return; }
 
     currentProfileUserId = userId;
+    window.currentProfileUserId = userId;
 
     try {
         const userData = await getUserData(database, userId);
@@ -47,6 +48,41 @@ async function showProfile(userId) {
             bioEl.style.display = userData.bio ? 'block' : 'none';
         }
 
+        // Website + Location (if exists)
+        const websiteEl = document.getElementById('profile-website');
+        const locationEl = document.getElementById('profile-location');
+        if (websiteEl) {
+            if (userData.website) {
+                websiteEl.innerHTML = `<i class="fas fa-link"></i> <a href="${escapeHtml(userData.website)}" target="_blank" rel="noopener noreferrer" style="color:var(--text-link);">${escapeHtml(userData.website)}</a>`;
+                websiteEl.style.display = 'block';
+            } else {
+                websiteEl.style.display = 'none';
+            }
+        }
+        if (locationEl) {
+            if (userData.location) {
+                locationEl.innerHTML = `<i class="fas fa-location-dot"></i> ${escapeHtml(userData.location)}`;
+                locationEl.style.display = 'block';
+            } else {
+                locationEl.style.display = 'none';
+            }
+        }
+
+        // Banner image
+        const bannerEl = document.querySelector('.profile-banner');
+        if (bannerEl) {
+            if (userData.banner) {
+                bannerEl.style.backgroundImage = `url(${userData.banner})`;
+                bannerEl.style.backgroundSize = 'cover';
+                bannerEl.style.backgroundPosition = 'center';
+                bannerEl.querySelector('.profile-banner-gradient').style.display = 'none';
+            } else {
+                bannerEl.style.backgroundImage = '';
+                const grad = bannerEl.querySelector('.profile-banner-gradient');
+                if (grad) grad.style.display = 'block';
+            }
+        }
+
         // Profile actions
         const actionsDiv = document.getElementById('profile-actions');
         if (isOwnProfile) {
@@ -54,8 +90,11 @@ async function showProfile(userId) {
                 <button class="profile-edit-btn" onclick="editProfile()">تعديل الملف الشخصي</button>
                 <div id="profile-edit-form" style="display:none;margin-top:12px;">
                     <input type="text" class="auth-input" id="profile-name-input" placeholder="الاسم الجديد" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.name || '')}">
-                    <input type="text" class="auth-input" id="profile-picture-url" placeholder="رابط صورة جديدة" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;">
+                    <input type="text" class="auth-input" id="profile-picture-url" placeholder="رابط صورة الملف الشخصي" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;">
+                    <input type="text" class="auth-input" id="profile-banner-url" placeholder="رابط صورة الغلاف" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.banner || '')}">
                     <input type="text" class="auth-input" id="profile-bio-input" placeholder="نبذة عنك" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.bio || '')}">
+                    <input type="text" class="auth-input" id="profile-website-input" placeholder="الموقع الإلكتروني" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.website || '')}">
+                    <input type="text" class="auth-input" id="profile-location-input" placeholder="الموقع الجغرافي" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.location || '')}">
                     <button class="follow-btn" onclick="saveProfile()" style="font-size:13px;padding:4px 12px;background:var(--accent);color:white;">حفظ</button>
                 </div>
             `;
@@ -102,22 +141,35 @@ function editProfile() {
 async function saveProfile() {
     const nameInput = document.getElementById('profile-name-input');
     const picInput = document.getElementById('profile-picture-url');
+    const bannerInput = document.getElementById('profile-banner-url');
     const bioInput = document.getElementById('profile-bio-input');
+    const websiteInput = document.getElementById('profile-website-input');
+    const locationInput = document.getElementById('profile-location-input');
 
     const name = nameInput?.value.trim();
     const picUrl = picInput?.value.trim();
+    const bannerUrl = bannerInput?.value.trim();
     const bio = bioInput?.value.trim();
+    const website = websiteInput?.value.trim();
+    const location = locationInput?.value.trim();
 
     if (!name) { alert('أدخل اسمك'); return; }
 
     showLoading();
     try {
         const updates = { name };
-        if (bio) updates.bio = bio;
+        if (bio !== undefined) updates.bio = bio;
+        if (website !== undefined) updates.website = website;
+        if (location !== undefined) updates.location = location;
 
         if (picUrl) {
-            new URL(picUrl); // validate
+            new URL(picUrl);
             updates.profilePicture = picUrl;
+        }
+
+        if (bannerUrl) {
+            new URL(bannerUrl);
+            updates.banner = bannerUrl;
         }
 
         await update(ref(database, 'users/' + auth.currentUser.uid), updates);
@@ -133,11 +185,44 @@ async function saveProfile() {
             document.getElementById('composer-avatar').src = picUrl;
         }
 
-        if (bio) {
-            const bioEl = document.getElementById('profile-bio');
-            if (bioEl) {
-                bioEl.textContent = bio;
-                bioEl.style.display = 'block';
+        // Update banner
+        if (bannerUrl) {
+            const bannerEl = document.querySelector('.profile-banner');
+            if (bannerEl) {
+                bannerEl.style.backgroundImage = `url(${bannerUrl})`;
+                bannerEl.style.backgroundSize = 'cover';
+                bannerEl.style.backgroundPosition = 'center';
+                const grad = bannerEl.querySelector('.profile-banner-gradient');
+                if (grad) grad.style.display = 'none';
+            }
+        }
+
+        // Update bio
+        const bioEl = document.getElementById('profile-bio');
+        if (bioEl) {
+            bioEl.textContent = bio || '';
+            bioEl.style.display = bio ? 'block' : 'none';
+        }
+
+        // Update website
+        const websiteEl = document.getElementById('profile-website');
+        if (websiteEl) {
+            if (website) {
+                websiteEl.innerHTML = `<i class="fas fa-link"></i> <a href="${escapeHtml(website)}" target="_blank" rel="noopener noreferrer" style="color:var(--text-link);">${escapeHtml(website)}</a>`;
+                websiteEl.style.display = 'block';
+            } else {
+                websiteEl.style.display = 'none';
+            }
+        }
+
+        // Update location
+        const locationEl = document.getElementById('profile-location');
+        if (locationEl) {
+            if (location) {
+                locationEl.innerHTML = `<i class="fas fa-location-dot"></i> ${escapeHtml(location)}`;
+                locationEl.style.display = 'block';
+            } else {
+                locationEl.style.display = 'none';
             }
         }
 
@@ -146,7 +231,7 @@ async function saveProfile() {
         document.getElementById('drawer-name').textContent = name;
 
         document.getElementById('profile-edit-form').style.display = 'none';
-        alert('تم التحديث');
+        showToast('تم التحديث');
     } catch (error) {
         alert('رابط غير صالح أو خطأ');
     } finally {
@@ -183,13 +268,16 @@ async function loadProfilePosts(userId) {
     container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
     try {
-        const [postsSnap, retweetsSnap] = await Promise.all([
+        const [postsSnap, retweetsSnap, userSnap] = await Promise.all([
             get(ref(database, 'posts')),
-            get(ref(database, 'retweets'))
+            get(ref(database, 'retweets')),
+            get(ref(database, 'users/' + userId))
         ]);
 
         container.innerHTML = '';
         const allItems = [];
+        const userData = userSnap.val() || {};
+        const pinnedPostId = userData.pinnedPost;
 
         if (postsSnap.exists()) {
             postsSnap.forEach(child => {
@@ -208,13 +296,29 @@ async function loadProfilePosts(userId) {
 
         document.getElementById('profile-view-count').textContent = `${allItems.length} منشورات`;
 
-        if (!allItems.length) {
+        if (!allItems.length && !pinnedPostId) {
             container.innerHTML = '<div class="empty-state"><p>لا توجد منشورات</p></div>';
             hideLoading();
             return;
         }
 
         allItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        // Show pinned post first (if exists)
+        if (pinnedPostId) {
+            const pinnedSnap = await get(ref(database, 'posts/' + pinnedPostId));
+            if (pinnedSnap.exists()) {
+                const pinnedEl = document.createElement('div');
+                pinnedEl.setAttribute('data-post-id', pinnedPostId);
+                pinnedEl.style.borderBottom = '2px solid var(--accent)';
+                container.appendChild(pinnedEl);
+                await renderPost({ id: pinnedPostId, ...pinnedSnap.val(), isPinned: true }, pinnedEl);
+
+                // Remove pinned from regular list
+                const pinnedIdx = allItems.findIndex(i => i.id === pinnedPostId);
+                if (pinnedIdx !== -1) allItems.splice(pinnedIdx, 1);
+            }
+        }
 
         for (const item of allItems) {
             const el = document.createElement('div');
@@ -412,10 +516,108 @@ async function updateProfilePicture() {
     }
 }
 
-export { init, showProfile, updateProfilePicture, editProfile, saveProfile };
+/**
+ * Show list of followers for a user
+ */
+async function showFollowersList(userId) {
+    const container = document.getElementById('profile-posts');
+    container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+    try {
+        const followersSnap = await get(ref(database, `followers/${userId}`));
+        if (!followersSnap.exists()) {
+            container.innerHTML = '<div class="empty-state"><p>لا يوجد متابعون</p></div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        const followerIds = [];
+        followersSnap.forEach(child => { followerIds.push(child.key); });
+
+        for (const fid of followerIds.slice(0, 30)) {
+            const userData = await getUserData(database, fid);
+            if (!userData.name) continue;
+
+            const isFollowing = (await get(ref(database, `followers/${fid}/${auth.currentUser?.uid}`))).exists();
+            const el = document.createElement('div');
+            el.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-color);cursor:pointer;';
+            el.onclick = () => showProfile(fid);
+            el.innerHTML = `
+                <img src="${userData.profilePicture || DEFAULT_AVATAR}" style="width:40px;height:40px;border-radius:50%;" alt="">
+                <div style="flex:1;">
+                    <div style="font-weight:700;font-size:15px;">${escapeHtml(userData.name)}</div>
+                    <div style="color:var(--text-secondary);font-size:13px;">@${escapeHtml(userData.name).replace(/\s/g, '').toLowerCase()}</div>
+                </div>
+                ${fid !== auth.currentUser?.uid ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" onclick="event.stopPropagation(); followUser('${fid}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
+            `;
+            container.appendChild(el);
+        }
+
+        if (!followerIds.length) {
+            container.innerHTML = '<div class="empty-state"><p>لا يوجد متابعون</p></div>';
+        }
+    } catch (error) {
+        container.innerHTML = '<div class="empty-state"><p>خطأ</p></div>';
+    }
+}
+
+/**
+ * Show list of users this account is following
+ */
+async function showFollowingList(userId) {
+    const container = document.getElementById('profile-posts');
+    container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+    try {
+        const allFollowersSnap = await get(ref(database, 'followers'));
+        if (!allFollowersSnap.exists()) {
+            container.innerHTML = '<div class="empty-state"><p>لا يتابع أحداً</p></div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        const followingIds = [];
+
+        // Find all users where this userId is a follower
+        allFollowersSnap.forEach(targetUserSnap => {
+            if (targetUserSnap.hasChild(userId)) {
+                followingIds.push(targetUserSnap.key);
+            }
+        });
+
+        for (const fid of followingIds.slice(0, 30)) {
+            const userData = await getUserData(database, fid);
+            if (!userData.name) continue;
+
+            const isFollowing = (await get(ref(database, `followers/${fid}/${auth.currentUser?.uid}`))).exists();
+            const el = document.createElement('div');
+            el.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-color);cursor:pointer;';
+            el.onclick = () => showProfile(fid);
+            el.innerHTML = `
+                <img src="${userData.profilePicture || DEFAULT_AVATAR}" style="width:40px;height:40px;border-radius:50%;" alt="">
+                <div style="flex:1;">
+                    <div style="font-weight:700;font-size:15px;">${escapeHtml(userData.name)}</div>
+                    <div style="color:var(--text-secondary);font-size:13px;">@${escapeHtml(userData.name).replace(/\s/g, '').toLowerCase()}</div>
+                </div>
+                ${fid !== auth.currentUser?.uid ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" onclick="event.stopPropagation(); followUser('${fid}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
+            `;
+            container.appendChild(el);
+        }
+
+        if (!followingIds.length) {
+            container.innerHTML = '<div class="empty-state"><p>لا يتابع أحداً</p></div>';
+        }
+    } catch (error) {
+        container.innerHTML = '<div class="empty-state"><p>خطأ</p></div>';
+    }
+}
+
+export { init, showProfile, updateProfilePicture, editProfile, saveProfile, showFollowersList, showFollowingList };
 
 // Expose to window for HTML onclick handlers
 if (typeof window !== 'undefined') {
     window.saveProfile = saveProfile;
     window.updateProfilePicture = updateProfilePicture;
+    window.showFollowersList = showFollowersList;
+    window.showFollowingList = showFollowingList;
 }

@@ -1,7 +1,7 @@
 // Posts Module — Upgraded with Pagination, Rate Limiting, Denormalization
 import { ref, push, set, get, update, remove, increment, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
-import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast } from './utils.js';
+import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js';
 import { showLoading, hideLoading, showView } from './ui.js';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
 import { loadComments } from './comments.js';
@@ -728,11 +728,13 @@ async function renderPost(post, container) {
 
     const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
     const editedHtml = post.edited ? '<span style="color:var(--text-secondary);font-size:12px;"> (معدّل)</span>' : '';
+    const pinnedHtml = post.isPinned ? '<div style="display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:13px;margin-bottom:4px;padding-right:52px;"><i class="fas fa-thumbtack" style="font-size:12px;"></i> منشور مثبت</div>' : '';
 
     container.innerHTML = `
         <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
             <img class="tweet-avatar" src="${avatar}" alt="" onclick="event.stopPropagation(); showProfile('${post.userId}')">
             <div class="tweet-body">
+                ${pinnedHtml}
                 <div class="tweet-header">
                     <span class="tweet-name" onclick="event.stopPropagation(); showProfile('${post.userId}')">${escapeHtml(userName)}</span>
                     <span class="tweet-handle">@${escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
@@ -744,7 +746,7 @@ async function renderPost(post, container) {
                         <i class="fas fa-ellipsis"></i>
                     </button>
                 </div>
-                ${post.content ? `<div class="tweet-content">${post.content}</div>` : ''}
+                ${post.content ? `<div class="tweet-content">${parseContent(post.content)}</div>` : ''}
                 ${mediaHtml ? `<div onclick="event.stopPropagation(); ${post.imageUrl ? `openLightbox('${post.imageUrl}')` : ''}" style="cursor:${post.imageUrl ? 'zoom-in' : 'default'};">${mediaHtml}</div>` : ''}
                 ${pollHtml}
                 <div class="tweet-actions" onclick="event.stopPropagation();">
@@ -818,7 +820,7 @@ async function renderRetweet(retweet, originalPost, container) {
                         <span class="tweet-dot">·</span>
                         <span class="tweet-time">${formatTime(originalPost.timestamp)}</span>
                     </div>
-                    ${originalPost.content ? `<div class="tweet-content">${originalPost.content}</div>` : ''}
+                    ${originalPost.content ? `<div class="tweet-content">${parseContent(originalPost.content)}</div>` : ''}
                     ${mediaHtml}
                 </div>
                 <div class="tweet-actions" onclick="event.stopPropagation();">
@@ -847,8 +849,39 @@ async function renderRetweet(retweet, originalPost, container) {
     loadComments(postId);
 }
 
+/**
+ * Pin a post to profile
+ */
+async function pinPost(postId) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    try {
+        await update(ref(database, 'users/' + userId), { pinnedPost: postId });
+        showToast('تم تثبيت المنشور');
+    } catch (error) {
+        showToast('خطأ في التثبيت');
+    }
+}
+
+/**
+ * Unpin post from profile
+ */
+async function unpinPost() {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    try {
+        await update(ref(database, 'users/' + userId), { pinnedPost: null });
+        showToast('تم إلغاء التثبيت');
+    } catch (error) {
+        showToast('خطأ');
+    }
+}
+
 export {
     init, postTweet, deletePost, editPost, likePost, retweetPost, followUser,
     reportPost, loadPosts, loadMorePostsCallback, renderPost, renderFeedItem, renderRetweet,
-    handleImageSelect, removePreview, toggleUrlInput, toggleVideoInput, toggleBookmark
+    handleImageSelect, removePreview, toggleUrlInput, toggleVideoInput, toggleBookmark,
+    pinPost, unpinPost
 };

@@ -6,7 +6,7 @@ import { getStorage } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-
 
 import { firebaseConfig } from './config.js';
 import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js';
-import { escapeHtml, showToast } from './utils.js';
+import { escapeHtml, showToast, parseContent } from './utils.js';
 import * as auth from './auth.js';
 import * as posts from './posts.js';
 import * as comments from './comments.js';
@@ -406,6 +406,8 @@ window.removePreview = posts.removePreview;
 window.toggleUrlInput = posts.toggleUrlInput;
 window.toggleVideoInput = posts.toggleVideoInput;
 window.toggleBookmark = posts.toggleBookmark;
+window.pinPost = posts.pinPost;
+window.unpinPost = posts.unpinPost;
 
 window.addComment = comments.addComment;
 window.toggleComments = comments.toggleComments;
@@ -414,6 +416,8 @@ window.showProfile = profile.showProfile;
 window.updateProfilePicture = profile.updateProfilePicture;
 window.editProfile = profile.editProfile;
 window.saveProfile = profile.saveProfile;
+window.showFollowersList = profile.showFollowersList;
+window.showFollowingList = profile.showFollowingList;
 
 window.focusComposer = focusComposer;
 
@@ -1017,6 +1021,7 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
 
     // Bind actions
     deleteBtn.onclick = () => { dropdown.style.display = 'none'; posts.deletePost(postId); };
+    pinBtn.onclick = () => { dropdown.style.display = 'none'; posts.pinPost(postId); };
     bookmarkBtn.onclick = () => { dropdown.style.display = 'none'; posts.toggleBookmark(postId); };
     quoteBtn.onclick = () => { dropdown.style.display = 'none'; quoteTweet(postId); };
     reportBtn.onclick = () => { dropdown.style.display = 'none'; posts.reportPost(postId, userId); };
@@ -1128,7 +1133,7 @@ window.openPostDetail = async function(postId) {
                     </div>
                     ${!isOwnPost ? `<button class="follow-btn" data-follow-id="${post.userId}" onclick="followUser('${post.userId}', event)">متابعة</button>` : ''}
                 </div>
-                ${post.content ? `<div class="post-detail-content">${post.content}${editedHtml}</div>` : ''}
+                ${post.content ? `<div class="post-detail-content">${parseContent(post.content)}${editedHtml}</div>` : ''}
                 ${mediaHtml}
                 <div class="post-detail-timestamp">
                     <span>${timeStr}</span>
