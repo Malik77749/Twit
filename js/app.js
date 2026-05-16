@@ -214,19 +214,45 @@ async function performSearch(queryStr) {
         if (currentSearchFilter === 'all' || currentSearchFilter === 'people') {
             const usersSnap = await get(ref(database, 'users'));
             const users = [];
+            const exactHandleMatches = [];
+            const handleMatches = [];
+            const nameMatches = [];
+
+            // Determine if searching by @handle
+            const isHandleSearch = searchTerm.startsWith('@');
+            const handleTerm = isHandleSearch ? searchTerm.substring(1) : searchTerm;
+
             if (usersSnap.exists()) {
                 usersSnap.forEach(child => {
                     const userData = child.val();
                     const name = (userData.name || '').toLowerCase();
-                    if (name.includes(searchTerm)) {
-                        users.push({ id: child.key, ...userData });
+                    const handle = (userData.handle || '').toLowerCase();
+
+                    // Exact handle match (highest priority)
+                    if (handle && handle === handleTerm) {
+                        exactHandleMatches.push({ id: child.key, ...userData });
+                    }
+                    // Handle contains search term
+                    else if (handle && handle.includes(handleTerm) && isHandleSearch) {
+                        handleMatches.push({ id: child.key, ...userData });
+                    }
+                    // Name contains search term
+                    else if (name.includes(searchTerm) || name.includes(handleTerm)) {
+                        nameMatches.push({ id: child.key, ...userData });
+                    }
+                    // Handle contains search term (non-@ search)
+                    else if (!isHandleSearch && handle && handle.includes(searchTerm)) {
+                        handleMatches.push({ id: child.key, ...userData });
                     }
                 });
             }
 
-            if (users.length > 0) {
+            // Merge: exact handle first, then handle matches, then name matches
+            const allUsers = [...exactHandleMatches, ...handleMatches, ...nameMatches];
+
+            if (allUsers.length > 0) {
                 html += '<div style="padding:12px 16px;"><h3 style="font-size:18px;font-weight:800;">أشخاص</h3></div>';
-                for (const user of users.slice(0, 10)) {
+                for (const user of allUsers.slice(0, 10)) {
                     const protectedIcon = user.isProtected ? '<i class="fas fa-lock" style="font-size:12px;color:var(--text-secondary);margin-right:4px;"></i>' : '';
                     html += `
                         <div class="search-result-item" onclick="showProfile('${user.id}')">
