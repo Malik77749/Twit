@@ -133,8 +133,11 @@
                 <button class="drawer-item" onclick="showDrafts(); closeDrawer();">
                     <i class="far fa-file-lines"></i><span>المسودات</span>
                 </button>
-                <button class="drawer-item" onclick="closeDrawer()">
+                <button class="drawer-item" onclick="showLists(); closeDrawer();">
                     <i class="fas fa-list"></i><span>القوائم</span>
+                </button>
+                <button class="drawer-item" onclick="showAnalytics(); closeDrawer();">
+                    <i class="fas fa-chart-simple"></i><span>الإحصائيات</span>
                 </button>
                 <button class="drawer-item" onclick="closeDrawer()">
                     <i class="fas fa-circle-check"></i><span>الاشتراك المميز</span>
@@ -175,6 +178,12 @@
                 <button class="nav-item" onclick="showMessages()">
                     <i class="far fa-envelope"></i><span>الرسائل</span>
                     <span id="dm-badge-desktop" class="notif-badge" style="display:none;"></span>
+                </button>
+                <button class="nav-item" onclick="showLists()">
+                    <i class="fas fa-list"></i><span>القوائم</span>
+                </button>
+                <button class="nav-item" onclick="showAnalytics()">
+                    <i class="fas fa-chart-simple"></i><span>الإحصائيات</span>
                 </button>
                 <button class="nav-item" onclick="showProfile()">
                     <i class="fas fa-user"></i><span>الملف الشخصي</span>
@@ -410,6 +419,29 @@
                     </div>
                 </div>
                 <div id="drafts-list"></div>
+            </div>
+
+            <!-- ===== ANALYTICS VIEW ===== -->
+            <div id="analytics-view" style="display:none;">
+                <div class="feed-header">
+                    <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
+                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <h2>الإحصائيات</h2>
+                    </div>
+                </div>
+                <div id="analytics-content"></div>
+            </div>
+
+            <!-- ===== LISTS VIEW ===== -->
+            <div id="lists-view" style="display:none;">
+                <div class="feed-header">
+                    <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
+                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <h2>القوائم</h2>
+                        <button class="follow-btn" onclick="createListAction()" style="margin-right:auto;font-size:13px;padding:4px 12px;">إنشاء قائمة</button>
+                    </div>
+                </div>
+                <div id="lists-content"></div>
             </div>
 
             <!-- ===== SETTINGS VIEW ===== -->

@@ -20,6 +20,14 @@ import * as blockMute from './block-mute.js';
 import * as polls from './polls.js';
 import * as theme from './theme.js';
 import * as drafts from './drafts.js';
+import * as threads from './threads.js';
+import * as analytics from './analytics.js';
+import * as lists from './lists.js';
+import * as shortcuts from './shortcuts.js';
+import * as a11y from './accessibility.js';
+import * as undoTweet from './undo-tweet.js';
+import * as verified from './verified.js';
+import * as trending from './trending.js';
 import { getUserData } from './firebase-helpers.js';
 
 // Initialize Firebase
@@ -46,7 +54,14 @@ try {
     blockMute.init(authInstance, database);
     polls.init(authInstance, database);
     drafts.init(authInstance, database);
+    threads.init(authInstance, database);
+    analytics.init(authInstance, database);
+    lists.init(authInstance, database);
+    verified.init(database);
+    trending.init(database);
     theme.init();
+    shortcuts.init();
+    a11y.init();
     console.log('Modules initialized OK');
 } catch (error) {
     console.error('Module initialization error:', error);
@@ -470,6 +485,8 @@ function updateDMBadge() {
 
 // ===== Poll Functions =====
 
+window.undoPost = undoTweet.undoPost;
+
 let pollOptionCount = 2;
 let isPollActive = false;
 
@@ -549,6 +566,81 @@ window.cycleTheme = function() {
     document.querySelectorAll('.theme-btn, .settings-theme-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.theme === next);
     });
+};
+
+// ===== Analytics =====
+
+window.showAnalytics = async function() {
+    hideAllViews();
+    document.getElementById('analytics-view').style.display = 'block';
+
+    const container = document.getElementById('analytics-content');
+    container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+    const userId = authInstance.currentUser?.uid;
+    const userData = await getUserData(database, userId);
+    const data = await analytics.getUserAnalytics(userId);
+    container.innerHTML = analytics.renderDashboard(data, userData.name);
+};
+
+// ===== Lists =====
+
+window.showLists = async function() {
+    hideAllViews();
+    document.getElementById('lists-view').style.display = 'block';
+
+    const container = document.getElementById('lists-content');
+    container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+    const userId = authInstance.currentUser?.uid;
+    const userLists = await lists.getUserLists(userId);
+    container.innerHTML = lists.renderLists(userLists, true);
+};
+
+window.createListAction = async function() {
+    const name = prompt('اسم القائمة:');
+    if (!name) return;
+    const desc = prompt('وصف (اختياري):');
+    const isPrivate = confirm('هل تريد قائمة خاصة؟');
+    await lists.createList(name, desc, isPrivate);
+    showLists();
+    showToast('تم إنشاء القائمة');
+};
+
+window.deleteListAction = async function(listId) {
+    if (!confirm('حذف هذه القائمة؟')) return;
+    const userId = authInstance.currentUser?.uid;
+    await lists.deleteList(userId, listId);
+    showLists();
+    showToast('تم حذف القائمة');
+};
+
+// ===== Trending (update right panel) =====
+
+async function updateTrending() {
+    const trends = await trending.getTrendingTopics(5);
+    const container = document.querySelector('.trending-card:nth-child(3)');
+    if (container) {
+        container.innerHTML = `<h3>الأكثر تداولاً</h3>` + trends.map(t => {
+            const countStr = t.count >= 1000 ? (t.count / 1000).toFixed(1).replace('.0', '') + 'K' : t.count;
+            return `
+                <div class="trending-item" onclick="searchTrend('${t.topic}')">
+                    <div class="category">${t.category}</div>
+                    <div class="topic">${t.topic}</div>
+                    <div class="count">${countStr} منشور</div>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+window.searchTrend = function(topic) {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = topic;
+        handleSearch(topic);
+    }
+    navigateTo('search');
 };
 
 // ===== Draft Functions =====
@@ -1103,6 +1195,7 @@ async function checkUserRole(user) {
         notifications.loadNotifications();
         loadWhoToFollow();
         updateDMBadge();
+        updateTrending();
     } catch (error) {
         showAuth();
     }

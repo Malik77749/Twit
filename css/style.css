@@ -2611,3 +2611,403 @@ img[loading="lazy"]:not([src=""]) {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* ===== Undo Bar (X-style) ===== */
+.undo-bar {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+}
+.undo-bar.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+.undo-bar-content {
+    background-color: var(--accent);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.undo-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 15px;
+    font-family: inherit;
+}
+.undo-timer {
+    width: 100px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.undo-timer-fill {
+    height: 100%;
+    background: white;
+    border-radius: 2px;
+    transition: width 1s linear;
+}
+
+/* ===== Analytics Dashboard ===== */
+.analytics-dashboard {
+    padding: 16px;
+}
+.analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.analytics-header h3 {
+    font-size: 20px;
+    font-weight: 800;
+}
+.analytics-period {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+.analytics-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.analytics-card {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+}
+.analytics-card-icon {
+    font-size: 20px;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+.analytics-card-value {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+.analytics-card-label {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+.analytics-card-change {
+    font-size: 12px;
+    margin-top: 4px;
+}
+.analytics-card-change.positive {
+    color: var(--success);
+}
+.analytics-engagement {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+.analytics-engagement-label {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+.analytics-engagement-value {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+.analytics-engagement-bar {
+    height: 6px;
+    background: var(--bg-input);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+.analytics-engagement-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+.analytics-engagement-desc {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+.analytics-section {
+    margin-bottom: 20px;
+}
+.analytics-section h4 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+.analytics-top-post {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.analytics-top-post:hover {
+    background: var(--bg-hover);
+}
+.analytics-post-rank {
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 24px;
+}
+.analytics-post-content {
+    flex: 1;
+}
+.analytics-post-text {
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+.analytics-post-stats {
+    display: flex;
+    gap: 16px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+.analytics-post-stats i {
+    margin-left: 4px;
+}
+.analytics-weekly {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+.analytics-weekly-item {
+    text-align: center;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 12px;
+}
+.analytics-weekly-num {
+    display: block;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+.analytics-weekly-label {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+/* ===== Lists ===== */
+.lists-container {
+    padding: 0;
+}
+.list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.list-item:hover {
+    background: var(--bg-hover);
+}
+.list-info {
+    flex: 1;
+}
+.list-name {
+    font-weight: 700;
+    font-size: 15px;
+}
+.list-meta {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-top: 2px;
+}
+.list-meta i {
+    margin-left: 4px;
+}
+.list-desc {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: 4px;
+}
+.list-delete {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+.list-delete:hover {
+    color: var(--danger);
+    background: rgba(244, 33, 46, 0.1);
+}
+
+/* ===== Thread Indicator ===== */
+.thread-indicator {
+    position: absolute;
+    right: 36px;
+    top: 52px;
+    bottom: 0;
+    width: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.thread-line {
+    width: 2px;
+    flex: 1;
+    background: var(--border-color);
+}
+.thread-line-top {
+    margin-bottom: 4px;
+}
+.thread-line-bottom {
+    margin-top: 4px;
+}
+.thread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border-color);
+}
+.thread-link {
+    color: var(--accent);
+    font-size: 14px;
+    padding: 8px 0;
+    cursor: pointer;
+}
+.thread-link:hover {
+    text-decoration: underline;
+}
+
+/* ===== Shortcuts Modal ===== */
+.shortcuts-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(91, 112, 131, 0.4);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+.shortcuts-content {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.shortcuts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.shortcuts-header h3 {
+    font-size: 20px;
+    font-weight: 800;
+}
+.shortcuts-close {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+}
+.shortcuts-close:hover {
+    background: var(--bg-hover);
+}
+.shortcuts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.shortcut-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.shortcut-row kbd {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-family: monospace;
+    min-width: 32px;
+    text-align: center;
+}
+
+/* ===== Accessibility ===== */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--accent);
+    color: white;
+    padding: 8px 16px;
+    z-index: 100000;
+    transition: top 0.3s;
+    text-decoration: none;
+    font-size: 14px;
+}
+.skip-link:focus {
+    top: 0;
+}
+.reduced-motion * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+}
+.high-contrast {
+    --border-color: #555;
+}
+.high-contrast .tweet:hover {
+    outline: 2px solid var(--accent);
+}
+
+/* ===== Verified Badge ===== */
+.verified-badge {
+    font-size: 16px;
+    margin: 0 2px;
+    vertical-align: middle;
+}

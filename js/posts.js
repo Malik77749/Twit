@@ -9,6 +9,8 @@ import * as rateLimiter from './rate-limiter.js';
 import * as pagination from './pagination.js';
 import * as blockMute from './block-mute.js';
 import * as pollsModule from './polls.js';
+import * as imageCompress from './image-compress.js';
+import * as undoTweetModule from './undo-tweet.js';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -134,8 +136,10 @@ async function postTweet() {
 
     try {
         if (selectedFile) {
-            const imgRef = storageRef(storage, `posts/${postRef.key}/${selectedFile.name}`);
-            const snapshot = await uploadBytes(imgRef, selectedFile);
+            // Compress image before upload
+            const compressedFile = await imageCompress.compressImage(selectedFile);
+            const imgRef = storageRef(storage, `posts/${postRef.key}/${compressedFile.name}`);
+            const snapshot = await uploadBytes(imgRef, compressedFile);
             postData.imageUrl = await getDownloadURL(snapshot.ref);
         } else if (imageUrl) {
             try {
@@ -216,6 +220,9 @@ async function postTweet() {
         await renderPost({ id: postRef.key, ...postData }, container);
 
         showToast('تم النشر');
+        undoTweetModule.startUndo(postRef.key, (deletedId) => {
+            showToast('تم إلغاء المنشور');
+        });
         if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
     } catch (error) {
         showToast('خطأ: ' + error.message);
