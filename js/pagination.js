@@ -1,5 +1,5 @@
-// Pagination Module — Infinite Scroll with Cursor-based Pagination
-import { ref, get, query, orderByChild, limitToLast, endBefore, startAt } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+// Pagination Module — Infinite Scroll
+import { ref, get } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const PAGE_SIZE = 15;
 let isLoadingMore = false;
@@ -77,13 +77,8 @@ async function loadFirstPage(database, renderCallback) {
     if (!postsDiv) return [];
 
     try {
-        const postsQuery = query(
-            ref(database, 'posts'),
-            orderByChild('timestamp'),
-            limitToLast(PAGE_SIZE)
-        );
-
-        const snapshot = await get(postsQuery);
+        // Fetch all posts (no index needed) and sort client-side
+        const snapshot = await get(ref(database, 'posts'));
         const posts = [];
 
         if (snapshot.exists()) {
@@ -94,19 +89,22 @@ async function loadFirstPage(database, renderCallback) {
             });
         }
 
-        // Sort newest first (limitToLast gives oldest first)
+        // Sort newest first
         posts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        if (posts.length > 0) {
-            oldestTimestamp = posts[posts.length - 1].timestamp;
+        // Take first page only
+        const page = posts.slice(0, PAGE_SIZE);
+
+        if (page.length > 0) {
+            oldestTimestamp = page[page.length - 1].timestamp;
         }
 
         // Check if there might be more
-        if (posts.length < PAGE_SIZE) {
+        if (posts.length <= PAGE_SIZE) {
             hasMorePosts = false;
         }
 
-        return posts;
+        return page;
     } catch (error) {
         console.error('Pagination error (first page):', error);
         // Non-blocking: return empty but don't break the feed
@@ -124,18 +122,12 @@ async function loadMorePosts() {
     showLoadMoreIndicator();
 
     try {
-        const postsQuery = query(
-            ref(database, 'posts'),
-            orderByChild('timestamp'),
-            limitToLast(PAGE_SIZE + 1)  // +1 because endBefore is inclusive
-        );
-
-        const snapshot = await get(postsQuery);
+        // Fetch all posts and filter out already loaded ones
+        const snapshot = await get(ref(database, 'posts'));
         const posts = [];
 
         if (snapshot.exists()) {
             snapshot.forEach(child => {
-                // Skip already loaded posts
                 if (!allLoadedPosts.has(child.key)) {
                     const post = { id: child.key, ...child.val() };
                     posts.push(post);
@@ -147,12 +139,15 @@ async function loadMorePosts() {
         // Sort newest first
         posts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        if (posts.length > 0) {
-            oldestTimestamp = posts[posts.length - 1].timestamp;
-            await renderMoreCallback(posts);
+        // Take next page
+        const page = posts.slice(0, PAGE_SIZE);
+
+        if (page.length > 0) {
+            oldestTimestamp = page[page.length - 1].timestamp;
+            await renderMoreCallback(page);
         }
 
-        if (posts.length < PAGE_SIZE) {
+        if (posts.length <= PAGE_SIZE) {
             hasMorePosts = false;
             showEndOfFeed();
         }
