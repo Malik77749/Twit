@@ -21,17 +21,23 @@ try {
     authInstance = getAuth(app);
     database = getDatabase(app);
     storage = getStorage(app);
+    console.log('Firebase initialized OK');
 } catch (error) {
     console.error('Firebase initialization error:', error);
-    hideLoading();
+    document.body.innerHTML = '<div style="color:white;padding:20px;text-align:center;"><h2>خطأ في تحميل التطبيق</h2><p>' + error.message + '</p></div>';
 }
 
 // Initialize all modules
-auth.init(authInstance, database);
-posts.init(authInstance, database, storage);
-comments.init(authInstance, database);
-notifications.init(authInstance, database);
-profile.init(authInstance, database);
+try {
+    auth.init(authInstance, database);
+    posts.init(authInstance, database, storage);
+    comments.init(authInstance, database);
+    notifications.init(authInstance, database);
+    profile.init(authInstance, database);
+    console.log('Modules initialized OK');
+} catch (error) {
+    console.error('Module initialization error:', error);
+}
 
 // ===== Global Navigation =====
 
@@ -809,4 +815,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-showAuth();
+try {
+    showAuth();
+    console.log('showAuth() called OK');
+} catch (error) {
+    console.error('showAuth() failed:', error);
+    document.getElementById('auth-section').style.display = 'flex';
+}
