@@ -719,6 +719,7 @@ async function checkUserRole(user) {
             return;
         }
 
+        hideLoading();
         showApp();
         updateSidebar(userData);
         showView('home');
