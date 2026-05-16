@@ -1,5 +1,5 @@
 // Service Worker — PWA Offline Support + Caching
-const CACHE_NAME = 'twit-v3';
+const CACHE_NAME = 'twit-v4';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
