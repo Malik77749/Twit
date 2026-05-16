@@ -312,23 +312,30 @@ async function signupWithPhone() {
 
         const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
 
-        // Save user profile
-        await set(ref(database, 'users/' + cred.user.uid), {
-            name: name,
-            handle: handleResult.handle,
-            phone: fullPhone,
-            phoneDisplay: formatPhoneDisplay(phone, countryCode),
-            countryCode: countryCode,
-            email: null,
-            joinDate: new Date().toISOString(),
-            followers: 0,
-            following: 0,
-            profilePicture: DEFAULT_AVATAR,
-            provider: 'phone'
-        });
+        // Save user profile — with error handling
+        try {
+            await set(ref(database, 'users/' + cred.user.uid), {
+                name: name,
+                handle: handleResult.handle,
+                phone: fullPhone,
+                phoneDisplay: formatPhoneDisplay(phone, countryCode),
+                countryCode: countryCode,
+                email: null,
+                joinDate: new Date().toISOString(),
+                followers: 0,
+                following: 0,
+                profilePicture: DEFAULT_AVATAR,
+                provider: 'phone'
+            });
 
-        // Reserve handle
-        await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+            // Reserve handle
+            await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+        } catch (dbErr) {
+            console.error('DB write failed:', dbErr);
+            errorEl.innerText = 'تم إنشاء الحساب لكن حدث خطأ في حفظ البيانات. حاول تسجيل الدخول.';
+            hideLoading();
+            return;
+        }
 
         errorEl.innerText = '';
         hideLoading();
@@ -403,20 +410,28 @@ async function signup() {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         // Send verification email
         try { await sendEmailVerification(cred.user); } catch(e) { console.warn('Email verification failed:', e); }
-        await set(ref(database, 'users/' + cred.user.uid), {
-            name: name,
-            handle: handleResult.handle,
-            email: email,
-            joinDate: new Date().toISOString(),
-            followers: 0,
-            following: 0,
-            profilePicture: DEFAULT_AVATAR,
-            provider: 'email',
-            emailVerified: false
-        });
+        
+        try {
+            await set(ref(database, 'users/' + cred.user.uid), {
+                name: name,
+                handle: handleResult.handle,
+                email: email,
+                joinDate: new Date().toISOString(),
+                followers: 0,
+                following: 0,
+                profilePicture: DEFAULT_AVATAR,
+                provider: 'email',
+                emailVerified: false
+            });
 
-        // Reserve handle
-        await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+            // Reserve handle
+            await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+        } catch (dbErr) {
+            console.error('DB write failed:', dbErr);
+            errorEl.innerText = 'تم إنشاء الحساب لكن حدث خطأ في حفظ البيانات. حاول تسجيل الدخول.';
+            hideLoading();
+            return;
+        }
 
         errorEl.innerText = '';
         hideLoading();
