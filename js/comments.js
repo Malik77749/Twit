@@ -3,6 +3,8 @@ import { ref, push, set, get, onValue } from 'https://www.gstatic.com/firebasejs
 import { escapeHtml } from './utils.js';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
 
+const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
+
 let auth, database;
 const commentCooldowns = new Map();
 const commentListeners = new Map();
@@ -69,7 +71,7 @@ function loadComments(postId) {
         if (!snapshot.exists()) {
             commentSection.innerHTML = `
                 <div class="comment-input-row">
-                    <img src="https://via.placeholder.com/32" alt="">
+                    <img src="DEFAULT_AVATAR" alt="">
                     <input type="text" id="comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
                 </div>
             `;
@@ -85,7 +87,7 @@ function loadComments(postId) {
 
         let commentsHtml = `
             <div class="comment-input-row">
-                <img src="https://via.placeholder.com/32" alt="">
+                <img src="DEFAULT_AVATAR" alt="">
                 <input type="text" id="comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
             </div>
         `;
@@ -93,7 +95,7 @@ function loadComments(postId) {
         for (const comment of topLevel) {
             const userData = await getUserData(database, comment.userId);
             const name = userData.name || 'مستخدم';
-            const avatar = userData.profilePicture || 'https://via.placeholder.com/32';
+            const avatar = userData.profilePicture || DEFAULT_AVATAR;
 
             commentsHtml += `
                 <div class="comment">
@@ -114,7 +116,7 @@ function loadComments(postId) {
                 const replyUser = await getUserData(database, reply.userId);
                 commentsHtml += `
                     <div class="comment reply">
-                        <img src="${replyUser.profilePicture || 'https://via.placeholder.com/32'}" alt="">
+                        <img src="${replyUser.profilePicture || DEFAULT_AVATAR}" alt="">
                         <div class="comment-body">
                             <div class="comment-meta">
                                 <span class="name">${escapeHtml(replyUser.name || 'مستخدم')}</span>

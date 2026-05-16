@@ -188,7 +188,7 @@ async function performSearch(queryStr) {
             for (const user of users) {
                 html += `
                     <div class="search-result-item" onclick="showProfile('${user.id}')">
-                        <img src="${user.profilePicture || 'https://via.placeholder.com/40'}" alt="">
+                        <img src="${user.profilePicture || DEFAULT_AVATAR}" alt="">
                         <div class="search-result-info">
                             <div class="search-result-name">${escapeHtml(user.name || 'مستخدم')}</div>
                             <div class="search-result-handle">@${escapeHtml((user.name || '').replace(/\s/g, '').toLowerCase())}</div>
@@ -524,7 +524,7 @@ window.openPostDetail = async function(postId) {
         const userId = authInstance.currentUser?.uid;
         const userData = await getUserData(database, post.userId);
         const userName = userData.name || 'مستخدم';
-        const avatar = userData.profilePicture || 'https://via.placeholder.com/40';
+        const avatar = userData.profilePicture || DEFAULT_AVATAR;
         const isOwnPost = post.userId === userId;
 
         // Like status
@@ -640,7 +640,7 @@ window.copyPostLink = function(postId) {
 
 function updateSidebar(userData) {
     const name = userData?.name || 'مستخدم';
-    const pic = userData?.profilePicture || 'https://via.placeholder.com/40';
+    const pic = userData?.profilePicture || DEFAULT_AVATAR;
     const handle = '@' + name.replace(/\s/g, '').toLowerCase();
 
     // Desktop sidebar
@@ -693,7 +693,7 @@ async function loadWhoToFollow() {
             const item = document.createElement('div');
             item.className = 'who-to-follow-item';
             item.innerHTML = `
-                <img src="${user.profilePicture || 'https://via.placeholder.com/40'}" alt="" onclick="showProfile('${user.id}')">
+                <img src="${user.profilePicture || DEFAULT_AVATAR}" alt="" onclick="showProfile('${user.id}')">
                 <div class="who-to-follow-info" onclick="showProfile('${user.id}')">
                     <div class="who-to-follow-name">${escapeHtml(user.name || 'مستخدم')}</div>
                     <div class="who-to-follow-handle">@${escapeHtml((user.name || '').replace(/\s/g, '').toLowerCase())}</div>

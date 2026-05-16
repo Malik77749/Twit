@@ -10,11 +10,13 @@ function showView(viewName) {
 }
 
 function showApp() {
+    hideLoading();
     document.getElementById('auth-section').style.display = 'none';
     document.getElementById('app-section').style.display = 'flex';
 }
 
 function showAuth() {
+    hideLoading();
     document.getElementById('auth-section').style.display = 'flex';
     document.getElementById('app-section').style.display = 'none';
 }

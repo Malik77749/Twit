@@ -38,16 +38,16 @@ async function getUserName(database, userId) {
 async function getUserProfilePicture(database, userId) {
     try {
         const cached = getCachedUser(userId);
-        if (cached) return cached.profilePicture || 'https://via.placeholder.com/48';
+        if (cached) return cached.profilePicture || DEFAULT_AVATAR;
 
         const snapshot = await get(ref(database, 'users/' + userId));
         const userData = snapshot.val();
         if (userData) {
             userCache.set(userId, { data: userData, timestamp: Date.now() });
         }
-        return userData?.profilePicture || 'https://via.placeholder.com/48';
+        return userData?.profilePicture || DEFAULT_AVATAR;
     } catch (error) {
-        return 'https://via.placeholder.com/48';
+        return DEFAULT_AVATAR;
     }
 }
 

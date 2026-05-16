@@ -3,6 +3,8 @@ import { ref, push, set, get, update, remove, increment } from 'https://www.gsta
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast } from './utils.js';
 import { showLoading, hideLoading, showView } from './ui.js';
+
+const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
 import { loadComments } from './comments.js';
 
@@ -346,9 +348,12 @@ async function incrementViewCount(postId) {
 // ===== Feed Loading =====
 
 async function loadPosts() {
-    showLoading();
     const postsDiv = document.getElementById('posts');
-    postsDiv.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+    postsDiv.innerHTML = `
+        <div class="skeleton-post"><div class="skeleton-avatar skeleton"></div><div class="skeleton-post-body"><div class="skeleton-line short skeleton"></div><div class="skeleton-line long skeleton"></div><div class="skeleton-line medium skeleton"></div></div></div>
+        <div class="skeleton-post"><div class="skeleton-avatar skeleton"></div><div class="skeleton-post-body"><div class="skeleton-line short skeleton"></div><div class="skeleton-line long skeleton"></div><div class="skeleton-media skeleton"></div></div></div>
+        <div class="skeleton-post"><div class="skeleton-avatar skeleton"></div><div class="skeleton-post-body"><div class="skeleton-line short skeleton"></div><div class="skeleton-line medium skeleton"></div></div></div>
+    `;
 
     try {
         const [postsSnapshot, retweetsSnapshot] = await Promise.all([
@@ -431,7 +436,7 @@ async function renderPost(post, container) {
     const userId = auth.currentUser?.uid;
     const userData = await getUserData(database, post.userId);
     const userName = userData.name || 'مستخدم';
-    const avatar = userData.profilePicture || 'https://via.placeholder.com/40';
+    const avatar = userData.profilePicture || DEFAULT_AVATAR;
     const isOwnPost = post.userId === userId;
 
     // Check like status
@@ -541,7 +546,7 @@ async function renderRetweet(retweet, originalPost, container) {
 
     container.innerHTML = `
         <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
-            <img class="tweet-avatar" src="${retweetUser.profilePicture || 'https://via.placeholder.com/40'}" alt="" onclick="event.stopPropagation(); showProfile('${retweet.userId}')">
+            <img class="tweet-avatar" src="${retweetUser.profilePicture || DEFAULT_AVATAR}" alt="" onclick="event.stopPropagation(); showProfile('${retweet.userId}')">
             <div class="tweet-body">
                 <div class="tweet-header">
                     <span class="tweet-name" onclick="event.stopPropagation(); showProfile('${retweet.userId}')">${escapeHtml(retweetUser.name || 'مستخدم')}</span>
@@ -554,7 +559,7 @@ async function renderRetweet(retweet, originalPost, container) {
                 </div>
                 <div style="border:1px solid var(--border-color);border-radius:16px;padding:12px;" onclick="event.stopPropagation();">
                     <div class="tweet-header">
-                        <img class="tweet-avatar" src="${originalUser.profilePicture || 'https://via.placeholder.com/40'}" style="width:32px;height:32px;" alt="" onclick="showProfile('${originalPost.userId}')">
+                        <img class="tweet-avatar" src="${originalUser.profilePicture || DEFAULT_AVATAR}" style="width:32px;height:32px;" alt="" onclick="showProfile('${originalPost.userId}')">
                         <span class="tweet-name" onclick="showProfile('${originalPost.userId}')">${escapeHtml(originalUser.name || 'مستخدم')}</span>
                         <span class="tweet-handle">@${escapeHtml(originalUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
                         <span class="tweet-dot">·</span>

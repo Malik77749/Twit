@@ -61,7 +61,7 @@ async function signup() {
             joinDate: new Date().toISOString(),
             followers: 0,
             following: 0,
-            profilePicture: 'https://via.placeholder.com/80'
+            profilePicture: DEFAULT_AVATAR
         });
         errorEl.innerText = '';
         // Auth state listener handles the rest

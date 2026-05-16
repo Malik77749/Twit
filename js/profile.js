@@ -5,6 +5,8 @@ import { getUserData } from './firebase-helpers.js';
 import { renderPost, renderRetweet } from './posts.js';
 import { escapeHtml } from './utils.js';
 
+const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
+
 let auth, database;
 let currentProfileUserId = null;
 
@@ -29,7 +31,7 @@ async function showProfile(userId) {
         document.getElementById('profile-handle').textContent = '@' + (userData.name || 'user').replace(/\s/g, '').toLowerCase();
         document.getElementById('profile-followers').textContent = userData.followers || 0;
         document.getElementById('profile-following').textContent = userData.following || 0;
-        document.getElementById('profile-picture').src = userData.profilePicture || 'https://via.placeholder.com/134';
+        document.getElementById('profile-picture').src = userData.profilePicture || DEFAULT_AVATAR;
 
         // Join date
         if (userData.joinDate) {
