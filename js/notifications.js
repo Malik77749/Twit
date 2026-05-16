@@ -1,8 +1,8 @@
 // Notifications Module
 import { ref, update, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { escapeHtml } from './utils.js';
-import { showLoading, hideLoading, showView } from './ui.js';
-import { toggleComments } from './comments.js';
+import { escapeHtml } from './utils.js?v=3';
+import { showLoading, hideLoading, showView } from './ui.js?v=3';
+import { toggleComments } from './comments.js?v=3';
 
 let auth, database;
 let notificationsUnsub = null;

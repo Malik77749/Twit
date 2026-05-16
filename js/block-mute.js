@@ -1,6 +1,6 @@
 // Block & Mute Module — User Safety
 import { ref, set, get, remove, push } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { showToast } from './utils.js';
+import { showToast } from './utils.js?v=3';
 
 let auth, database;
 

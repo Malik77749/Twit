@@ -1,6 +1,6 @@
 // Drafts Module — Save and Schedule Posts
 import { ref, push, set, get, remove, update } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml } from './utils.js?v=3';
 
 let auth, database;
 

@@ -101,7 +101,7 @@ function parseContent(text) {
 function searchAndShowUser(username) {
     const lower = username.toLowerCase();
     // Search in database for user with matching name
-    import('./firebase-helpers.js').then(({ searchUserByName }) => {
+    import('./firebase-helpers.js?v=3').then(({ searchUserByName }) => {
         searchUserByName(lower).then(userId => {
             if (userId) {
                 window.showProfile(userId);

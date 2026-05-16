@@ -1,8 +1,8 @@
 // Comments Module — Upgraded with Rate Limiting + Denormalization
 import { ref, push, set, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { escapeHtml } from './utils.js';
-import { getUserName, getUserData, addNotification } from './firebase-helpers.js';
-import * as rateLimiter from './rate-limiter.js';
+import { escapeHtml } from './utils.js?v=3';
+import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=3';
+import * as rateLimiter from './rate-limiter.js?v=3';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 

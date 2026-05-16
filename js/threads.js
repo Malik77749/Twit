@@ -1,7 +1,7 @@
 // Threads Module — Tweet Threads (like X)
 import { ref, push, set, get, update } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { escapeHtml } from './utils.js';
-import { getUserData } from './firebase-helpers.js';
+import { escapeHtml } from './utils.js?v=3';
+import { getUserData } from './firebase-helpers.js?v=3';
 
 let auth, database;
 
