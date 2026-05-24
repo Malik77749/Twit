@@ -186,8 +186,8 @@ async function postTweet() {
             await pollsModule.createPoll(postRef.key, question, options, duration);
         } else {
             // Handle reply setting
-            const replySettingIdx = window.currentReplySetting || 0;
-            const replySetting = ['everyone', 'following', 'mentioned'][replySettingIdx];
+            const replySettingIdx = Number(window.currentReplySetting || 0);
+            const replySetting = window.replySettings?.[replySettingIdx]?.value || 'everyone';
             if (replySetting !== 'everyone') {
                 postData.replySetting = replySetting;
             }
@@ -336,8 +336,14 @@ async function likePost(postId, event) {
             rateLimiter.recordAction(userId, 'like');
 
             if (postSnapshot.exists() && postSnapshot.val().userId !== userId) {
-                const likerName = await getUserName(database, userId);
-                await addNotification(database, postSnapshot.val().userId, `أعجب ${likerName} بمنشورك`, postId);
+                const likerData = await getUserData(database, userId);
+                const likerName = likerData.name || await getUserName(database, userId);
+                await addNotification(database, postSnapshot.val().userId, `أعجب ${likerName} بمنشورك`, postId, {
+                    actorId: userId,
+                    actorName: likerName,
+                    actorAvatar: likerData.profilePicture || DEFAULT_AVATAR,
+                    type: 'likes'
+                });
             }
         }
 
@@ -416,8 +422,14 @@ async function retweetPost(postId, event) {
         rateLimiter.recordAction(userId, 'retweet');
 
         if (postSnapshot.exists() && postSnapshot.val().userId !== userId) {
-            const name = await getUserName(database, userId);
-            await addNotification(database, postSnapshot.val().userId, `أعاد ${name} نشر تغريدتك`, postId);
+            const actorData = await getUserData(database, userId);
+            const name = actorData.name || await getUserName(database, userId);
+            await addNotification(database, postSnapshot.val().userId, `أعاد ${name} نشر تغريدتك`, postId, {
+                actorId: userId,
+                actorName: name,
+                actorAvatar: actorData.profilePicture || DEFAULT_AVATAR,
+                type: 'retweets'
+            });
         }
 
         document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
@@ -461,8 +473,14 @@ async function followUser(userId, event) {
             updates[`users/${currentUserId}/following`] = increment(1);
             rateLimiter.recordAction(currentUserId, 'follow');
 
-            const name = await getUserName(database, currentUserId);
-            await addNotification(database, userId, `بدأ ${name} بمتابعتك`, null);
+            const actorData = await getUserData(database, currentUserId);
+            const name = actorData.name || await getUserName(database, currentUserId);
+            await addNotification(database, userId, `بدأ ${name} بمتابعتك`, null, {
+                actorId: currentUserId,
+                actorName: name,
+                actorAvatar: actorData.profilePicture || DEFAULT_AVATAR,
+                type: 'follows'
+            });
         }
 
         await update(ref(database), updates);
@@ -785,6 +803,11 @@ async function renderPost(post, container) {
     // Views
     const views = post.views || 0;
 
+    // Protected tweet check
+    const authorData = post.userName ? null : await getUserData(database, post.userId);
+    const isProtected = authorData?.isProtected || false;
+    const protectedBadge = isProtected ? '<span class="tweet-protected-badge"><i class="fas fa-lock"></i></span>' : '';
+
     // Protected tweets: only visible to followers
     if (isProtected && !isOwnPost) {
         const followCheck = await get(ref(database, `followers/${post.userId}/${userId}`));
@@ -810,11 +833,6 @@ async function renderPost(post, container) {
     if (!isOwnPost) {
         incrementViewCount(postId);
     }
-
-    // Protected tweet check
-    const authorData = post.userName ? null : await getUserData(database, post.userId);
-    const isProtected = authorData?.isProtected || false;
-    const protectedBadge = isProtected ? '<span class="tweet-protected-badge"><i class="fas fa-lock"></i></span>' : '';
 
     // Media (optimized)
     let mediaHtml = '';
@@ -993,3 +1011,81 @@ export {
     handleImageSelect, removePreview, toggleUrlInput, toggleVideoInput, toggleBookmark,
     pinPost, unpinPost, subscribeToFeed, unsubscribeFeed
 };
+
+
+// ===== TWIT_POST_ENHANCEMENTS_V2 =====
+(function () {
+    function enhanceRenderedTweet(container, post) {
+        if (!container) return;
+
+        // Fix protected tweet badge / follows visibility card only after author data resolved by old render
+        const tweet = container.querySelector('.tweet');
+        const avatar = container.querySelector('.tweet-avatar');
+        if (tweet && avatar && !container.querySelector('.tweet-thread-wrap')) {
+            const wrap = document.createElement('div');
+            wrap.className = 'tweet-thread-wrap';
+            avatar.parentNode.insertBefore(wrap, avatar);
+            wrap.appendChild(avatar);
+            if ((post.commentCount || 0) > 0 || post.replyTo) {
+                const line = document.createElement('div');
+                line.className = 'tweet-thread-line';
+                wrap.appendChild(line);
+            }
+        }
+
+        const contentEl = container.querySelector('.tweet-content');
+        if (contentEl) {
+            const rawText = contentEl.textContent || '';
+            const shouldCollapse = rawText.length > 240 || rawText.split('\n').length > 4;
+            if (shouldCollapse && !container.querySelector('.tweet-show-more')) {
+                contentEl.classList.add('tweet-content-collapsed');
+                const btn = document.createElement('button');
+                btn.className = 'tweet-show-more';
+                btn.textContent = 'عرض المزيد';
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const expanded = !contentEl.classList.contains('tweet-content-collapsed');
+                    contentEl.classList.toggle('tweet-content-collapsed', expanded);
+                    btn.textContent = expanded ? 'عرض المزيد' : 'عرض أقل';
+                };
+                contentEl.insertAdjacentElement('afterend', btn);
+            }
+        }
+
+        const actions = container.querySelector('.tweet-actions');
+        if (actions && !actions.querySelector('.tweet-action.share')) {
+            const postId = post.id;
+            const shareBtn = document.createElement('button');
+            shareBtn.className = 'tweet-action share';
+            shareBtn.innerHTML = '<span class="icon-wrap"><i class="fas fa-arrow-up-from-bracket"></i></span>';
+            shareBtn.onclick = (e) => window.openShareSheet?.(postId, e);
+            actions.appendChild(shareBtn);
+        }
+    }
+
+    const __originalRenderPost = renderPost;
+    renderPost = async function(post, container) {
+        await __originalRenderPost(post, container);
+        enhanceRenderedTweet(container, post);
+    };
+
+    const __originalRenderRetweet = renderRetweet;
+    renderRetweet = async function(retweet, originalPost, container) {
+        await __originalRenderRetweet(retweet, originalPost, container);
+        enhanceRenderedTweet(container, { ...originalPost, id: originalPost.id || retweet.originalPostId, commentCount: originalPost.commentCount || 0 });
+    };
+
+    const __originalLikePost = likePost;
+    likePost = async function(postId, event) {
+        await __originalLikePost(postId, event);
+        document.querySelectorAll(`[data-like-id="${postId}"]`).forEach(btn => {
+            const icon = btn.querySelector('.fa-heart');
+            if (btn.classList.contains('active') && icon) {
+                icon.style.animation = 'none';
+                void icon.offsetWidth;
+                icon.style.animation = 'likePopIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275)';
+            }
+        });
+    };
+})();

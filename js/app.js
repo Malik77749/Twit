@@ -786,13 +786,15 @@ window.votePoll = async function(postId, optionKey) {
 
 const replySettings = [
     { icon: 'fa-earth-americas', text: 'الجميع يمكنه الرد', value: 'everyone' },
-    { icon: 'fa-user-check', text: 'المتابَعون يمكنهم الرد', value: 'following' },
-    { icon: 'fa-at', text: 'المذكورون فقط يمكنهم الرد', value: 'mentioned' }
+    { icon: 'fa-user-check', text: 'الأشخاص الذين تتابعهم يمكنهم الرد', value: 'following' }
 ];
 let currentReplySetting = 0;
+window.currentReplySetting = currentReplySetting;
+window.replySettings = replySettings;
 
 window.cycleReplySetting = function() {
     currentReplySetting = (currentReplySetting + 1) % replySettings.length;
+    window.currentReplySetting = currentReplySetting;
     const setting = replySettings[currentReplySetting];
     document.getElementById('reply-setting-text').textContent = setting.text;
     document.querySelector('.reply-selector-btn i').className = `fas ${setting.icon}`;
@@ -1719,3 +1721,333 @@ try {
     console.error('showAuth() failed:', error);
     document.getElementById('auth-section').style.display = 'flex';
 }
+
+
+// ===== TWIT_UI_ENHANCEMENTS_V2 =====
+(function () {
+    const originalNavigateTo = window.navigateTo;
+    const originalShowHome = window.showHome;
+    const originalShowNotifications = window.showNotifications;
+    const originalShowMessages = window.showMessages;
+    const originalShowProfile = window.showProfile;
+    const originalShowLists = window.showLists;
+    const originalShowAnalytics = window.showAnalytics;
+    const originalShowSettings = window.showSettings;
+    const originalShowDrafts = window.showDrafts;
+    const originalShowCommunities = window.showCommunities;
+
+    function animateVisibleView() {
+        const current = document.querySelector('#app-section > * .page-enter-active');
+        if (current) current.classList.remove('page-enter-active');
+        const visible = [...document.querySelectorAll('#app-section [id$="-view"]')].find(el => el.style.display !== 'none');
+        if (visible) {
+            visible.classList.remove('page-enter', 'page-enter-active');
+            void visible.offsetWidth;
+            visible.classList.add('page-enter-active');
+        }
+    }
+
+    function setDesktopActive(nav) {
+        document.querySelectorAll('.sidebar .nav-item').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.nav === nav);
+        });
+    }
+
+    function updateIndicator(container) {
+        if (!container) return;
+        const active = container.querySelector('.feed-tab.active, .mobile-feed-tab.active, .profile-tab.active, .notif-tab.active, .explore-tab.active');
+        const indicator = container.querySelector('.tab-indicator');
+        if (!active || !indicator) return;
+        const left = active.offsetLeft;
+        indicator.style.width = `${active.offsetWidth > 56 ? 56 : active.offsetWidth * 0.6}px`;
+        indicator.style.left = `${left + (active.offsetWidth - parseFloat(indicator.style.width || 56)) / 2}px`;
+    }
+
+    function initTabIndicators() {
+        document.querySelectorAll('.feed-tabs, .mobile-feed-tabs, .profile-tabs, .notif-tabs, .explore-tabs').forEach(updateIndicator);
+    }
+
+    window.addEventListener('resize', initTabIndicators);
+    document.addEventListener('click', (e) => {
+        const container = e.target.closest('.feed-tabs, .mobile-feed-tabs, .profile-tabs, .notif-tabs, .explore-tabs');
+        if (container) setTimeout(() => updateIndicator(container), 10);
+    });
+    setTimeout(initTabIndicators, 50);
+    document.addEventListener('DOMContentLoaded', () => setTimeout(initTabIndicators, 50));
+
+    function updateHeaderBlur() {
+        document.querySelectorAll('.feed-header').forEach(header => {
+            header.classList.toggle('scrolled', window.scrollY > 12);
+        });
+    }
+    window.addEventListener('scroll', updateHeaderBlur, { passive: true });
+    updateHeaderBlur();
+
+    window.openSearch = function() {
+        hideAllViews();
+        setActiveNav('search');
+        setDesktopActive('search');
+        document.getElementById('search-view').style.display = 'block';
+        document.getElementById('search-input')?.focus();
+        loadSearchTrending();
+        loadExploreSections(window.currentExploreSection || 'foryou');
+        animateVisibleView();
+        initTabIndicators();
+    };
+
+    window.navigateTo = function(view) {
+        originalNavigateTo(view);
+        setDesktopActive(view);
+        if (view === 'search') loadExploreSections(window.currentExploreSection || 'foryou');
+        animateVisibleView();
+        initTabIndicators();
+    };
+
+    window.showHome = function() {
+        originalShowHome();
+        setDesktopActive('home');
+        animateVisibleView();
+        initTabIndicators();
+    };
+
+    window.showNotifications = function() {
+        originalShowNotifications();
+        setDesktopActive('notifications');
+        animateVisibleView();
+        initTabIndicators();
+    };
+
+    window.showMessages = function() {
+        originalShowMessages();
+        setDesktopActive('messages');
+        animateVisibleView();
+        initTabIndicators();
+    };
+
+    window.showProfile = function(...args) {
+        const result = originalShowProfile(...args);
+        setDesktopActive('profile');
+        animateVisibleView();
+        initTabIndicators();
+        return result;
+    };
+
+    window.showLists = async function(...args) {
+        const result = await originalShowLists(...args);
+        setDesktopActive('lists');
+        animateVisibleView();
+        return result;
+    };
+
+    window.showAnalytics = async function(...args) {
+        const result = await originalShowAnalytics(...args);
+        setDesktopActive('analytics');
+        animateVisibleView();
+        return result;
+    };
+
+    window.showSettings = function(...args) {
+        const result = originalShowSettings(...args);
+        setDesktopActive('settings');
+        animateVisibleView();
+        return result;
+    };
+
+    window.showDrafts = async function(...args) {
+        const result = await originalShowDrafts(...args);
+        setDesktopActive('drafts');
+        animateVisibleView();
+        return result;
+    };
+
+    window.showCommunities = async function(...args) {
+        const result = await originalShowCommunities(...args);
+        setDesktopActive('communities');
+        animateVisibleView();
+        return result;
+    };
+
+    window.toggleSidebarMore = function(event) {
+        event?.stopPropagation();
+        document.getElementById('sidebar-more-dropdown')?.classList.toggle('open');
+    };
+    window.closeSidebarMore = function() {
+        document.getElementById('sidebar-more-dropdown')?.classList.remove('open');
+    };
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#sidebar-more-btn') && !e.target.closest('#sidebar-more-dropdown')) {
+            window.closeSidebarMore?.();
+        }
+    });
+    window.showKeyboardShortcuts = function() { shortcuts.showShortcutsHelp(); };
+    window.showHelpCenter = function() { showToast('مركز المساعدة قريباً'); };
+
+    window.currentExploreSection = 'foryou';
+    window.switchExploreTab = function(section, btn) {
+        window.currentExploreSection = section;
+        document.querySelectorAll('.explore-tab').forEach(el => el.classList.remove('active'));
+        btn?.classList.add('active');
+        loadExploreSections(section);
+        initTabIndicators();
+    };
+
+    async function renderWhoToFollow(limit = 3) {
+        const usersSnap = await get(ref(database, 'users'));
+        const currentUserId = authInstance.currentUser?.uid;
+        if (!usersSnap.exists()) return '';
+        const users = [];
+        usersSnap.forEach(child => {
+            if (child.key !== currentUserId) users.push({ id: child.key, ...child.val() });
+        });
+        return users.slice(0, limit).map(user => `
+            <div class="wtf-item" onclick="showProfile('${user.id}')">
+                <img class="wtf-avatar" src="${user.profilePicture || DEFAULT_AVATAR}" alt="">
+                <div class="wtf-info">
+                    <div class="wtf-name">${escapeHtml(user.name || 'مستخدم')}</div>
+                    <div class="wtf-handle">@${escapeHtml(user.handle || (user.name || 'user').replace(/\s/g, '').toLowerCase())}</div>
+                </div>
+                <button class="follow-btn" onclick="event.stopPropagation(); followUser('${user.id}', event)">متابعة</button>
+            </div>
+        `).join('');
+    }
+
+    function buildNewsCards(trends) {
+        return trends.slice(0, 6).map((t, i) => `
+            <div class="news-card" onclick="searchTrend('${t.topic}')">
+                <div class="news-card-img"></div>
+                <div class="news-card-body">
+                    <div class="news-card-label">عاجل · ${['سياسة','تقنية','رياضة','ترفيه','أخبار','مجتمع'][i % 6]}</div>
+                    <div class="news-card-title">${t.topic} يتصدر النقاش الآن</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function buildTrendRows(trends, categoryLabel) {
+        return trends.slice(0, 8).map(t => {
+            const countStr = t.count >= 1000 ? (t.count / 1000).toFixed(1).replace('.0', '') + 'K' : t.count;
+            return `
+                <div class="trend-row" onclick="searchTrend('${t.topic}')">
+                    <div class="trend-row-left">
+                        <div class="trend-category">${categoryLabel}</div>
+                        <div class="trend-topic">${t.topic}</div>
+                        <div class="trend-count">${countStr} منشور</div>
+                    </div>
+                    <div class="trend-row-right"><i class="fas fa-ellipsis"></i></div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function loadExploreSections(section = 'foryou') {
+        const container = document.getElementById('explore-dynamic-sections');
+        const carousel = document.getElementById('breaking-news-carousel');
+        if (!container || !carousel) return;
+
+        const trends = await trending.getTrendingTopics(12);
+        carousel.innerHTML = buildNewsCards(trends);
+
+        const categoryMap = {
+            foryou: 'لك',
+            trending: 'الأكثر تداولاً',
+            news: 'الأخبار',
+            sports: 'الرياضة',
+            entertainment: 'الترفيه'
+        };
+
+        const whoToFollowHtml = await renderWhoToFollow(4);
+        container.innerHTML = `
+            <div class="trending-card">
+                <h3>${categoryMap[section] || 'لك'}</h3>
+                ${buildTrendRows(trends, categoryMap[section] || 'لك')}
+            </div>
+            <div class="trending-card" style="margin-top:16px;">
+                <h3>من تتابع</h3>
+                ${whoToFollowHtml || '<div class="empty-state"><p>لا توجد اقتراحات حالياً</p></div>'}
+            </div>
+        `;
+    }
+    window.loadExploreSections = loadExploreSections;
+
+    const originalClearSearch = window.clearSearch;
+    window.clearSearch = function() {
+        originalClearSearch();
+        document.getElementById('search-filters').style.display = 'none';
+        document.getElementById('explore-discovery').style.display = 'block';
+        loadExploreSections(window.currentExploreSection || 'foryou');
+    };
+
+    const originalHandleSearch = window.handleSearch;
+    window.handleSearch = function(query) {
+        originalHandleSearch(query);
+        const discovery = document.getElementById('explore-discovery');
+        if (discovery) discovery.style.display = query?.trim() ? 'none' : 'block';
+    };
+
+    window.scrollToTopAction = function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    const scrollTopBtn = document.getElementById('scroll-top-btn');
+    function handleScrollTopBtn() {
+        if (!scrollTopBtn) return;
+        scrollTopBtn.classList.toggle('visible', window.scrollY > 350);
+    }
+    window.addEventListener('scroll', handleScrollTopBtn, { passive: true });
+    handleScrollTopBtn();
+
+    // Share sheet: copy link / quote / DM
+    window.quoteTweet = function(postId) {
+        showHome();
+        const composer = document.getElementById('postContent');
+        if (!composer) return;
+        composer.focus();
+        composer.value = `\n\nاقتباس منشور: ${window.location.origin}${window.location.pathname}#post/${postId}`;
+        composer.dispatchEvent(new Event('input'));
+    };
+
+    window.sendPostByDM = async function(postId) {
+        const handle = prompt('اسم المستخدم لإرسال الرابط في الرسائل الخاصة (بدون @):');
+        if (!handle) return;
+        const usersSnap = await get(ref(database, 'users'));
+        let targetUserId = null;
+        if (usersSnap.exists()) {
+            usersSnap.forEach(child => {
+                const val = child.val();
+                if (!targetUserId && (val.handle || '').toLowerCase() === handle.toLowerCase()) {
+                    targetUserId = child.key;
+                }
+            });
+        }
+        if (!targetUserId) {
+            showToast('لم يتم العثور على المستخدم');
+            return;
+        }
+        const conversationId = await dm.getOrCreateConversation(targetUserId);
+        if (!conversationId) return;
+        const url = `${window.location.origin}${window.location.pathname}#post/${postId}`;
+        await dm.sendMessage(conversationId, `رابط منشور: ${url}`);
+        showToast('تم إرسال الرابط في الرسائل');
+    };
+
+    window.openShareSheet = function(postId, event) {
+        event?.preventDefault();
+        event?.stopPropagation();
+        const dropdown = document.getElementById('post-dropdown');
+        if (!dropdown) return;
+        dropdown.innerHTML = `
+            <button class="dropdown-item" onclick="copyPostLink('${postId}')"><i class="fas fa-link"></i><span>نسخ الرابط</span></button>
+            <button class="dropdown-item" onclick="sendPostByDM('${postId}')"><i class="far fa-envelope"></i><span>إرسال برسالة خاصة</span></button>
+            <button class="dropdown-item" onclick="quoteTweet('${postId}')"><i class="fas fa-quote-right"></i><span>اقتباس</span></button>
+        `;
+        const rect = event.currentTarget.getBoundingClientRect();
+        dropdown.style.display = 'block';
+        dropdown.style.top = `${rect.bottom + 4}px`;
+        dropdown.style.left = `${Math.max(16, rect.left - 180 + rect.width)}px`;
+        dropdown.style.right = 'auto';
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initTabIndicators();
+        setTimeout(() => loadExploreSections('foryou'), 150);
+    });
+})();

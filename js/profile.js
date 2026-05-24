@@ -629,3 +629,24 @@ if (typeof window !== 'undefined') {
     window.showFollowersList = showFollowersList;
     window.showFollowingList = showFollowingList;
 }
+
+// ===== TWIT_PROFILE_ENHANCEMENTS_V2 =====
+(function () {
+    const __originalShowProfile = showProfile;
+    showProfile = async function(userId) {
+        await __originalShowProfile(userId);
+        try {
+            const profileUserId = userId || auth.currentUser?.uid;
+            const currentUserId = auth.currentUser?.uid;
+            if (!profileUserId || !currentUserId || profileUserId === currentUserId) return;
+
+            const followsYouSnap = await get(ref(database, `followers/${currentUserId}/${profileUserId}`));
+            const handleEl = document.getElementById('profile-handle');
+            if (followsYouSnap.exists() && handleEl && !document.querySelector('.follows-you-badge')) {
+                handleEl.insertAdjacentHTML('afterend', '<span class="follows-you-badge">يتابعك</span>');
+            }
+        } catch (e) {
+            console.error('Profile enhancement error:', e);
+        }
+    };
+})();

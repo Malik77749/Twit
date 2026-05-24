@@ -3387,3 +3387,565 @@ img[loading="lazy"]:not([src=""]) {
     height: 100%;
     object-fit: cover;
 }
+
+/* ================================================================
+   === PHASE 1: EXTENDED DESIGN SYSTEM (X.COM TOKENS) ============
+   ================================================================ */
+:root {
+    /* === Extended colour palette === */
+    --gold: #ffd700;
+    --gold-hover: #ffb300;
+    --blue-hover-bg: rgba(29,155,240,0.1);
+    --pink-hover-bg: rgba(249,24,128,0.1);
+    --green-hover-bg: rgba(0,186,124,0.1);
+
+    /* === Spacing scale === */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* === Border-radius === */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
+
+    /* === Typography === */
+    --font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-size-xs: 12px;
+    --font-size-sm: 13px;
+    --font-size-base: 15px;
+    --font-size-md: 17px;
+    --font-size-lg: 20px;
+    --font-size-xl: 23px;
+    --font-size-2xl: 31px;
+    --line-height: 1.5;
+    --line-height-tight: 1.3;
+
+    /* === Shadows === */
+    --shadow-card: 0 1px 3px rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.4);
+
+    /* === Transitions === */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.2s ease;
+    --transition-slow: 0.35s ease;
+}
+
+/* ================================================================
+   === PHASE 2: ANIMATIONS & TRANSITIONS ==========================
+   ================================================================ */
+
+/* --- Shimmer (skeleton loader) --- */
+@keyframes shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position:  600px 0; }
+}
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--bg-secondary) 0%,
+        rgba(255,255,255,0.06) 40%,
+        var(--bg-secondary) 80%
+    ) !important;
+    background-size: 600px 100% !important;
+    animation: shimmer 1.4s infinite linear !important;
+    border-radius: var(--radius-sm) !important;
+    color: transparent !important;
+}
+
+/* --- Skeleton structure --- */
+.skeleton-post {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+.skeleton-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.skeleton-post-body { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.skeleton-line { height: 14px; border-radius: 7px; }
+.skeleton-line.short  { width: 30%; }
+.skeleton-line.medium { width: 60%; }
+.skeleton-line.long   { width: 90%; }
+.skeleton-media { height: 180px; border-radius: var(--radius-lg); margin-top: 4px; }
+
+/* --- Heart animation (likePopIn + likeRing) --- */
+@keyframes likePopIn {
+    0%   { transform: scale(0.6); opacity: 0.4; }
+    35%  { transform: scale(1.4); opacity: 1; }
+    60%  { transform: scale(0.85); }
+    80%  { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+@keyframes likeRing {
+    0%   { transform: scale(0.3); opacity: 1; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+.tweet-action.like.active .fa-heart {
+    animation: likePopIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards !important;
+}
+.tweet-action.like.active .icon-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--like-color);
+    border-radius: 50%;
+    animation: likeRing 0.45s ease-out forwards;
+    pointer-events: none;
+}
+.tweet-action .icon-wrap { position: relative; }
+
+/* --- Page transitions (SPA feel) --- */
+@keyframes page-enter-kf {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: page-enter-kf 0.22s var(--transition-slow) both; }
+.page-enter-active { animation: page-enter-kf 0.22s ease both; }
+.view-enter { animation: page-enter-kf 0.2s ease both !important; }
+
+/* --- Lightbox enhanced (scale + blur) --- */
+@keyframes lightboxOpen {
+    from { opacity: 0; transform: scale(0.88); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.lightbox.open img { animation: lightboxOpen 0.25s cubic-bezier(0.34,1.56,0.64,1) both; }
+.lightbox.open { backdrop-filter: blur(4px); }
+
+/* --- Modal overlay fade+scale --- */
+@keyframes modalIn {
+    from { opacity: 0; transform: scale(0.93); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.modal-content-animate { animation: modalIn 0.2s ease both; }
+
+/* --- Header blur on scroll --- */
+.feed-header.scrolled {
+    background-color: rgba(0,0,0,0.82) !important;
+    backdrop-filter: blur(18px) !important;
+    box-shadow: 0 1px 0 var(--border-color);
+}
+
+/* --- Post hover elevated --- */
+.tweet:hover {
+    background-color: rgba(255,255,255,0.025) !important;
+    transition: background-color var(--transition-normal) !important;
+}
+
+/* ================================================================
+   === PHASE 2B: SLIDING TAB INDICATOR ============================
+   ================================================================ */
+.feed-tabs,
+.mobile-feed-tabs,
+.profile-tabs,
+.notif-tabs {
+    position: relative;
+}
+.tab-indicator {
+    position: absolute;
+    bottom: 0;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: left 0.25s cubic-bezier(0.4,0,0.2,1), width 0.25s cubic-bezier(0.4,0,0.2,1);
+    pointer-events: none;
+}
+/* Remove static ::after on active tab when indicator is present */
+.tabs-with-indicator .feed-tab.active::after,
+.tabs-with-indicator .mobile-feed-tab.active::after,
+.tabs-with-indicator .profile-tab.active::after,
+.tabs-with-indicator .notif-tab.active::after { display: none; }
+
+/* ================================================================
+   === PHASE 3: SIDEBAR ENHANCEMENTS ==============================
+   ================================================================ */
+
+/* "More" dropdown in sidebar */
+.sidebar-more-btn {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px;
+    border-radius: var(--radius-full);
+    color: var(--text-primary);
+    font-size: 20px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: right;
+    transition: background-color var(--transition-normal);
+}
+.sidebar-more-btn:hover { background-color: var(--bg-hover); }
+.sidebar-more-btn i { font-size: 26px; width: 26px; text-align: center; }
+.sidebar-more-btn span { margin-right: 16px; font-weight: 400; }
+
+.sidebar-more-dropdown {
+    display: none;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 4px 0;
+    margin: 4px 0;
+    box-shadow: var(--shadow-card);
+    position: absolute;
+    bottom: 70px;
+    right: 12px;
+    left: 12px;
+    z-index: 200;
+    animation: modalIn 0.15s ease both;
+}
+.sidebar-more-dropdown.open { display: flex; }
+.sidebar-more-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 15px;
+    width: 100%;
+    text-align: right;
+    transition: background-color var(--transition-normal);
+}
+.sidebar-more-item:hover { background-color: var(--bg-hover); }
+
+/* Notification badge red dot on sidebar */
+.nav-item .notif-badge {
+    background: var(--danger);
+    color: white;
+    border-radius: var(--radius-full);
+    min-width: 20px;
+    height: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+}
+
+/* ================================================================
+   === PHASE 3B: NOTIFICATIONS ENHANCEMENTS =======================
+   ================================================================ */
+.notif-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+.notif-tab {
+    flex: 1;
+    text-align: center;
+    padding: 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    background: none;
+    position: relative;
+    transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+.notif-tab:hover { background-color: var(--bg-hover); }
+.notif-tab.active {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+.notif-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+/* Notification filter chips */
+.notif-filters {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border-color);
+    scrollbar-width: none;
+}
+.notif-filters::-webkit-scrollbar { display: none; }
+.notif-filter-chip {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-color);
+    background: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    font-family: var(--font-family);
+}
+.notif-filter-chip:hover { background: var(--bg-hover); color: var(--text-primary); }
+.notif-filter-chip.active { background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary); }
+
+/* Mark-all button */
+.notif-mark-all-bar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+.notif-mark-all-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 14px;
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-full);
+    transition: background-color var(--transition-normal);
+}
+.notif-mark-all-btn:hover { background: var(--blue-hover-bg); }
+
+/* Grouped notification item */
+.notif-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color var(--transition-normal);
+}
+.notif-item:hover { background-color: var(--bg-hover); }
+.notif-item.unread { background-color: rgba(29,155,240,0.04); }
+.notif-item.unread:hover { background-color: rgba(29,155,240,0.07); }
+.notif-icon-wrap {
+    font-size: 24px;
+    width: 36px;
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.notif-avatars { display: flex; gap: -8px; margin-bottom: 4px; flex-wrap: wrap; gap: 4px; }
+.notif-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-primary);
+}
+.notif-text { font-size: 15px; line-height: 1.4; }
+.notif-text strong { color: var(--text-primary); }
+.notif-time { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ================================================================
+   === PHASE 3C: PROFILE ENHANCEMENTS ============================
+   ================================================================ */
+.follows-you-badge {
+    display: inline-block;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+/* ================================================================
+   === PHASE 3D: THREAD INDICATOR =================================
+   ================================================================ */
+.tweet-thread-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+.tweet-thread-line {
+    width: 2px;
+    flex: 1;
+    min-height: 20px;
+    background: var(--border-color);
+    margin: 4px auto 0;
+}
+
+/* ================================================================
+   === PHASE 3E: SHOW MORE BUTTON =================================
+   ================================================================ */
+.tweet-show-more {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 0;
+    font-family: var(--font-family);
+    display: block;
+    margin-top: 4px;
+}
+.tweet-show-more:hover { text-decoration: underline; }
+.tweet-content-collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ================================================================
+   === PHASE 4: EXPLORE VIEW ======================================
+   ================================================================ */
+.explore-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    scrollbar-width: none;
+    position: relative;
+}
+.explore-tabs::-webkit-scrollbar { display: none; }
+.explore-tab {
+    flex-shrink: 0;
+    padding: 14px 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    background: none;
+    position: relative;
+    transition: background-color var(--transition-normal);
+    white-space: nowrap;
+}
+.explore-tab:hover { background-color: var(--bg-hover); }
+.explore-tab.active { color: var(--text-primary); font-weight: 700; }
+.explore-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+/* Breaking news carousel */
+.news-carousel {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding: 12px 16px;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border-color);
+}
+.news-carousel::-webkit-scrollbar { display: none; }
+.news-card {
+    flex-shrink: 0;
+    width: 220px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color var(--transition-normal);
+}
+.news-card:hover { background-color: var(--bg-hover); }
+.news-card-img {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-hover));
+}
+.news-card-body { padding: 10px 12px; }
+.news-card-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+.news-card-title { font-size: 14px; font-weight: 700; line-height: 1.3; }
+
+/* Trending section row (enriched) */
+.trend-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color var(--transition-normal);
+}
+.trend-row:hover { background-color: var(--bg-hover); }
+.trend-row-left .trend-category { font-size: 13px; color: var(--text-secondary); margin-bottom: 2px; }
+.trend-row-left .trend-topic { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.trend-row-left .trend-count { font-size: 13px; color: var(--text-secondary); }
+.trend-row-right { color: var(--text-secondary); font-size: 18px; padding: 4px; }
+
+/* Who to follow card */
+.wtf-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color var(--transition-normal);
+}
+.wtf-item:hover { background-color: var(--bg-hover); }
+.wtf-avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; }
+.wtf-info { flex: 1; min-width: 0; }
+.wtf-name { font-weight: 700; font-size: 15px; }
+.wtf-handle { color: var(--text-secondary); font-size: 13px; }
+
+/* ================================================================
+   === PHASE 4B: MISC POLISHES =====================================
+   ================================================================ */
+
+/* New-post animation */
+@keyframes newPostSlide {
+    from { opacity: 0; transform: translateY(-14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.new-post, .new-post-realtime { animation: newPostSlide 0.3s ease both; }
+
+/* Scroll-to-top fab */
+.scroll-top-btn {
+    position: fixed;
+    bottom: 100px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 90;
+    pointer-events: none;
+}
+.scroll-top-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+/* notification-item legacy compat */
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color var(--transition-normal);
+}
+.notification-item:hover { background-color: var(--bg-hover); }
+.notification-item.unread { background-color: rgba(29,155,240,0.04); }

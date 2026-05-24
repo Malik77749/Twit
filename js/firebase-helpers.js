@@ -80,14 +80,18 @@ function clearUserCache() {
 /**
  * Add a notification for a user
  */
-async function addNotification(database, toUserId, message, postId) {
+async function addNotification(database, toUserId, message, postId, metadata = {}) {
     try {
         const notificationRef = push(ref(database, `notifications/${toUserId}`));
         await set(notificationRef, {
             message: message,
             postId: postId,
             timestamp: new Date().toISOString(),
-            read: false
+            read: false,
+            actorId: metadata.actorId || null,
+            actorName: metadata.actorName || null,
+            actorAvatar: metadata.actorAvatar || null,
+            type: metadata.type || null
         });
     } catch (error) {
         console.error('Failed to add notification:', error);

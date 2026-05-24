@@ -67,8 +67,14 @@ async function addComment(postId, parentCommentId, event) {
 
             // Send notification
             if (postSnap.val().userId !== userId) {
-                const name = userData.name || await getUserName(database, userId);
-                await addNotification(database, postSnap.val().userId, `رد ${name} على منشورك`, postId);
+                const actorData = userData || await getUserData(database, userId);
+                const name = actorData.name || await getUserName(database, userId);
+                await addNotification(database, postSnap.val().userId, `رد ${name} على منشورك`, postId, {
+                    actorId: userId,
+                    actorName: name,
+                    actorAvatar: actorData.profilePicture || DEFAULT_AVATAR,
+                    type: 'mentions'
+                });
             }
         }
 

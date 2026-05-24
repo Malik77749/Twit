@@ -215,3 +215,38 @@ export {
     hasMore,
     PAGE_SIZE
 };
+
+
+// ===== TWIT_PAGINATION_IO_V2 =====
+let __ioObserver = null;
+initInfiniteScroll = function(containerSelector, database, renderCallback) {
+    databaseRef = database;
+    renderMoreCallback = renderCallback;
+
+    if (__ioObserver) {
+        __ioObserver.disconnect();
+        __ioObserver = null;
+    }
+
+    const postsDiv = document.getElementById('posts');
+    if (!postsDiv) return;
+
+    let sentinel = document.getElementById('infinite-scroll-sentinel');
+    if (!sentinel) {
+        sentinel = document.createElement('div');
+        sentinel.id = 'infinite-scroll-sentinel';
+        sentinel.style.height = '1px';
+        postsDiv.appendChild(sentinel);
+    } else {
+        postsDiv.appendChild(sentinel);
+    }
+
+    __ioObserver = new IntersectionObserver(async (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting && !isLoadingMore && hasMorePosts) {
+            await loadMorePosts();
+        }
+    }, { root: null, rootMargin: '300px 0px 300px 0px', threshold: 0.01 });
+
+    __ioObserver.observe(sentinel);
+};
