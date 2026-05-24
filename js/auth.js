@@ -15,6 +15,34 @@ function init(authInstance, databaseInstance) {
     auth = authInstance;
     database = databaseInstance;
     setupHandleValidation();
+    setupAuthListeners();
+}
+
+function setupAuthListeners() {
+    // Login buttons
+    document.getElementById('login-phone-btn')?.addEventListener('click', loginWithPhone);
+    document.getElementById('login-btn')?.addEventListener('click', login);
+    
+    // Signup buttons
+    document.getElementById('signup-phone-btn')?.addEventListener('click', signupWithPhone);
+    document.getElementById('signup-btn')?.addEventListener('click', signup);
+    
+    // Login Tab Toggles
+    document.getElementById('tab-phone')?.addEventListener('click', () => setLoginMethod('phone'));
+    document.getElementById('tab-email')?.addEventListener('click', () => setLoginMethod('email'));
+
+    // Toggle buttons (Login/Signup)
+    document.getElementById('show-signup-btn')?.addEventListener('click', () => {
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('signup-section').style.display = 'block';
+        document.getElementById('error').innerText = '';
+    });
+    
+    document.getElementById('show-login-btn')?.addEventListener('click', () => {
+        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('signup-section').style.display = 'none';
+        document.getElementById('error').innerText = '';
+    });
 }
 
 // ===== Handle (Username) Validation =====
@@ -265,7 +293,8 @@ async function signupWithPhone() {
     const phone = document.getElementById('signup-phone').value.trim();
     const password = document.getElementById('signup-password-phone').value.trim();
     const countryCode = document.getElementById('signup-country-code').value;
-    const handle = document.getElementById('signup-handle-phone')?.value?.trim() || '';
+    const handleInput = document.getElementById('signup-handle-phone');
+    const handle = handleInput?.value?.trim() || '';
     const errorEl = document.getElementById('error');
 
     if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); return; }
@@ -297,54 +326,50 @@ async function signupWithPhone() {
     const fullPhone = countryCode + cleanedPhone;
 
     try {
-        // Check if phone already registered (non-blocking — index may be missing)
-        try {
-            const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(fullPhone));
-            const existingSnap = await get(phoneQuery);
-            if (existingSnap.exists()) {
-                errorEl.innerText = 'رقم الهاتف مسجل بالفعل';
-                hideLoading();
-                return;
-            }
-        } catch (indexErr) {
-            console.warn('Phone uniqueness check skipped:', indexErr.message);
-        }
-
-        const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
-
-        // Save user profile — with error handling
-        try {
-            await set(ref(database, 'users/' + cred.user.uid), {
-                name: name,
-                handle: handleResult.handle,
-                phone: fullPhone,
-                phoneDisplay: formatPhoneDisplay(phone, countryCode),
-                countryCode: countryCode,
-                email: null,
-                joinDate: new Date().toISOString(),
-                followers: 0,
-                following: 0,
-                profilePicture: DEFAULT_AVATAR,
-                provider: 'phone'
-            });
-
-            // Reserve handle
-            await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
-        } catch (dbErr) {
-            console.error('DB write failed:', dbErr);
-            errorEl.innerText = 'تم إنشاء الحساب لكن حدث خطأ في حفظ البيانات. حاول تسجيل الدخول.';
+        // Step 1: Check phone uniqueness in DB
+        const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(fullPhone));
+        const existingSnap = await get(phoneQuery);
+        if (existingSnap.exists()) {
+            errorEl.innerText = 'رقم الهاتف مسجل بالفعل';
             hideLoading();
             return;
         }
 
+        // Step 2: Create Firebase Auth User
+        const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
+
+        // Step 3: Save user profile
+        const userData = {
+            uid: cred.user.uid,
+            name: name,
+            handle: handleResult.handle,
+            phone: fullPhone,
+            phoneDisplay: formatPhoneDisplay(phone, countryCode),
+            countryCode: countryCode,
+            email: null,
+            joinDate: new Date().toISOString(),
+            followers: 0,
+            following: 0,
+            profilePicture: DEFAULT_AVATAR,
+            provider: 'phone',
+            isVerified: false
+        };
+
+        await set(ref(database, 'users/' + cred.user.uid), userData);
+        await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+
+        // Success
         errorEl.innerText = '';
-        hideLoading();
+        // UI will be updated by onAuthStateChanged in app.js
     } catch (error) {
+        console.error('Signup error:', error);
         const messages = {
             'auth/email-already-in-use': 'رقم الهاتف مسجل بالفعل',
-            'auth/weak-password': 'كلمة المرور ضعيفة'
+            'auth/weak-password': 'كلمة المرور ضعيفة جداً',
+            'auth/operation-not-allowed': 'خدمة التسجيل بالهاتف غير مفعلة حالياً',
+            'auth/network-request-failed': 'فشل الاتصال بالخادم، تحقق من الإنترنت'
         };
-        errorEl.innerText = messages[error.code] || error.message;
+        errorEl.innerText = messages[error.code] || 'حدث خطأ أثناء التسجيل: ' + error.message;
         hideLoading();
     }
 }
