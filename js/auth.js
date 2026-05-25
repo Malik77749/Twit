@@ -326,10 +326,24 @@ async function signupWithPhone() {
     const fullPhone = countryCode + cleanedPhone;
 
     try {
-        // Step 1: Check phone uniqueness in DB
-        const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(fullPhone));
-        const existingSnap = await get(phoneQuery);
-        if (existingSnap.exists()) {
+        // Step 1: Check phone uniqueness in DB (Safe check)
+        let phoneExists = false;
+        try {
+            const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(fullPhone));
+            const existingSnap = await get(phoneQuery);
+            if (existingSnap.exists()) phoneExists = true;
+        } catch (indexErr) {
+            console.warn('Index not ready, performing manual check');
+            // Manual check if index is missing to prevent crash
+            const allUsersSnap = await get(ref(database, 'users'));
+            if (allUsersSnap.exists()) {
+                allUsersSnap.forEach(child => {
+                    if (child.val().phone === fullPhone) phoneExists = true;
+                });
+            }
+        }
+
+        if (phoneExists) {
             errorEl.innerText = 'رقم الهاتف مسجل بالفعل';
             hideLoading();
             return;

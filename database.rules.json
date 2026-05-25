@@ -1,7 +1,7 @@
 {
   "rules": {
     "users": {
-      ".indexOn": ["phone"],
+      ".indexOn": ["phone", "handle"],
       "$uid": {
         ".read": true,
         ".write": "auth.uid === $uid",
