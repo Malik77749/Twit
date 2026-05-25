@@ -78,29 +78,36 @@ async function disable2FA() {
 
 /**
  * Verify 2FA on login — check if email is verified
- * Returns true if user can proceed, false if blocked
+ * Always returns an object: { allowed: boolean, message?: string }
  */
 async function verify2FAOnLogin(user) {
     try {
         const twoFASnap = await get(ref(database, `users/${user.uid}/twoFactorEnabled`));
         const isEnabled = twoFASnap.exists() && twoFASnap.val() === true;
 
-        if (!isEnabled) return true; // 2FA not enabled, proceed
+        if (!isEnabled) {
+            return { allowed: true };
+        }
 
         // Reload user to get fresh emailVerified status
         await reload(user);
 
         if (!user.emailVerified) {
-            // Send verification email
-            await sendEmailVerification(user);
+            // Send verification email only for accounts that actually have an email
+            if (user.email) {
+                await sendEmailVerification(user);
+            }
             return {
                 allowed: false,
-                message: 'تم إرسال رابط التحقق إلى بريدك. تحقق من بريدك لتسجيل الدخول.'
+                message: user.email
+                    ? 'تم إرسال رابط التحقق إلى بريدك. تحقق من بريدك لتسجيل الدخول.'
+                    : 'تعذر إكمال التحقق الإضافي لهذا الحساب.'
             };
         }
 
         return { allowed: true };
     } catch (error) {
+        console.warn('2FA login verification skipped:', error);
         // On error, allow login (don't lock users out)
         return { allowed: true };
     }

@@ -30,7 +30,7 @@ import * as verified from './verified.js?v=3';
 import * as trending from './trending.js?v=3';
 import * as googleAuth from './google-auth.js?v=3';
 import * as communities from './communities.js?v=3';
-import * as twoFactor from './two-factor.js?v=3';
+import * as twoFactor from './two-factor.js?v=4';
 import { getUserData } from './firebase-helpers.js?v=3';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
@@ -1506,8 +1506,9 @@ async function checkUserRole(user) {
     try {
         // 2FA verification
         const twoFA = await twoFactor.verify2FAOnLogin(user);
-        if (!twoFA.allowed) {
-            alert(twoFA.message);
+        const isAllowed = typeof twoFA === 'object' ? twoFA.allowed !== false : twoFA !== false;
+        if (!isAllowed) {
+            alert(twoFA?.message || 'تعذر إكمال التحقق من تسجيل الدخول');
             const { signOut } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
             await signOut(authInstance);
             showAuth();
