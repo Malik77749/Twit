@@ -10,13 +10,34 @@ let auth, database;
 
 // Track login method
 let loginMethod = 'phone'; // 'phone' or 'email'
+let currentCaptcha = '';
 
 function init(authInstance, databaseInstance) {
     auth = authInstance;
     database = databaseInstance;
     setupHandleValidation();
     setupAuthListeners();
+    refreshCaptcha(); // Initial captcha
 }
+
+function generateCaptcha() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
+    let result = '';
+    for (let i = 0; i < 4; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+function refreshCaptcha() {
+    currentCaptcha = generateCaptcha();
+    const display = document.getElementById('captcha-display');
+    if (display) display.textContent = currentCaptcha;
+    const input = document.getElementById('captcha-input');
+    if (input) input.value = '';
+}
+
+window.refreshCaptcha = refreshCaptcha;
 
 function setupAuthListeners() {
     // Login buttons
@@ -27,6 +48,9 @@ function setupAuthListeners() {
     document.getElementById('signup-phone-btn')?.addEventListener('click', signupWithPhone);
     document.getElementById('signup-btn')?.addEventListener('click', signup);
     
+    // Captcha Refresh
+    document.getElementById('refresh-captcha')?.addEventListener('click', refreshCaptcha);
+
     // Login Tab Toggles
     document.getElementById('tab-phone')?.addEventListener('click', () => setLoginMethod('phone'));
     document.getElementById('tab-email')?.addEventListener('click', () => setLoginMethod('email'));
@@ -36,6 +60,7 @@ function setupAuthListeners() {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('signup-section').style.display = 'block';
         document.getElementById('error').innerText = '';
+        refreshCaptcha();
     });
     
     document.getElementById('show-login-btn')?.addEventListener('click', () => {
@@ -295,13 +320,31 @@ async function signupWithPhone() {
     const countryCode = document.getElementById('signup-country-code').value;
     const handleInput = document.getElementById('signup-handle-phone');
     const handle = handleInput?.value?.trim() || '';
+    const captchaInput = document.getElementById('captcha-input').value.trim().toUpperCase();
+    const termsChecked = document.getElementById('terms-checkbox').checked;
     const errorEl = document.getElementById('error');
 
     if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); return; }
-    if (!phone) { errorEl.innerText = 'أدخل رقم الهاتف'; hideLoading(); return; }
+    if (!handle) { errorEl.innerText = 'أدخل اسم المستخدم (المعرف)'; hideLoading(); return; }
     if (!password) { errorEl.innerText = 'أدخل كلمة المرور'; hideLoading(); return; }
+    if (!phone) { errorEl.innerText = 'أدخل رقم الهاتف'; hideLoading(); return; }
 
-    // Validate handle
+    // 1. Check CAPTCHA
+    if (captchaInput !== currentCaptcha) {
+        errorEl.innerText = 'رمز التحقق غير صحيح';
+        refreshCaptcha();
+        hideLoading();
+        return;
+    }
+
+    // 2. Check Terms
+    if (!termsChecked) {
+        errorEl.innerText = 'يجب الموافقة على الشروط والسياسة';
+        hideLoading();
+        return;
+    }
+
+    // 3. Validate handle format and uniqueness
     const handleResult = await validateHandleForSignup(handle);
     if (!handleResult.valid) {
         errorEl.innerText = handleResult.error;
@@ -309,6 +352,7 @@ async function signupWithPhone() {
         return;
     }
 
+    // 4. Validate phone
     if (!isValidPhone(phone)) {
         errorEl.innerText = 'رقم الهاتف غير صالح';
         hideLoading();
@@ -326,15 +370,13 @@ async function signupWithPhone() {
     const fullPhone = countryCode + cleanedPhone;
 
     try {
-        // Step 1: Check phone uniqueness in DB (Safe check)
+        // Step 1: Check phone uniqueness in DB
         let phoneExists = false;
         try {
             const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(fullPhone));
             const existingSnap = await get(phoneQuery);
             if (existingSnap.exists()) phoneExists = true;
         } catch (indexErr) {
-            console.warn('Index not ready, performing manual check');
-            // Manual check if index is missing to prevent crash
             const allUsersSnap = await get(ref(database, 'users'));
             if (allUsersSnap.exists()) {
                 allUsersSnap.forEach(child => {
@@ -344,12 +386,13 @@ async function signupWithPhone() {
         }
 
         if (phoneExists) {
-            errorEl.innerText = 'رقم الهاتف مسجل بالفعل';
+            errorEl.innerText = 'رقم الهاتف مسجل بالفعل لمستخدم آخر';
             hideLoading();
             return;
         }
 
         // Step 2: Create Firebase Auth User
+        // Note: setPersistence is usually set to LOCAL by default in web, ensuring login persists
         const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
 
         // Step 3: Save user profile
@@ -366,24 +409,25 @@ async function signupWithPhone() {
             following: 0,
             profilePicture: DEFAULT_AVATAR,
             provider: 'phone',
-            isVerified: false
+            isVerified: false,
+            canChangeHandle: false // Lock handle
         };
 
         await set(ref(database, 'users/' + cred.user.uid), userData);
         await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
 
-        // Success
+        // Success - clear error
         errorEl.innerText = '';
-        // UI will be updated by onAuthStateChanged in app.js
+        // UI will be updated by onAuthStateChanged in app.js automatically
     } catch (error) {
         console.error('Signup error:', error);
         const messages = {
-            'auth/email-already-in-use': 'رقم الهاتف مسجل بالفعل',
+            'auth/email-already-in-use': 'رقم الهاتف هذا مسجل مسبقاً',
             'auth/weak-password': 'كلمة المرور ضعيفة جداً',
-            'auth/operation-not-allowed': 'خدمة التسجيل بالهاتف غير مفعلة حالياً',
-            'auth/network-request-failed': 'فشل الاتصال بالخادم، تحقق من الإنترنت'
+            'auth/network-request-failed': 'فشل الاتصال، تحقق من الإنترنت'
         };
-        errorEl.innerText = messages[error.code] || 'حدث خطأ أثناء التسجيل: ' + error.message;
+        errorEl.innerText = messages[error.code] || 'خطأ في التسجيل: ' + error.message;
+        refreshCaptcha();
         hideLoading();
     }
 }
