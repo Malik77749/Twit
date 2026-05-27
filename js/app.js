@@ -2052,3 +2052,204 @@ try {
         setTimeout(() => loadExploreSections('foryou'), 150);
     });
 })();
+
+
+// ===== MOBILE BOTTOM NAVIGATION BAR =====
+(function initMobileNav() {
+    const mobileNav = document.querySelector('.mobile-nav');
+    if (!mobileNav) return;
+
+    // Create mobile nav items if they don't exist
+    if (mobileNav.children.length === 0) {
+        mobileNav.innerHTML = `
+            <button class="mobile-nav-item active" data-nav="home" onclick="showHome()">
+                <i class="fas fa-home"></i>
+                <span>الرئيسية</span>
+            </button>
+            <button class="mobile-nav-item" data-nav="search" onclick="openSearch()">
+                <i class="fas fa-magnifying-glass"></i>
+                <span>استكشاف</span>
+            </button>
+            <button class="mobile-nav-item" data-nav="notifications" onclick="showNotifications()" style="position:relative;">
+                <i class="fas fa-bell"></i>
+                <span>إشعارات</span>
+                <span id="notif-badge-mobile" class="notif-badge" style="display:none;position:absolute;top:2px;right:2px;"></span>
+            </button>
+            <button class="mobile-nav-item" data-nav="messages" onclick="showMessages()" style="position:relative;">
+                <i class="far fa-envelope"></i>
+                <span>رسائل</span>
+                <span id="dm-badge-mobile" class="notif-badge" style="display:none;position:absolute;top:2px;right:2px;"></span>
+            </button>
+            <button class="mobile-nav-item" data-nav="profile" onclick="showProfile()">
+                <i class="fas fa-user"></i>
+                <span>ملفي</span>
+            </button>
+        `;
+    }
+
+    // Update active nav item
+    window.setActiveMobileNav = function(nav) {
+        document.querySelectorAll('.mobile-nav-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.nav === nav);
+        });
+    };
+
+    // Intercept navigation functions to update mobile nav
+    const originalShowHome = window.showHome;
+    window.showHome = function() {
+        originalShowHome();
+        setActiveMobileNav('home');
+    };
+
+    const originalShowNotifications = window.showNotifications;
+    window.showNotifications = function() {
+        originalShowNotifications();
+        setActiveMobileNav('notifications');
+    };
+
+    const originalShowMessages = window.showMessages;
+    window.showMessages = function() {
+        originalShowMessages();
+        setActiveMobileNav('messages');
+    };
+
+    const originalShowProfile = window.showProfile;
+    window.showProfile = function(...args) {
+        originalShowProfile(...args);
+        setActiveMobileNav('profile');
+    };
+
+    const originalOpenSearch = window.openSearch;
+    window.openSearch = function() {
+        originalOpenSearch();
+        setActiveMobileNav('search');
+    };
+})();
+
+// ===== INSTANT POST PUBLISHING (NO TIMER) =====
+window.postTweet = async function() {
+    // This is already handled in posts.js with instant publishing
+    // Just ensure the button feedback is immediate
+    const postBtn = document.querySelector('.composer-submit');
+    if (postBtn && !postBtn.disabled) {
+        postBtn.textContent = '...';
+        postBtn.style.opacity = '0.7';
+        setTimeout(() => {
+            postBtn.textContent = 'نشر';
+            postBtn.style.opacity = '1';
+        }, 300);
+    }
+};
+
+// ===== IMPROVED PULL-TO-REFRESH =====
+(function improvePullToRefresh() {
+    const mainFeed = document.querySelector('.main-feed');
+    if (!mainFeed) return;
+
+    let startY = 0;
+    let currentY = 0;
+    let isPulling = false;
+    const ptr = document.getElementById('pull-to-refresh');
+
+    mainFeed.addEventListener('touchstart', (e) => {
+        if (mainFeed.scrollTop === 0) {
+            startY = e.touches[0].clientY;
+            currentY = startY;
+            isPulling = true;
+        }
+    }, { passive: true });
+
+    mainFeed.addEventListener('touchmove', (e) => {
+        if (!isPulling) return;
+        currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+
+        if (diff > 0 && mainFeed.scrollTop === 0) {
+            if (ptr) {
+                ptr.style.display = 'flex';
+                ptr.style.transform = `translateY(${Math.min(diff, 80)}px)`;
+                if (diff > 60) {
+                    ptr.classList.add('active');
+                } else {
+                    ptr.classList.remove('active');
+                }
+            }
+        }
+    }, { passive: true });
+
+    mainFeed.addEventListener('touchend', async () => {
+        if (!isPulling) return;
+        const diff = currentY - startY;
+
+        if (diff > 60 && ptr?.classList.contains('active')) {
+            ptr.classList.add('active');
+            // Refresh posts
+            pagination.resetPagination();
+            await posts.loadPosts();
+            showToast('تم تحديث المنشورات ✓');
+        }
+
+        // Reset
+        if (ptr) {
+            ptr.style.transform = '';
+            ptr.classList.remove('active');
+            setTimeout(() => ptr.style.display = 'none', 300);
+        }
+        isPulling = false;
+    }, { passive: true });
+})();
+
+// ===== MOBILE DRAWER SWIPE GESTURE =====
+(function improveDrawerGesture() {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
+
+    document.addEventListener('touchstart', (e) => {
+        const x = e.touches[0].clientX;
+        // Detect swipe from right edge
+        if (x > window.innerWidth - 20) {
+            touchStartX = x;
+            touchStartY = e.touches[0].clientY;
+            isSwiping = true;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isSwiping || !window.innerWidth <= 768) return;
+        const dx = touchStartX - e.touches[0].clientX;
+        const dy = Math.abs(touchStartY - e.touches[0].clientY);
+        
+        if (dx > 40 && dy < 100) {
+            window.openDrawer?.();
+            isSwiping = false;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+        isSwiping = false;
+    }, { passive: true });
+})();
+
+// ===== RESPONSIVE MOBILE ADJUSTMENTS =====
+(function initResponsiveAdjustments() {
+    function updateLayout() {
+        const isMobile = window.innerWidth <= 768;
+        const mobileNav = document.querySelector('.mobile-nav');
+        const sidebar = document.querySelector('.sidebar');
+        const rightPanel = document.querySelector('.right-panel');
+
+        if (isMobile) {
+            if (mobileNav) mobileNav.style.display = 'flex';
+            if (sidebar) sidebar.style.display = 'none';
+            if (rightPanel) rightPanel.style.display = 'none';
+        } else {
+            if (mobileNav) mobileNav.style.display = 'none';
+            if (sidebar) sidebar.style.display = 'flex';
+            if (rightPanel) rightPanel.style.display = 'block';
+        }
+    }
+
+    window.addEventListener('resize', updateLayout);
+    updateLayout();
+})();

@@ -1,5 +1,5 @@
-// Authentication Module — Enhanced with Phone, Email, Google, CAPTCHA, and Persistence
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, sendEmailVerification, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+// Authentication Module — Email + Phone + Google
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { ref, get, set, query, orderByChild, equalTo } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { showApp, showAuth, showLoading, hideLoading } from './ui.js?v=3';
 import { clearUserCache } from './firebase-helpers.js?v=3';
@@ -7,24 +7,21 @@ import { clearUserCache } from './firebase-helpers.js?v=3';
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
 let auth, database;
+
+// Track login method
 let loginMethod = 'phone'; // 'phone' or 'email'
 let currentCaptcha = '';
 
 function init(authInstance, databaseInstance) {
     auth = authInstance;
     database = databaseInstance;
-    
-    // Set persistence to LOCAL for staying logged in
-    setPersistence(auth, browserLocalPersistence).catch(err => console.error('Persistence error:', err));
-    
     setupHandleValidation();
     setupAuthListeners();
-    refreshCaptcha();
+    refreshCaptcha(); // Initial captcha
 }
 
-// ===== CAPTCHA Generation =====
 function generateCaptcha() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
     let result = '';
     for (let i = 0; i < 4; i++) {
         result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -42,17 +39,23 @@ function refreshCaptcha() {
 
 window.refreshCaptcha = refreshCaptcha;
 
-// ===== Auth Event Listeners =====
 function setupAuthListeners() {
+    // Login buttons
     document.getElementById('login-phone-btn')?.addEventListener('click', loginWithPhone);
     document.getElementById('login-btn')?.addEventListener('click', login);
+    
+    // Signup buttons
     document.getElementById('signup-phone-btn')?.addEventListener('click', signupWithPhone);
     document.getElementById('signup-btn')?.addEventListener('click', signup);
-    document.getElementById('refresh-captcha')?.addEventListener('click', refreshCaptcha);
     
+    // Captcha Refresh
+    document.getElementById('refresh-captcha')?.addEventListener('click', refreshCaptcha);
+
+    // Login Tab Toggles
     document.getElementById('tab-phone')?.addEventListener('click', () => setLoginMethod('phone'));
     document.getElementById('tab-email')?.addEventListener('click', () => setLoginMethod('email'));
-    
+
+    // Toggle buttons (Login/Signup)
     document.getElementById('show-signup-btn')?.addEventListener('click', () => {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('signup-section').style.display = 'block';
@@ -73,6 +76,7 @@ let lastCheckedHandle = '';
 let lastCheckedResult = '';
 
 function validateHandleFormat(handle) {
+    // Only allow: letters, numbers, underscore, dot. 3-20 chars.
     return /^[a-zA-Z0-9_.]{3,20}$/.test(handle);
 }
 
@@ -117,6 +121,7 @@ function updateHandleUI(inputId, feedbackId, status, message) {
 }
 
 function setupHandleValidation() {
+    // Phone signup handle
     const phoneHandle = document.getElementById('signup-handle-phone');
     const emailHandle = document.getElementById('signup-handle-email');
 
@@ -132,8 +137,10 @@ function handleInputLive(input, feedbackId) {
     const raw = input.value.trim();
     const inputId = input.id;
 
+    // Clear previous timeout
     if (handleCheckTimeout) clearTimeout(handleCheckTimeout);
 
+    // Empty
     if (!raw) {
         updateHandleUI(inputId, feedbackId, 'hint', 'اختر اسماً مستخدم فريداً');
         lastCheckedHandle = '';
@@ -141,6 +148,7 @@ function handleInputLive(input, feedbackId) {
         return;
     }
 
+    // Format check
     if (!validateHandleFormat(raw)) {
         updateHandleUI(inputId, feedbackId, 'taken', '✗ الأحرف المسموحة: إنجليزية، أرقام، _ و . (3-20 حرف)');
         lastCheckedHandle = '';
@@ -148,11 +156,14 @@ function handleInputLive(input, feedbackId) {
         return;
     }
 
+    // Show checking state
     updateHandleUI(inputId, feedbackId, 'checking');
 
+    // Debounce — wait 500ms after user stops typing
     handleCheckTimeout = setTimeout(async () => {
         const lower = raw.toLowerCase();
 
+        // Skip if already checked this exact handle
         if (lower === lastCheckedHandle) {
             updateHandleUI(inputId, feedbackId, lastCheckedResult);
             return;
@@ -162,12 +173,16 @@ function handleInputLive(input, feedbackId) {
         lastCheckedHandle = lower;
         lastCheckedResult = available ? 'available' : 'taken';
 
+        // Make sure the input still has the same value
         if (input.value.trim().toLowerCase() === lower) {
             updateHandleUI(inputId, feedbackId, lastCheckedResult);
         }
     }, 500);
 }
 
+/**
+ * Get the handle value from the active signup form
+ */
 function getActiveHandle() {
     const phoneForm = document.getElementById('signup-phone-form');
     if (phoneForm && phoneForm.style.display !== 'none') {
@@ -176,6 +191,9 @@ function getActiveHandle() {
     return document.getElementById('signup-handle-email')?.value?.trim() || '';
 }
 
+/**
+ * Validate handle before signup — returns { valid, handle, error }
+ */
 async function validateHandleForSignup(handle) {
     if (!handle) {
         return { valid: false, error: 'أدخل اسم المستخدم' };
@@ -190,27 +208,44 @@ async function validateHandleForSignup(handle) {
     return { valid: true, handle: handle.toLowerCase() };
 }
 
-// ===== Phone Number Utilities =====
+/**
+ * Convert phone number to internal email format
+ */
 function phoneToEmail(phone, countryCode) {
+    // Remove spaces, dashes, and leading +
     let cleaned = phone.replace(/[\s\-+]/g, '');
+
+    // Remove leading 0 if present (local format)
     if (cleaned.startsWith('0')) {
         cleaned = cleaned.substring(1);
     }
+
+    // Combine country code + number
     const fullNumber = countryCode + cleaned;
+
     return `${fullNumber}@twit.internal`;
 }
 
+/**
+ * Validate phone number (basic)
+ */
 function isValidPhone(phone) {
     const cleaned = phone.replace(/[\s\-+]/g, '');
+    // At least 6 digits, max 15
     return /^\d{6,15}$/.test(cleaned);
 }
 
+/**
+ * Format phone for display
+ */
 function formatPhoneDisplay(phone, countryCode) {
     const cleaned = phone.replace(/[\s\-+]/g, '').replace(/^0+/, '');
     return `+${countryCode} ${cleaned}`;
 }
 
-// ===== Login/Signup Methods =====
+/**
+ * Switch between phone and email login
+ */
 function setLoginMethod(method) {
     loginMethod = method;
     const phoneSection = document.getElementById('phone-login-section');
@@ -233,6 +268,9 @@ function setLoginMethod(method) {
     document.getElementById('error').innerText = '';
 }
 
+/**
+ * Login with phone number + password
+ */
 async function loginWithPhone() {
     showLoading();
     const phone = document.getElementById('login-phone').value.trim();
@@ -271,35 +309,9 @@ async function loginWithPhone() {
     }
 }
 
-async function login() {
-    showLoading();
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value.trim();
-    const errorEl = document.getElementById('error');
-
-    if (!email || !password) {
-        errorEl.innerText = 'يرجى إدخال البريد الإلكتروني وكلمة المرور';
-        hideLoading();
-        return;
-    }
-
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-        errorEl.innerText = '';
-    } catch (error) {
-        const messages = {
-            'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
-            'auth/wrong-password': 'كلمة المرور غير صحيحة',
-            'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
-            'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
-            'auth/network-request-failed': 'تحقق من اتصال الإنترنت',
-            'auth/user-disabled': 'هذا الحساب معطل'
-        };
-        errorEl.innerText = messages[error.code] || error.message;
-        hideLoading();
-    }
-}
-
+/**
+ * Signup with phone number + name + password
+ */
 async function signupWithPhone() {
     showLoading();
     const name = document.getElementById('signup-name-phone').value.trim();
@@ -317,6 +329,7 @@ async function signupWithPhone() {
     if (!password) { errorEl.innerText = 'أدخل كلمة المرور'; hideLoading(); return; }
     if (!phone) { errorEl.innerText = 'أدخل رقم الهاتف'; hideLoading(); return; }
 
+    // 1. Check CAPTCHA
     if (captchaInput !== currentCaptcha) {
         errorEl.innerText = 'رمز التحقق غير صحيح';
         refreshCaptcha();
@@ -324,12 +337,14 @@ async function signupWithPhone() {
         return;
     }
 
+    // 2. Check Terms
     if (!termsChecked) {
         errorEl.innerText = 'يجب الموافقة على الشروط والسياسة';
         hideLoading();
         return;
     }
 
+    // 3. Validate handle format and uniqueness
     const handleResult = await validateHandleForSignup(handle);
     if (!handleResult.valid) {
         errorEl.innerText = handleResult.error;
@@ -337,6 +352,7 @@ async function signupWithPhone() {
         return;
     }
 
+    // 4. Validate phone
     if (!isValidPhone(phone)) {
         errorEl.innerText = 'رقم الهاتف غير صالح';
         hideLoading();
@@ -354,6 +370,7 @@ async function signupWithPhone() {
     const fullPhone = countryCode + cleanedPhone;
 
     try {
+        // Step 1: Check phone uniqueness in DB
         let phoneExists = false;
         try {
             const phoneQuery = query(ref(database, 'users'), orderByChild('phone'), equalTo(fullPhone));
@@ -374,68 +391,95 @@ async function signupWithPhone() {
             return;
         }
 
+        // Step 2: Create Firebase Auth User
+        // Note: setPersistence is usually set to LOCAL by default in web, ensuring login persists
         const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
 
+        // Step 3: Save user profile
         const userData = {
             uid: cred.user.uid,
             name: name,
             handle: handleResult.handle,
             phone: fullPhone,
             phoneDisplay: formatPhoneDisplay(phone, countryCode),
-            email: fakeEmail,
+            countryCode: countryCode,
+            email: null,
             joinDate: new Date().toISOString(),
             followers: 0,
             following: 0,
             profilePicture: DEFAULT_AVATAR,
             provider: 'phone',
-            emailVerified: false
+            isVerified: false,
+            canChangeHandle: false // Lock handle
         };
 
-        await set(ref(database, `users/${cred.user.uid}`), userData);
+        await set(ref(database, 'users/' + cred.user.uid), userData);
         await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
 
+        // Success - clear error
         errorEl.innerText = '';
+        // UI will be updated by onAuthStateChanged in app.js automatically
+    } catch (error) {
+        console.error('Signup error:', error);
+        const messages = {
+            'auth/email-already-in-use': 'رقم الهاتف هذا مسجل مسبقاً',
+            'auth/weak-password': 'كلمة المرور ضعيفة جداً',
+            'auth/network-request-failed': 'فشل الاتصال، تحقق من الإنترنت'
+        };
+        errorEl.innerText = messages[error.code] || 'خطأ في التسجيل: ' + error.message;
+        refreshCaptcha();
         hideLoading();
+    }
+}
+
+/**
+ * Login with email + password (legacy)
+ */
+async function login() {
+    showLoading();
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    const errorEl = document.getElementById('error');
+
+    if (!email || !password) {
+        errorEl.innerText = 'يرجى إدخال البريد وكلمة المرور';
+        hideLoading();
+        return;
+    }
+
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+        errorEl.innerText = '';
     } catch (error) {
         const messages = {
-            'auth/email-already-in-use': 'رقم الهاتف مسجل بالفعل',
-            'auth/invalid-email': 'البريد غير صالح',
-            'auth/weak-password': 'كلمة المرور ضعيفة'
+            'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
+            'auth/wrong-password': 'كلمة المرور غير صحيحة',
+            'auth/invalid-email': 'البريد الإلكتروني غير صالح',
+            'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
+            'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
+            'auth/network-request-failed': 'تحقق من اتصال الإنترنت',
+            'auth/user-disabled': 'هذا الحساب معطل'
         };
         errorEl.innerText = messages[error.code] || error.message;
         hideLoading();
     }
 }
 
+/**
+ * Signup with email (legacy)
+ */
 async function signup() {
     showLoading();
     const name = document.getElementById('signup-name').value.trim();
     const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value.trim();
-    const handleInput = document.getElementById('signup-handle-email');
-    const handle = handleInput?.value?.trim() || '';
-    const captchaInput = document.getElementById('captcha-input').value.trim().toUpperCase();
-    const termsChecked = document.getElementById('terms-checkbox').checked;
+    const handle = document.getElementById('signup-handle-email')?.value?.trim() || '';
     const errorEl = document.getElementById('error');
 
     if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); return; }
-    if (!email) { errorEl.innerText = 'أدخل بريدك الإلكتروني'; hideLoading(); return; }
-    if (!handle) { errorEl.innerText = 'أدخل اسم المستخدم (المعرف)'; hideLoading(); return; }
-    if (!password) { errorEl.innerText = 'أدخل كلمة المرور'; hideLoading(); return; }
+    if (!email || !password) { errorEl.innerText = 'أدخل البريد وكلمة المرور'; hideLoading(); return; }
 
-    if (captchaInput !== currentCaptcha) {
-        errorEl.innerText = 'رمز التحقق غير صحيح';
-        refreshCaptcha();
-        hideLoading();
-        return;
-    }
-
-    if (!termsChecked) {
-        errorEl.innerText = 'يجب الموافقة على الشروط والسياسة';
-        hideLoading();
-        return;
-    }
-
+    // Validate handle
     const handleResult = await validateHandleForSignup(handle);
     if (!handleResult.valid) {
         errorEl.innerText = handleResult.error;
@@ -443,30 +487,34 @@ async function signup() {
         return;
     }
 
-    if (password.length < 6) {
-        errorEl.innerText = 'كلمة المرور 6 أحرف على الأقل';
-        hideLoading();
-        return;
-    }
+    if (password.length < 6) { errorEl.innerText = 'كلمة المرور 6 أحرف على الأقل'; hideLoading(); return; }
 
     try {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
+        // Send verification email
+        try { await sendEmailVerification(cred.user); } catch(e) { console.warn('Email verification failed:', e); }
+        
+        try {
+            await set(ref(database, 'users/' + cred.user.uid), {
+                name: name,
+                handle: handleResult.handle,
+                email: email,
+                joinDate: new Date().toISOString(),
+                followers: 0,
+                following: 0,
+                profilePicture: DEFAULT_AVATAR,
+                provider: 'email',
+                emailVerified: false
+            });
 
-        const userData = {
-            uid: cred.user.uid,
-            name: name,
-            handle: handleResult.handle,
-            email: email,
-            joinDate: new Date().toISOString(),
-            followers: 0,
-            following: 0,
-            profilePicture: DEFAULT_AVATAR,
-            provider: 'email',
-            emailVerified: false
-        };
-
-        await set(ref(database, `users/${cred.user.uid}`), userData);
-        await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+            // Reserve handle
+            await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+        } catch (dbErr) {
+            console.error('DB write failed:', dbErr);
+            errorEl.innerText = 'تم إنشاء الحساب لكن حدث خطأ في حفظ البيانات. حاول تسجيل الدخول.';
+            hideLoading();
+            return;
+        }
 
         errorEl.innerText = '';
         hideLoading();
@@ -513,7 +561,6 @@ function setupAuthStateListener(callback) {
                     await callback(user);
                 }
             } catch (error) {
-                console.error('Auth state check error:', error);
                 showAuth();
                 hideLoading();
             }
@@ -536,9 +583,13 @@ function showSignup() {
     document.getElementById('error').innerText = '';
 }
 
+/**
+ * Send password reset email
+ */
 async function forgotPassword() {
     const errorEl = document.getElementById('error');
 
+    // Determine which method is active
     if (loginMethod === 'phone') {
         const phone = document.getElementById('login-phone').value.trim();
         const countryCode = document.getElementById('login-country-code').value;

@@ -153,6 +153,24 @@
                     </div>
                     <div class="handle-feedback" id="handle-feedback-phone"></div>
                     <input type="password" class="auth-input" id="signup-password-phone" placeholder="كلمة المرور (6 أحرف على الأقل)">
+                    
+                    <!-- CAPTCHA Verification -->
+                    <div class="captcha-box">
+                        <div class="captcha-display-row">
+                            <div class="captcha-code" id="captcha-display">XXXX</div>
+                            <button type="button" class="captcha-refresh" id="refresh-captcha" title="تحديث"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                        <input type="text" class="auth-input captcha-input" id="captcha-input" placeholder="أدخل الرمز أعلاه" maxlength="4" style="text-align:center;letter-spacing:8px;font-size:18px;font-weight:bold;">
+                    </div>
+                    
+                    <!-- Terms and Conditions -->
+                    <div class="auth-checkbox-group">
+                        <label>
+                            <input type="checkbox" id="terms-checkbox">
+                            <span>أوافق على <a href="#" style="color:var(--accent);text-decoration:none;">الشروط والسياسة</a></span>
+                        </label>
+                    </div>
+                    
                     <div class="phone-input-row">
                         <select class="auth-select" id="signup-country-code">
                             <option value="967">🇾🇪 +967</option>
@@ -192,6 +210,24 @@
                     <div class="handle-feedback" id="handle-feedback-email"></div>
                     <input type="email" class="auth-input" id="signup-email" placeholder="البريد الإلكتروني">
                     <input type="password" class="auth-input" id="signup-password" placeholder="كلمة المرور (6 أحرف على الأقل)">
+                    
+                    <!-- CAPTCHA Verification -->
+                    <div class="captcha-box">
+                        <div class="captcha-display-row">
+                            <div class="captcha-code" id="captcha-display">XXXX</div>
+                            <button type="button" class="captcha-refresh" id="refresh-captcha" title="تحديث"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                        <input type="text" class="auth-input captcha-input" id="captcha-input" placeholder="أدخل الرمز أعلاه" maxlength="4" style="text-align:center;letter-spacing:8px;font-size:18px;font-weight:bold;">
+                    </div>
+                    
+                    <!-- Terms and Conditions -->
+                    <div class="auth-checkbox-group">
+                        <label>
+                            <input type="checkbox" id="terms-checkbox">
+                            <span>أوافق على <a href="#" style="color:var(--accent);text-decoration:none;">الشروط والسياسة</a></span>
+                        </label>
+                    </div>
+                    
                     <button class="auth-btn" id="signup-btn">إنشاء حساب</button>
                 </div>
 
@@ -362,9 +398,9 @@
                     <img class="composer-avatar" id="composer-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect fill='%23333' width='40' height='40' rx='20'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%23555'/%3E%3Cpath d='M8 36c0-7 5-12 12-12s12 5 12 12' fill='%23555'/%3E%3C/svg%3E" alt="">
                     <div class="composer-body">
                         <textarea class="composer-input" id="postContent" placeholder="ما الذي يحدث؟!" rows="1" maxlength="550"></textarea>
-                        <div class="composer-preview" id="composer-preview">
-                            <img id="preview-img" src="" alt="">
-                            <button class="remove-btn" onclick="removePreview()"><i class="fas fa-times"></i></button>
+                        <!-- Multi-Media Preview Container -->
+                        <div class="composer-preview" id="composer-preview" style="display:none;">
+                            <!-- Media items will be added here dynamically -->
                         </div>
 
                         <!-- Poll Composer -->
@@ -402,9 +438,13 @@
                         <div class="composer-divider"></div>
                         <div class="composer-actions">
                             <div class="composer-tools">
-                                <label class="composer-tool" title="وسائط">
-                                    <i class="far fa-image"></i>
-                                    <input type="file" id="postImage" accept="image/*,video/*" style="display:none" onchange="handleImageSelect(this)">
+                                <label class="composer-tool" title="وسائط (صور وفيديو)">
+                                    <i class="far fa-images"></i>
+                                    <input type="file" id="postImage" accept="image/*,video/*" multiple style="display:none" onchange="handleImageSelect(this)">
+                                </label>
+                                <label class="composer-tool" title="من الاستوديو">
+                                    <i class="fas fa-film"></i>
+                                    <input type="file" id="postStudio" accept="image/*,video/*" multiple style="display:none" onchange="handleImageSelect(this)">
                                 </label>
                                 <button class="composer-tool" title="استطلاع" onclick="togglePoll()">
                                     <i class="fas fa-square-poll-horizontal"></i>

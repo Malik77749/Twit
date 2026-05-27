@@ -16,7 +16,7 @@ import * as imageCdn from './image-cdn.js?v=3';
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
 let auth, database, storage;
-let selectedFiles = []; // Support multiple files
+let selectedFile = null;
 
 function init(authInstance, databaseInstance, storageInstance) {
     auth = authInstance;
@@ -28,88 +28,40 @@ function init(authInstance, databaseInstance, storageInstance) {
 // ===== Composer Helpers =====
 
 function handleImageSelect(input) {
-    if (input.files) {
-        const files = Array.from(input.files);
-        
-        // Max 4 images/videos
-        if (files.length > 4) {
-            showToast('يمكنك رفع حد أقصى 4 وسائط');
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('حجم الصورة كبير جداً (الحد الأقصى 5MB)');
             input.value = '';
             return;
         }
 
-        selectedFiles = [];
-        const previewContainer = document.getElementById('composer-preview');
-        previewContainer.innerHTML = '';
-        previewContainer.style.display = 'block';
-
-        for (const file of files) {
-            // Validate file size (max 50MB per file)
-            if (file.size > 50 * 1024 * 1024) {
-                showToast(`حجم الملف ${file.name} كبير جداً (الحد الأقصى 50MB)`);
-                continue;
-            }
-
-            // Validate file type
-            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm'];
-            if (!validTypes.includes(file.type)) {
-                showToast(`نوع الملف ${file.name} غير مدعوم`);
-                continue;
-            }
-
-            selectedFiles.push(file);
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const previewItem = document.createElement('div');
-                previewItem.className = 'preview-item';
-                previewItem.style.position = 'relative';
-                previewItem.style.display = 'inline-block';
-                previewItem.style.margin = '8px';
-                previewItem.style.borderRadius = '8px';
-                previewItem.style.overflow = 'hidden';
-
-                if (file.type.startsWith('image/')) {
-                    previewItem.innerHTML = `<img src="${e.target.result}" style="width:120px;height:120px;object-fit:cover;">`;
-                } else {
-                    previewItem.innerHTML = `<div style="width:120px;height:120px;background:#333;display:flex;align-items:center;justify-content:center;"><i class="fas fa-video" style="font-size:32px;color:#888;"></i></div>`;
-                }
-
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-                removeBtn.style.position = 'absolute';
-                removeBtn.style.top = '4px';
-                removeBtn.style.right = '4px';
-                removeBtn.style.background = 'rgba(0,0,0,0.7)';
-                removeBtn.style.color = 'white';
-                removeBtn.style.border = 'none';
-                removeBtn.style.borderRadius = '50%';
-                removeBtn.style.width = '24px';
-                removeBtn.style.height = '24px';
-                removeBtn.style.cursor = 'pointer';
-                removeBtn.onclick = () => {
-                    selectedFiles = selectedFiles.filter(f => f !== file);
-                    previewItem.remove();
-                    if (selectedFiles.length === 0) {
-                        previewContainer.style.display = 'none';
-                    }
-                };
-
-                previewItem.appendChild(removeBtn);
-                previewContainer.appendChild(previewItem);
-            };
-            reader.readAsDataURL(file);
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4'];
+        if (!validTypes.includes(file.type)) {
+            alert('نوع الملف غير مدعوم');
+            input.value = '';
+            return;
         }
+
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-img').src = e.target.result;
+            document.getElementById('composer-preview').style.display = 'block';
+        };
+        reader.readAsDataURL(selectedFile);
     }
 }
 
 function removePreview() {
-    selectedFiles = [];
+    selectedFile = null;
     document.getElementById('postImage').value = '';
-    document.getElementById('postStudio').value = '';
     document.getElementById('postImageUrl').value = '';
     document.getElementById('postVideo').value = '';
-    document.getElementById('composer-preview').innerHTML = '';
+    document.getElementById('preview-img').src = '';
     document.getElementById('composer-preview').style.display = 'none';
     document.getElementById('url-input-row').style.display = 'none';
     document.getElementById('video-input-row').style.display = 'none';
@@ -140,8 +92,8 @@ async function postTweet() {
     const imageUrl = document.getElementById('postImageUrl').value.trim();
     const videoUrl = document.getElementById('postVideo').value.trim();
 
-    if (!content && selectedFiles.length === 0 && !imageUrl && !videoUrl) {
-        showToast('اكتب شيئاً أو أضف وسائط');
+    if (!content && !selectedFile && !imageUrl && !videoUrl) {
+        showToast('اكتب شيئاً أو أضف صورة');
         return;
     }
 
@@ -185,39 +137,12 @@ async function postTweet() {
     };
 
     try {
-        // Handle multiple media files
-        const mediaUrls = [];
-        if (selectedFiles.length > 0) {
-            for (const file of selectedFiles) {
-                try {
-                    if (file.type.startsWith('image/')) {
-                        // Compress image before upload
-                        const compressedFile = await imageCdn.compressImageFile(file, 1200, 0.8);
-                        const imgRef = storageRef(storage, `posts/${postRef.key}/${compressedFile.name}`);
-                        const snapshot = await uploadBytes(imgRef, compressedFile);
-                        mediaUrls.push({
-                            type: 'image',
-                            url: await getDownloadURL(snapshot.ref)
-                        });
-                    } else if (file.type.startsWith('video/')) {
-                        // Upload video without compression
-                        const vidRef = storageRef(storage, `posts/${postRef.key}/${file.name}`);
-                        const snapshot = await uploadBytes(vidRef, file);
-                        mediaUrls.push({
-                            type: 'video',
-                            url: await getDownloadURL(snapshot.ref)
-                        });
-                    }
-                } catch (err) {
-                    showToast(`خطأ في رفع ${file.name}`);
-                }
-            }
-            if (mediaUrls.length > 0) {
-                postData.media = mediaUrls;
-                // Use first image as preview
-                const firstImage = mediaUrls.find(m => m.type === 'image');
-                if (firstImage) postData.imageUrl = firstImage.url;
-            }
+        if (selectedFile) {
+            // Compress image before upload (CDN module)
+            const compressedFile = await imageCdn.compressImageFile(selectedFile, 1200, 0.8);
+            const imgRef = storageRef(storage, `posts/${postRef.key}/${compressedFile.name}`);
+            const snapshot = await uploadBytes(imgRef, compressedFile);
+            postData.imageUrl = await getDownloadURL(snapshot.ref);
         } else if (imageUrl) {
             try {
                 new URL(imageUrl);
@@ -305,11 +230,10 @@ async function postTweet() {
         }
         await renderPost({ id: postRef.key, ...postData }, container);
 
-        showToast('تم النشر بنجاح! ✅');
-        // Remove undo timer - post is instant
-        // undoTweetModule.startUndo(postRef.key, (deletedId) => {
-        //     showToast('تم إلغاء المنشور');
-        // });
+        showToast('تم النشر');
+        undoTweetModule.startUndo(postRef.key, (deletedId) => {
+            showToast('تم إلغاء المنشور');
+        });
         if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
     } catch (error) {
         showToast('خطأ: ' + error.message);
