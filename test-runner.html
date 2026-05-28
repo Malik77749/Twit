@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منشغل الاختبار التلقائي - Twit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .progress-section {
+            margin: 30px 0;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .log-section {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .log-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: white;
+            border-right: 3px solid #667eea;
+        }
+
+        .log-entry.success {
+            border-right-color: #4caf50;
+            color: #4caf50;
+        }
+
+        .log-entry.error {
+            border-right-color: #f44336;
+            color: #f44336;
+        }
+
+        .log-entry.warning {
+            border-right-color: #ff9800;
+            color: #ff9800;
+        }
+
+        .log-entry.info {
+            border-right-color: #2196f3;
+            color: #2196f3;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e0e0e0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status-badge.running {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .accounts-list {
+            margin-top: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .account-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            font-size: 12px;
+            border-left: 3px solid #667eea;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 منشغل الاختبار التلقائي</h1>
+            <p>اختبار شامل لمنصة Twit مع الإصلاح التلقائي</p>
+        </div>
+
+        <div class="status-section" style="text-align: center; margin: 20px 0;">
+            <span id="status-badge" class="status-badge">جاهز</span>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number" id="stat-registered">0</div>
+                <div class="label">حسابات مسجلة</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="stat-posts">0</div>
+                <div class="label">منشورات</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="stat-profiles">0</div>
+                <div class="label">ملفات محدثة</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="stat-errors">0</div>
+                <div class="label">أخطاء مصلحة</div>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-label">
+                <span>التقدم الكلي</span>
+                <span id="progress-text">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="log-section">
+            <div id="log-container">
+                <div class="log-entry info">📋 جاهز لبدء الاختبار...</div>
+            </div>
+        </div>
+
+        <div class="accounts-list" id="accounts-list" style="display: none;">
+            <h3 style="margin-bottom: 10px;">📊 قائمة الحسابات:</h3>
+            <div id="accounts-container"></div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" id="start-btn" onclick="startTest()">
+                <span class="spinner" id="spinner" style="display: none; margin-left: 10px;"></span>
+                بدء الاختبار الشامل
+            </button>
+            <button class="btn-secondary" onclick="clearLog()">مسح السجل</button>
+            <button class="btn-secondary" onclick="exportResults()">تصدير النتائج</button>
+        </div>
+    </div>
+
+    <script src="advanced-test-runner.js"></script>
+    <script>
+        let testRunner = null;
+        let testInProgress = false;
+
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = message;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateStats(stats) {
+            document.getElementById('stat-registered').textContent = stats.registered;
+            document.getElementById('stat-posts').textContent = stats.posted;
+            document.getElementById('stat-profiles').textContent = stats.profilesUpdated;
+            document.getElementById('stat-errors').textContent = stats.errorsFixed;
+
+            const total = stats.registered + stats.posted + stats.profilesUpdated;
+            const progress = (total / 120) * 100; // 10 + 100 + 10 = 120
+            document.getElementById('progress-fill').style.width = progress + '%';
+            document.getElementById('progress-text').textContent = Math.round(progress) + '%';
+        }
+
+        function setStatus(status, type) {
+            const badge = document.getElementById('status-badge');
+            badge.className = `status-badge ${type}`;
+            badge.textContent = status;
+        }
+
+        async function startTest() {
+            if (testInProgress) return;
+
+            testInProgress = true;
+            const btn = document.getElementById('start-btn');
+            const spinner = document.getElementById('spinner');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            setStatus('جاري الاختبار...', 'running');
+
+            addLog('🚀 بدء الاختبار الشامل', 'info');
+            addLog('═'.repeat(40), 'info');
+
+            testRunner = new AdvancedTestRunner();
+
+            try {
+                // الكشف والإصلاح
+                addLog('🔧 جاري فحص الأخطاء والإصلاح التلقائي...', 'info');
+                await testRunner.detectAndFixErrors();
+                updateStats(testRunner.stats);
+
+                // التسجيل
+                addLog('📝 بدء محاكاة التسجيل...', 'info');
+                for (let i = 1; i <= 10; i++) {
+                    const account = await testRunner.simulateRegistration(i);
+                    if (account) {
+                        testRunner.accounts.push(account);
+                        testRunner.stats.registered++;
+                        addLog(`✅ تم تسجيل: ${account.name} (@${account.handle})`, 'success');
+                    }
+                    updateStats(testRunner.stats);
+                    await new Promise(r => setTimeout(r, 200));
+                }
+
+                // النشر
+                addLog('📤 بدء محاكاة النشر...', 'info');
+                for (const account of testRunner.accounts) {
+                    for (let i = 1; i <= 10; i++) {
+                        const posted = await testRunner.simulatePost(account, i);
+                        if (posted) testRunner.stats.posted++;
+                        updateStats(testRunner.stats);
+                        await new Promise(r => setTimeout(r, 100));
+                    }
+                }
+
+                // تحديث الملفات الشخصية
+                addLog('👤 بدء محاكاة تحديث الملفات الشخصية...', 'info');
+                for (const account of testRunner.accounts) {
+                    const updated = await testRunner.simulateProfileUpdate(account);
+                    if (updated) testRunner.stats.profilesUpdated++;
+                    updateStats(testRunner.stats);
+                    await new Promise(r => setTimeout(r, 200));
+                }
+
+                // عرض النتائج
+                addLog('═'.repeat(40), 'info');
+                addLog('✨ انتهى الاختبار بنجاح!', 'success');
+                addLog(`✅ الحسابات المسجلة: ${testRunner.stats.registered}/10`, 'success');
+                addLog(`📝 المنشورات المنشورة: ${testRunner.stats.posted}/100`, 'success');
+                addLog(`👤 الملفات المحدثة: ${testRunner.stats.profilesUpdated}/10`, 'success');
+                addLog(`🔧 الأخطاء المصلحة: ${testRunner.stats.errorsFixed}`, 'success');
+
+                // عرض قائمة الحسابات
+                displayAccounts();
+
+                setStatus('✅ اكتمل الاختبار بنجاح', 'completed');
+            } catch (error) {
+                addLog(`❌ خطأ: ${error.message}`, 'error');
+                setStatus('❌ فشل الاختبار', 'failed');
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                testInProgress = false;
+            }
+        }
+
+        function displayAccounts() {
+            const listContainer = document.getElementById('accounts-list');
+            const accountsContainer = document.getElementById('accounts-container');
+            
+            accountsContainer.innerHTML = '';
+            testRunner.accounts.forEach((acc, idx) => {
+                const item = document.createElement('div');
+                item.className = 'account-item';
+                item.textContent = `${idx + 1}. ${acc.name} (@${acc.handle}) - ${acc.phone}`;
+                accountsContainer.appendChild(item);
+            });
+            
+            listContainer.style.display = 'block';
+        }
+
+        function clearLog() {
+            document.getElementById('log-container').innerHTML = '';
+            addLog('📋 تم مسح السجل', 'info');
+        }
+
+        function exportResults() {
+            if (!testRunner) {
+                alert('لم يتم تشغيل الاختبار بعد');
+                return;
+            }
+
+            const report = testRunner.generateReport();
+            const json = JSON.stringify(report, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `twit-test-report-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // تشغيل تلقائي عند تحميل الصفحة (اختياري)
+        // window.addEventListener('load', () => {
+        //     setTimeout(startTest, 1000);
+        // });
+    </script>
+</body>
+</html>
