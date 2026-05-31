@@ -642,6 +642,56 @@ const cardStyles = `
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Trending & News Cards Enhancement */
+.trending-card {
+    background-color: var(--bg-secondary) !important;
+    border-radius: 16px !important;
+    margin-bottom: 16px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.trending-card h3 {
+    padding: 16px !important;
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.news-card {
+    background-color: var(--bg-secondary) !important;
+    border-radius: 16px !important;
+    margin: 8px !important;
+    border: 1px solid var(--border-color) !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.news-card:hover {
+    background-color: var(--bg-hover) !important;
+}
+
+.wtf-item {
+    padding: 12px 16px !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.wtf-item:hover {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.analytics-card {
+    background: var(--bg-secondary) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 20px !important;
+    transition: transform 0.2s ease !important;
+}
+
+.analytics-card:hover {
+    transform: translateY(-4px) !important;
+    background-color: var(--bg-hover) !important;
+}
 `;
 
 // Inject card styles
