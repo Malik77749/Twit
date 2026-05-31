@@ -32,6 +32,7 @@ import * as googleAuth from './google-auth.js?v=3';
 import * as communities from './communities.js?v=3';
 import * as twoFactor from './two-factor.js?v=4';
 import { getUserData } from './firebase-helpers.js?v=3';
+import './improvements.js?v=1';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -2141,63 +2142,7 @@ window.postTweet = async function() {
     }
 };
 
-// ===== IMPROVED PULL-TO-REFRESH =====
-(function improvePullToRefresh() {
-    const mainFeed = document.querySelector('.main-feed');
-    if (!mainFeed) return;
-
-    let startY = 0;
-    let currentY = 0;
-    let isPulling = false;
-    const ptr = document.getElementById('pull-to-refresh');
-
-    mainFeed.addEventListener('touchstart', (e) => {
-        if (mainFeed.scrollTop === 0) {
-            startY = e.touches[0].clientY;
-            currentY = startY;
-            isPulling = true;
-        }
-    }, { passive: true });
-
-    mainFeed.addEventListener('touchmove', (e) => {
-        if (!isPulling) return;
-        currentY = e.touches[0].clientY;
-        const diff = currentY - startY;
-
-        if (diff > 0 && mainFeed.scrollTop === 0) {
-            if (ptr) {
-                ptr.style.display = 'flex';
-                ptr.style.transform = `translateY(${Math.min(diff, 80)}px)`;
-                if (diff > 60) {
-                    ptr.classList.add('active');
-                } else {
-                    ptr.classList.remove('active');
-                }
-            }
-        }
-    }, { passive: true });
-
-    mainFeed.addEventListener('touchend', async () => {
-        if (!isPulling) return;
-        const diff = currentY - startY;
-
-        if (diff > 60 && ptr?.classList.contains('active')) {
-            ptr.classList.add('active');
-            // Refresh posts
-            pagination.resetPagination();
-            await posts.loadPosts();
-            showToast('تم تحديث المنشورات ✓');
-        }
-
-        // Reset
-        if (ptr) {
-            ptr.style.transform = '';
-            ptr.classList.remove('active');
-            setTimeout(() => ptr.style.display = 'none', 300);
-        }
-        isPulling = false;
-    }, { passive: true });
-})();
+// Pull-to-refresh is now handled by improvements.js with professional threshold
 
 // ===== MOBILE DRAWER SWIPE GESTURE =====
 (function improveDrawerGesture() {

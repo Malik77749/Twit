@@ -233,7 +233,12 @@ function setLoginMethod(method) {
     document.getElementById('error').innerText = '';
 }
 
+// Prevent multiple login attempts
+let isLoggingIn = false;
+
 async function loginWithPhone() {
+    if (isLoggingIn) return;
+    isLoggingIn = true;
     showLoading();
     const phone = document.getElementById('login-phone').value.trim();
     const password = document.getElementById('login-password-phone').value.trim();
@@ -268,10 +273,13 @@ async function loginWithPhone() {
         };
         errorEl.innerText = messages[error.code] || error.message;
         hideLoading();
+        isLoggingIn = false;
     }
 }
 
 async function login() {
+    if (isLoggingIn) return;
+    isLoggingIn = true;
     showLoading();
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value.trim();
@@ -297,10 +305,16 @@ async function login() {
         };
         errorEl.innerText = messages[error.code] || error.message;
         hideLoading();
+        isLoggingIn = false;
     }
 }
 
+// Prevent multiple signup attempts
+let isSigningUp = false;
+
 async function signupWithPhone() {
+    if (isSigningUp) return;
+    isSigningUp = true;
     showLoading();
     const name = document.getElementById('signup-name-phone').value.trim();
     const phone = document.getElementById('signup-phone').value.trim();
@@ -396,6 +410,7 @@ async function signupWithPhone() {
 
         errorEl.innerText = '';
         hideLoading();
+        isSigningUp = false;
     } catch (error) {
         const messages = {
             'auth/email-already-in-use': 'رقم الهاتف مسجل بالفعل',
@@ -404,10 +419,13 @@ async function signupWithPhone() {
         };
         errorEl.innerText = messages[error.code] || error.message;
         hideLoading();
+        isSigningUp = false;
     }
 }
 
 async function signup() {
+    if (isSigningUp) return;
+    isSigningUp = true;
     showLoading();
     const name = document.getElementById('signup-name').value.trim();
     const email = document.getElementById('signup-email').value.trim();
@@ -470,6 +488,7 @@ async function signup() {
 
         errorEl.innerText = '';
         hideLoading();
+        isSigningUp = false;
     } catch (error) {
         const messages = {
             'auth/email-already-in-use': 'البريد مستخدم بالفعل',
@@ -478,6 +497,7 @@ async function signup() {
         };
         errorEl.innerText = messages[error.code] || error.message;
         hideLoading();
+        isSigningUp = false;
     }
 }
 
