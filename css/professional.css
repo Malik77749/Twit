@@ -244,3 +244,74 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 @media (prefers-reduced-motion: no-preference) {
   .nav-item, .mobile-nav-item, .tweet-action, button, .dropdown-item { transition: transform .16s var(--ease-out), background .18s var(--ease-out), color .18s var(--ease-out), border-color .18s var(--ease-out); }
 }
+
+/* Universal mobile responsiveness: compact, regular, large and landscape phones */
+* { max-width: 100%; }
+img, video, iframe, svg { max-width: 100%; }
+body { min-width: 0; }
+
+@media (max-width: 760px) {
+  :root { --mobile-gutter: clamp(12px, 4vw, 20px); }
+  html, body { width: 100%; min-width: 0; overflow-x: hidden; }
+  .app-layout, .main-feed, .main-content, .content-area { width: 100%; max-width: 100%; min-width: 0; }
+  .main-feed { overflow-x: clip; padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  .feed-header, .mobile-header { width: 100%; max-width: 100%; }
+  .feed-header h2 { padding-inline: var(--mobile-gutter); font-size: clamp(17px, 4.8vw, 20px); }
+  .composer, .tweet, .post-composer, .post-detail, .profile-header, .settings-panel, .analytics-section { max-width: 100%; min-width: 0; padding-inline: var(--mobile-gutter); }
+  .tweet-body, .tweet-content, .tweet-header, .tweet-meta, .post-detail-content, .profile-details { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+  .tweet-content, .post-detail-content { line-height: 1.75; }
+  .tweet-header { flex-wrap: wrap; gap: 5px 7px; }
+  .tweet-name, .tweet-handle, .tweet-time { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tweet-actions { width: 100%; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .tweet-action { padding-inline: 2px; }
+  .tweet-action i { font-size: 15px; }
+  .composer-toolbar, .composer-actions, .post-composer-footer { flex-wrap: wrap; gap: 8px; }
+  .composer-submit, .post-composer button[type="submit"] { min-width: 76px; }
+  .mobile-bottom-nav { position: fixed; inset-inline: 0; bottom: 0; width: 100%; min-height: 58px; padding: 5px max(8px, env(safe-area-inset-left)) max(5px, env(safe-area-inset-bottom)); z-index: 100; display: flex; justify-content: space-around; }
+  .mobile-nav-item { flex: 1 1 0; min-width: 0; padding-inline: 4px; }
+  .mobile-nav-item span { max-width: 18vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-header { padding-top: env(safe-area-inset-top); }
+  .mobile-feed-tabs, .feed-tabs, .profile-tabs, .notif-tabs, .explore-tabs { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+  .feed-tab, .mobile-feed-tab, .profile-tab, .notif-tab, .explore-tab { flex: 0 0 auto; min-width: clamp(76px, 22vw, 110px); padding-inline: 10px; }
+  .news-carousel { padding-inline: var(--mobile-gutter); scroll-snap-type: x proximity; }
+  .news-card { width: min(76vw, 280px); scroll-snap-align: start; }
+  .poll-options, .poll-options-input, .button-group, .auth-tabs { width: 100%; min-width: 0; }
+  .poll-option-btn, .settings-item, .notif-item, .dm-conversation-item { min-width: 0; max-width: 100%; }
+  .settings-item, .notif-item, .dm-conversation-item { padding-inline: var(--mobile-gutter); }
+  .settings-item > *, .notif-item > *, .dm-conversation-item > * { min-width: 0; }
+  .modal-overlay, .admin-modal-overlay, .lightbox { padding: 12px; }
+  .modal-content, .admin-modal, .post-detail, .settings-panel { width: min(100%, 560px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+  .dropdown-menu, .more-menu, .sidebar-more-dropdown { max-width: calc(100vw - 24px); }
+  input, textarea, select { max-width: 100%; font-size: 16px; }
+  textarea { resize: vertical; }
+}
+
+@media (max-width: 360px) {
+  .composer, .tweet, .post-composer { padding-inline: 12px; }
+  .tweet-avatar { width: 36px; height: 36px; }
+  .tweet-content { font-size: 14px; }
+  .tweet-actions { margin-inline: -4px; }
+  .tweet-action { min-height: 38px; }
+  .mobile-nav-item i, .mobile-bottom-nav .nav-icon { font-size: 16px; }
+  .mobile-nav-item span { font-size: 10px; }
+  .auth-box { width: calc(100vw - 20px); padding: 22px 14px; }
+}
+
+@media (min-width: 430px) and (max-width: 760px) {
+  .composer, .tweet, .post-composer { padding-inline: 20px; }
+  .tweet-action { gap: 5px; }
+  .tweet-action span { display: inline; font-size: 11px; }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  .main-feed { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
+  .mobile-bottom-nav { min-height: 50px; }
+  .mobile-nav-item { min-height: 42px; }
+  .modal-content, .post-detail, .settings-panel { max-height: calc(100dvh - 16px); }
+  .auth-container { align-items: flex-start; padding-block: 16px; overflow-y: auto; }
+  .auth-box { margin-block: 8px; }
+}
+
+@supports not (height: 100dvh) {
+  .modal-content, .post-detail, .settings-panel { max-height: calc(100vh - 24px); }
+}
