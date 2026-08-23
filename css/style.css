@@ -4299,3 +4299,182 @@ img[loading="lazy"]:not([src=""]) {
 .handle-feedback.hint {
     color: var(--text-secondary);
 }
+
+
+/* ===== Navigation and overlap hardening ===== */
+.app-layout,
+.main-feed,
+.main-feed > [id$="-view"],
+.right-panel {
+    min-width: 0;
+}
+
+.main-feed > [id$="-view"] {
+    width: 100%;
+    overflow-x: clip;
+}
+
+.feed-header,
+.mobile-header,
+.mobile-feed-tabs {
+    width: 100%;
+}
+
+.nav-item,
+.sidebar-more-btn,
+.mobile-nav-item,
+.drawer-item {
+    min-width: 0;
+}
+
+.nav-item span,
+.sidebar-more-btn span,
+.drawer-item span,
+.mobile-nav-item span,
+.sidebar-profile-info,
+.post-author-info,
+.tweet-content,
+.profile-header-info {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mobile-nav {
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-nav-item {
+    min-height: 56px;
+    padding-inline: 8px;
+    flex: 1 1 0;
+}
+
+@media (max-width: 700px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    body {
+        padding-bottom: 0;
+    }
+
+    .app-layout {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .main-feed {
+        width: 100%;
+        max-width: none;
+        border-right: 0;
+        padding-bottom: calc(56px + env(safe-area-inset-bottom));
+    }
+
+    .mobile-header {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+    }
+
+    .mobile-feed-tabs {
+        position: sticky;
+        top: 53px;
+        z-index: 25;
+    }
+
+    .feed-header,
+    .page-header,
+    .profile-header,
+    .settings-header,
+    .messages-header {
+        max-width: 100%;
+    }
+
+    .tweet,
+    .composer,
+    .profile-header,
+    .search-result-item,
+    .notification-item,
+    .conversation-item {
+        max-width: 100%;
+    }
+
+    .tweet-content,
+    .tweet-content * {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .tweet-media img,
+    .tweet-media video,
+    .post-detail-media img,
+    .post-detail-media video {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .scroll-top-btn {
+        right: 16px;
+        bottom: calc(72px + env(safe-area-inset-bottom));
+    }
+}
+
+@media (min-width: 701px) and (max-width: 1100px) {
+    .app-layout {
+        max-width: 100%;
+    }
+
+    .sidebar {
+        width: 88px;
+        padding-inline: 8px;
+        align-items: center;
+    }
+
+    .sidebar-nav {
+        width: 100%;
+    }
+
+    .nav-item,
+    .sidebar-more-btn {
+        justify-content: center;
+        width: 56px;
+        padding: 12px;
+    }
+
+    .nav-item span,
+    .sidebar-more-btn span,
+    .post-btn-sidebar,
+    .sidebar-profile-info {
+        display: none;
+    }
+
+    .sidebar-profile {
+        padding: 8px;
+    }
+
+    .main-feed {
+        flex: 1 1 auto;
+        max-width: 600px;
+    }
+
+    .right-panel {
+        width: 280px;
+        padding-inline: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}

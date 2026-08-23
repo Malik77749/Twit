@@ -78,7 +78,11 @@ try {
 
 // ===== Global Navigation =====
 
-const allViews = ['home', 'notifications', 'profile', 'search', 'messages', 'bookmarks', 'post-detail'];
+const allViews = [
+    'home', 'notifications', 'profile', 'search', 'messages', 'bookmarks',
+    'post-detail', 'lists', 'analytics', 'settings', 'drafts', 'communities',
+    'dm-chat'
+];
 
 function hideAllViews() {
     allViews.forEach(v => {
@@ -88,7 +92,7 @@ function hideAllViews() {
 }
 
 function setActiveNav(navName) {
-    document.querySelectorAll('.mobile-nav-item').forEach(btn => {
+    document.querySelectorAll('.mobile-nav-item, .sidebar .nav-item').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.nav === navName);
     });
 }
@@ -112,7 +116,34 @@ window.navigateTo = function(view) {
             notifications.loadNotifications();
             break;
         case 'messages':
-            document.getElementById('messages-view').style.display = 'block';
+            window.showMessages();
+            break;
+        case 'profile':
+            window.showProfile();
+            break;
+        case 'bookmarks':
+            window.showBookmarks();
+            break;
+        case 'lists':
+            window.showLists?.();
+            break;
+        case 'analytics':
+            window.showAnalytics?.();
+            break;
+        case 'settings':
+            window.showSettings?.();
+            break;
+        case 'drafts':
+            window.showDrafts?.();
+            break;
+        case 'communities':
+            window.showCommunities?.();
+            break;
+        default:
+            console.warn(`Unknown navigation target: ${view}`);
+            showView('home');
+            setActiveNav('home');
+            posts.loadPosts();
             break;
     }
 };
@@ -141,14 +172,13 @@ window.showMessages = function() {
 
 window.showBookmarks = function() {
     hideAllViews();
+    setActiveNav('bookmarks');
     document.getElementById('bookmarks-view').style.display = 'block';
     loadBookmarks();
 };
 
 window.openSearch = function() {
-    if (window.innerWidth <= 700) {
-        navigateTo('search');
-    }
+    navigateTo('search');
 };
 
 // ===== Search =====
