@@ -93,12 +93,43 @@ function hideAllViews() {
 
 function setActiveNav(navName) {
     document.querySelectorAll('.mobile-nav-item, .sidebar .nav-item').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.nav === navName);
+        const isActive = btn.dataset.nav === navName;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-current', isActive ? 'page' : 'false');
     });
 }
 
+function closeTransientMenus() {
+    document.querySelectorAll('.sidebar-more-dropdown.open, .dropdown-menu.open, .more-menu.open, .drawer.open').forEach(menu => {
+        menu.classList.remove('open');
+        menu.setAttribute('aria-hidden', 'true');
+    });
+    document.body.classList.remove('drawer-open', 'modal-open');
+}
+
+function resetViewPosition() {
+    const main = document.querySelector('.main-feed');
+    if (main) main.scrollTo({ top: 0, behavior: 'auto' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function safeDisplay(view, display = 'block') {
+    const element = document.getElementById(`${view}-view`);
+    if (!element) {
+        console.warn(`View element not found: ${view}-view`);
+        return false;
+    }
+    element.style.display = display;
+    element.classList.remove('view-enter');
+    void element.offsetWidth;
+    element.classList.add('view-enter');
+    return true;
+}
+
 window.navigateTo = function(view) {
+    closeTransientMenus();
     hideAllViews();
+    resetViewPosition();
     setActiveNav(view);
 
     switch(view) {
@@ -107,7 +138,7 @@ window.navigateTo = function(view) {
             posts.loadPosts();
             break;
         case 'search':
-            document.getElementById('search-view').style.display = 'block';
+            if (!safeDisplay('search')) { return navigateTo('home'); }
             setTimeout(() => document.getElementById('search-input')?.focus(), 100);
             loadSearchTrending();
             break;
@@ -116,28 +147,36 @@ window.navigateTo = function(view) {
             notifications.loadNotifications();
             break;
         case 'messages':
-            window.showMessages();
+            if (typeof window.showMessages === 'function') window.showMessages();
+            else safeDisplay('messages');
             break;
         case 'profile':
-            window.showProfile();
+            if (typeof window.showProfile === 'function') window.showProfile();
+            else safeDisplay('profile');
             break;
         case 'bookmarks':
-            window.showBookmarks();
+            if (typeof window.showBookmarks === 'function') window.showBookmarks();
+            else safeDisplay('bookmarks');
             break;
         case 'lists':
-            window.showLists?.();
+            if (typeof window.showLists === 'function') window.showLists();
+            else safeDisplay('lists');
             break;
         case 'analytics':
-            window.showAnalytics?.();
+            if (typeof window.showAnalytics === 'function') window.showAnalytics();
+            else safeDisplay('analytics');
             break;
         case 'settings':
-            window.showSettings?.();
+            if (typeof window.showSettings === 'function') window.showSettings();
+            else safeDisplay('settings');
             break;
         case 'drafts':
-            window.showDrafts?.();
+            if (typeof window.showDrafts === 'function') window.showDrafts();
+            else safeDisplay('drafts');
             break;
         case 'communities':
-            window.showCommunities?.();
+            if (typeof window.showCommunities === 'function') window.showCommunities();
+            else safeDisplay('communities');
             break;
         default:
             console.warn(`Unknown navigation target: ${view}`);
