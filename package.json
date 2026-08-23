@@ -1,0 +1,9 @@
+{
+  "name": "twit-arabic-social-app",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/static-check.mjs"
+  }
+}
