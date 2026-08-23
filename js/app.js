@@ -2158,19 +2158,9 @@ try {
 })();
 
 // ===== INSTANT POST PUBLISHING (NO TIMER) =====
-window.postTweet = async function() {
-    // This is already handled in posts.js with instant publishing
-    // Just ensure the button feedback is immediate
-    const postBtn = document.querySelector('.composer-submit');
-    if (postBtn && !postBtn.disabled) {
-        postBtn.textContent = '...';
-        postBtn.style.opacity = '0.7';
-        setTimeout(() => {
-            postBtn.textContent = 'نشر';
-            postBtn.style.opacity = '1';
-        }, 300);
-    }
-};
+// Keep the public handler connected to the real publishing flow.
+// Do not replace posts.postTweet with a visual-only stub.
+window.postTweet = (...args) => posts.postTweet(...args);
 
 // Pull-to-refresh is now handled by improvements.js with professional threshold
 
@@ -2191,7 +2181,7 @@ window.postTweet = async function() {
     }, { passive: true });
 
     document.addEventListener('touchmove', (e) => {
-        if (!isSwiping || !window.innerWidth <= 768) return;
+        if (!isSwiping || window.innerWidth > 768) return;
         const dx = touchStartX - e.touches[0].clientX;
         const dy = Math.abs(touchStartY - e.touches[0].clientY);
         
