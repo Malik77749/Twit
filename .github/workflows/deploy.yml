@@ -33,7 +33,7 @@ jobs:
   deploy-vercel:
     name: Deploy to Vercel
     needs: validate
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && vars.ENABLE_VERCEL == 'true'
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
