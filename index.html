@@ -763,6 +763,18 @@
                 </div>
                 <div id="settings-content">
                     <div class="settings-section">
+                        <h3 class="settings-title">حسابي</h3>
+                        <button class="settings-item" onclick="showProfile()">
+                            <i class="fas fa-user-pen"></i><span>تعديل الملف الشخصي</span><i class="fas fa-chevron-left settings-arrow"></i>
+                        </button>
+                        <button class="settings-item" onclick="showAccountSecurity()">
+                            <i class="fas fa-user-shield"></i><span>بيانات الحساب والأمان</span><i class="fas fa-chevron-left settings-arrow"></i>
+                        </button>
+                        <button class="settings-item" id="admin-panel-setting" onclick="window.open('admin.html','_blank')" style="display:none;">
+                            <i class="fas fa-gauge-high"></i><span>لوحة إدارة ميمر</span><i class="fas fa-arrow-up-right-from-square settings-arrow"></i>
+                        </button>
+                    </div>
+                    <div class="settings-section">
                         <h3 class="settings-title">الخصوصية والأمان</h3>
                         <button class="settings-item" onclick="showBlockedUsers()">
                             <i class="fas fa-ban"></i><span>المحظورون</span><i class="fas fa-chevron-left settings-arrow"></i>

@@ -553,13 +553,19 @@ function setupAuthStateListener(callback) {
             try {
                 const snapshot = await get(ref(database, 'bans/' + user.uid));
                 const banData = snapshot.val();
-                if (banData?.status === 'banned') {
+                let activeBan = banData;
+                if (banData?.status === 'suspended' && banData.expiresAt && Date.now() >= new Date(banData.expiresAt).getTime()) {
+                    await remove(ref(database, 'bans/' + user.uid));
+                    activeBan = null;
+                }
+                if (activeBan?.status === 'banned') {
                     alert('حسابك محظور');
                     await signOut(auth);
                     showAuth();
                     hideLoading();
-                } else if (banData?.status === 'suspended') {
-                    alert('حسابك معلق');
+                } else if (activeBan?.status === 'suspended') {
+                    const remaining = activeBan.expiresAt ? Math.max(1, Math.ceil((new Date(activeBan.expiresAt).getTime() - Date.now()) / 86400000)) : null;
+                    alert(remaining ? `حسابك مجمّد مؤقتاً. المتبقي: ${remaining} يوم` : 'حسابك مجمّد مؤقتاً');
                     showAuth();
                     hideLoading();
                 } else {

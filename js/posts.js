@@ -583,7 +583,11 @@ async function reportPost(postId, userId, event) {
     event?.preventDefault();
     event?.stopPropagation();
 
-    const currentUserId = auth.currentUser.uid;
+    const currentUserId = auth.currentUser?.uid;
+    if (!currentUserId) {
+        showToast('سجّل الدخول أولاً للإبلاغ');
+        return;
+    }
 
     // Rate limit check
     const limitCheck = rateLimiter.checkLimit(currentUserId, 'report');
@@ -592,12 +596,19 @@ async function reportPost(postId, userId, event) {
         return;
     }
 
-    const reason = prompt('سبب الإبلاغ:');
-    if (!reason) return;
+    const reason = prompt('سبب الإبلاغ (محتوى مخالف، إزعاج، احتيال، أو غير ذلك):');
+    if (!reason?.trim()) return;
 
     try {
-        await set(push(ref(database, 'reports')), {
-            postId, userId, reporterId: currentUserId, reason, timestamp: new Date().toISOString()
+        const reportRef = push(ref(database, 'reports'));
+        await set(reportRef, {
+            postId: postId || null,
+            reportedUserId: userId || null,
+            reporterId: currentUserId,
+            type: postId ? 'content' : 'user',
+            reason: reason.trim().slice(0, 500),
+            status: 'pending',
+            timestamp: new Date().toISOString()
         });
         rateLimiter.recordAction(currentUserId, 'report');
         showToast('تم الإبلاغ');

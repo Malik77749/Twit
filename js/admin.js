@@ -606,9 +606,14 @@ window.unverifyUser = async (uid) => {
 
 window.suspendUser = async (uid) => {
     const user = allUsers.find(u => u.id === uid);
-    showConfirm('إيقاف الحساب', `هل تريد إيقاف حساب "${getUserName(user)}" مؤقتاً؟`, async () => {
+    const rawDays = prompt('مدة التجميد بالأيام (1 إلى 365):', '7');
+    if (rawDays === null) return;
+    const days = Math.max(1, Math.min(365, Number.parseInt(rawDays, 10) || 0));
+    if (!days) { showToast('أدخل عدد أيام صحيحاً', 'error'); return; }
+    const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
+    showConfirm('إيقاف الحساب', `هل تريد إيقاف حساب "${getUserName(user)}" لمدة ${days} أيام؟`, async () => {
         try {
-            await set(ref(database, `bans/${uid}`), { status: 'suspended', reason: 'إيقاف مؤقت من الأدمن', timestamp: new Date().toISOString() });
+            await set(ref(database, `bans/${uid}`), { status: 'suspended', durationDays: days, expiresAt, reason: 'إيقاف مؤقت من الأدمن', timestamp: new Date().toISOString() });
             if (user) user.banStatus = 'suspended';
             await logAudit('suspend', uid, getUserName(user || {}), 'إيقاف الحساب مؤقتاً');
             showToast('تم إيقاف الحساب', 'success');
@@ -868,10 +873,17 @@ function renderReportsList() {
     }
 
     container.innerHTML = filtered.map(r => {
-        const typeLabel = r.type === 'content' ? 'محتوى مخالف' : r.type === 'spam' ? 'إزعاج' : r.type === 'fake' ? 'حساب وهمي' : 'أخرى';
+        const targetUserId = r.reportedUserId || r.userId || '';
+        const typeLabel = r.type === 'content' ? 'محتوى مخالف' : r.type === 'spam' ? 'إزعاج' : r.type === 'fake' ? 'حساب وهمي' : r.type === 'user' ? 'حساب' : 'أخرى';
         const typeClass = r.type === 'content' ? 'content' : r.type === 'spam' ? 'spam' : r.type === 'fake' ? 'fake' : 'other';
         const reporter = allUsers.find(u => u.id === r.reporterId);
-        const post = allPosts.find(p => p.id === r.postId);
+        const post = r.postId ? allPosts.find(p => p.id === r.postId) : null;
+        const reportedUser = allUsers.find(u => u.id === targetUserId);
+        const targetHtml = post
+            ? `<div class="report-content">"${escapeHtml((post.content || '').substring(0, 240))}"</div>`
+            : reportedUser
+                ? `<div class="report-content" style="display:flex;align-items:center;gap:10px;"><img src="${getUserAvatar(reportedUser)}" style="width:36px;height:36px;border-radius:50%;" alt=""><span>${escapeHtml(getUserName(reportedUser))} — ${escapeHtml(getUserHandle(reportedUser))}</span></div>`
+                : '<div class="report-content" style="color:var(--text-secondary);">الحساب أو المنشور غير موجود</div>';
 
         return `
         <div class="report-item">
@@ -882,13 +894,13 @@ function renderReportsList() {
             <div class="report-reason">
                 <i class="fas fa-user"></i> ${escapeHtml(getUserName(reporter || {}))} أبلغ عن:
             </div>
-            ${post ? `<div class="report-content">"${escapeHtml((post.content || '').substring(0, 120))}"</div>` : '<div class="report-content" style="color:var(--text-secondary);">المنشور محذوف</div>'}
+            ${targetHtml}
             ${r.reason ? `<div style="color:var(--text-secondary);font-size:14px;margin-top:4px;">السبب: ${escapeHtml(r.reason)}</div>` : ''}
             <div class="report-actions">
                 <button class="action-btn outline small" onclick="dismissReport('${r.id}')"><i class="fas fa-check"></i> تجاهل</button>
                 ${post ? `<button class="action-btn danger small" onclick="deleteReportedPost('${r.id}', '${r.postId}')"><i class="fas fa-trash"></i> حذف المنشور</button>` : ''}
-                ${r.reportedUserId ? `<button class="action-btn warning small" onclick="warnReportedUser('${r.id}', '${r.reportedUserId}')"><i class="fas fa-exclamation-triangle"></i> تحذير</button>` : ''}
-                ${r.reportedUserId ? `<button class="action-btn danger small" onclick="banReportedUser('${r.id}', '${r.reportedUserId}')"><i class="fas fa-ban"></i> حظر</button>` : ''}
+                ${targetUserId ? `<button class="action-btn warning small" onclick="warnReportedUser('${r.id}', '${targetUserId}')"><i class="fas fa-exclamation-triangle"></i> تحذير</button>` : ''}
+                ${targetUserId ? `<button class="action-btn danger small" onclick="banReportedUser('${r.id}', '${targetUserId}')"><i class="fas fa-ban"></i> حظر</button>` : ''}
             </div>
         </div>`;
     }).join('');
@@ -934,14 +946,18 @@ window.deleteReportedPost = async (reportId, postId) => {
 window.warnReportedUser = async (reportId, uid) => {
     const user = allUsers.find(u => u.id === uid);
     try {
-        const notifRef = push(ref(database, `notifications/${uid}`));
-        await set(notifRef, {
+        const warningRef = push(ref(database, `warnings/${uid}`));
+        const warning = {
             type: 'warning',
             message: 'تم الإبلاغ عن محتوى مخالف في حسابك. يرجى مراجعة قواعد المجتمع.',
-            from: 'admin',
+            reportId,
+            adminId: currentAdmin?.uid || '',
             read: false,
             timestamp: new Date().toISOString()
-        });
+        };
+        await set(warningRef, warning);
+        const notifRef = push(ref(database, `notifications/${uid}`));
+        await set(notifRef, { ...warning, from: 'admin' });
         await update(ref(database, `reports/${reportId}`), { status: 'warned' });
         await logAudit('warn_user', uid, getUserName(user || {}), 'تحذير بسبب بلاغ');
         showToast('تم إرسال تحذير', 'success');

@@ -19,11 +19,15 @@ async function addComment(postId, parentCommentId, event) {
     event?.stopPropagation();
 
     const inputId = `comment-input-${postId}${parentCommentId ? '-' + parentCommentId : ''}`;
-    const input = document.getElementById(inputId);
+    const input = document.getElementById(inputId) || document.getElementById(`detail-comment-input-${postId}`);
     if (!input) return;
 
     const text = input.value.trim();
     if (!text) return;
+    if (!auth.currentUser?.uid) {
+        if (window.showToast) window.showToast('سجّل الدخول أولاً للتعليق');
+        return;
+    }
 
     // Character limit
     if (text.length > 500) {
@@ -58,24 +62,18 @@ async function addComment(postId, parentCommentId, event) {
         // Record rate limit
         rateLimiter.recordAction(userId, 'comment');
 
-        // Update comment count on post
-        const postRef = ref(database, `posts/${postId}`);
-        const postSnap = await get(postRef);
-        if (postSnap.exists()) {
-            const currentCount = postSnap.val().commentCount || 0;
-            await update(postRef, { commentCount: currentCount + 1 });
-
-            // Send notification
-            if (postSnap.val().userId !== userId) {
-                const actorData = userData || await getUserData(database, userId);
-                const name = actorData.name || await getUserName(database, userId);
-                await addNotification(database, postSnap.val().userId, `رد ${name} على منشورك`, postId, {
-                    actorId: userId,
-                    actorName: name,
-                    actorAvatar: actorData.profilePicture || DEFAULT_AVATAR,
-                    type: 'mentions'
-                });
-            }
+        // Read-only post lookup: commenters must not be able to mutate the post owner’s record.
+        // The live comments listener recalculates the visible count, so this remains smooth and secure.
+        const postSnap = await get(ref(database, `posts/${postId}`));
+        if (postSnap.exists() && postSnap.val().userId !== userId) {
+            const actorData = userData || await getUserData(database, userId);
+            const name = actorData.name || await getUserName(database, userId);
+            await addNotification(database, postSnap.val().userId, `رد ${name} على منشورك`, postId, {
+                actorId: userId,
+                actorName: name,
+                actorAvatar: actorData.profilePicture || DEFAULT_AVATAR,
+                type: 'mentions'
+            });
         }
 
         loadComments(postId);

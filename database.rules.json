@@ -17,6 +17,10 @@
         "isAdmin": {
           ".write": false
         },
+        "verified": {
+          ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
+          ".validate": "newData.isBoolean()"
+        },
         "followers": {
           ".validate": "newData.isNumber()"
         },
@@ -55,7 +59,7 @@
       ".indexOn": ["timestamp"],
       "$postId": {
         ".read": true,
-          ".write": "auth != null && ((!data.exists() && newData.child('userId').val() === auth.uid) || (data.exists() && data.child('userId').val() === auth.uid))",
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && newData.child('userId').val() === auth.uid) || (data.exists() && data.child('userId').val() === auth.uid))",
           "content": {
             ".validate": "newData.isString() && newData.val().length <= 500"
           },
@@ -80,12 +84,18 @@
         "videoUrl": {
           ".validate": "newData.isString()"
         },
-        "edited": {
-          ".validate": "newData.isBoolean()"
-        },
-        "$other": {
-          ".validate": false
-        }
+        "edited": { ".validate": "newData.isBoolean()" },
+        "editedAt": { ".validate": "newData.isString()" },
+        "commentCount": { ".validate": "newData.isNumber()" },
+        "userName": { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "userAvatar": { ".validate": "newData.isString()" },
+        "userHandle": { ".validate": "newData.isString() && newData.val().length <= 24" },
+        "media": { ".validate": "newData.isString()" },
+        "mediaUrls": { ".validate": "newData.val() != null" },
+        "replySetting": { ".validate": "newData.isString() && (newData.val() === 'everyone' || newData.val() === 'following')" },
+        "hidden": { ".validate": "newData.isBoolean()" },
+        "pinned": { ".validate": "newData.isBoolean()" },
+        "$other": { ".validate": false }
       }
     },
 
@@ -94,7 +104,7 @@
         ".indexOn": ["timestamp"],
         "$commentId": {
           ".read": true,
-          ".write": "auth != null && ((!data.exists() && newData.child('userId').val() === auth.uid) || (data.exists() && data.child('userId').val() === auth.uid))",
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && newData.child('userId').val() === auth.uid) || (data.exists() && data.child('userId').val() === auth.uid))",
           "content": {
             ".validate": "newData.isString() && newData.val().length <= 500"
           },
@@ -104,13 +114,42 @@
           "timestamp": {
             ".validate": "newData.isString()"
           },
-          "$other": {
-            ".validate": false
-          }
+                    "userName": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "userAvatar": { ".validate": "newData.isString()" },
+          "parentCommentId": { ".validate": "newData.isString() || newData.val() === null" },
+          "$other": { ".validate": false }
         }
       }
     },
-
+    "blocks": {
+      "$uid": {
+        ".read": "auth.uid === $uid",
+        "$targetUid": {
+          ".write": "auth.uid === $uid && $uid !== $targetUid",
+          ".validate": "newData.hasChildren(['timestamp'])",
+          "timestamp": { ".validate": "newData.isString()" }
+        }
+      }
+    },
+    "mutes": {
+      "$uid": {
+        ".read": "auth.uid === $uid",
+        "$targetUid": {
+          ".write": "auth.uid === $uid && $uid !== $targetUid",
+          ".validate": "newData.hasChildren(['timestamp'])",
+          "timestamp": { ".validate": "newData.isString()" }
+        }
+      }
+    },
+    "mutedWords": {
+      "$uid": {
+        ".read": "auth.uid === $uid",
+        "$word": {
+          ".write": "auth.uid === $uid",
+          ".validate": "newData.hasChildren(['word','timestamp']) && newData.child('word').isString() && newData.child('timestamp').isString()"
+        }
+      }
+    },
     "likes": {
       "$postId": {
         "$uid": {
@@ -166,17 +205,31 @@
     "reports": {
       "$reportId": {
         ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
-        ".write": "auth != null"
+        ".write": "auth != null && ((!data.exists() && newData.child('reporterId').val() === auth.uid) || (data.exists() && root.child('users').child(auth.uid).child('isAdmin').val() === true))",
+        ".validate": "newData.hasChildren(['reporterId','reason','status','timestamp','type']) && newData.child('reporterId').isString() && newData.child('reason').isString() && newData.child('reason').val().length <= 500 && newData.child('status').isString() && newData.child('type').isString()"
       }
     },
 
+    "warnings": {
+      "$uid": {
+        ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('isAdmin').val() === true",
+        "$warningId": {
+          ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
+          ".validate": "newData.hasChildren(['message','timestamp','adminId']) && newData.child('message').isString() && newData.child('message').val().length <= 500 && newData.child('timestamp').isString() && newData.child('adminId').isString()"
+        }
+      }
+    },
     "bans": {
       "$uid": {
         ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('isAdmin').val() === true",
-        ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true"
+                ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
+        "status": { ".validate": "newData.isString() && (newData.val() === 'banned' || newData.val() === 'suspended')" },
+        "durationDays": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 365" },
+        "expiresAt": { ".validate": "newData.isString()" },
+        "reason": { ".validate": "newData.isString() && newData.val().length <= 500" },
+        "timestamp": { ".validate": "newData.isString()" }
       }
     },
-
     "auditLog": {
       "$logId": {
         ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",

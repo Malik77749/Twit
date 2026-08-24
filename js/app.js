@@ -1109,10 +1109,40 @@ window.deleteDraftAction = async function(draftId) {
 
 // ===== Settings =====
 
-window.showSettings = function() {
+window.showSettings = async function() {
     hideAllViews();
     document.getElementById('settings-view').style.display = 'block';
+    const adminLink = document.getElementById('admin-panel-setting');
+    if (adminLink) {
+        const userData = await getUserData(database, authInstance.currentUser?.uid);
+        adminLink.style.display = userData?.isAdmin === true ? 'flex' : 'none';
+    }
     load2FAStatus();
+};
+
+window.showAccountSecurity = async function() {
+    const container = document.getElementById('settings-content');
+    const user = authInstance.currentUser;
+    if (!container || !user) return;
+    const data = await getUserData(database, user.uid);
+    const banSnap = await get(ref(database, `bans/${user.uid}`));
+    const ban = banSnap.exists() ? banSnap.val() : null;
+    const warningSnap = await get(ref(database, `warnings/${user.uid}`));
+    const warningCount = warningSnap.exists() ? Object.keys(warningSnap.val()).length : 0;
+    container.innerHTML = `
+        <div style="padding:16px;">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
+                <button class="back-btn" onclick="showSettings()"><i class="fas fa-arrow-right"></i></button>
+                <h3>بيانات الحساب والأمان</h3>
+            </div>
+            <div class="settings-section">
+                <div class="settings-item"><i class="fas fa-envelope"></i><span>البريد</span><strong style="margin-right:auto;direction:ltr;">${escapeHtml(user.email || 'مرتبط بـ Google/الهاتف')}</strong></div>
+                <div class="settings-item"><i class="fas fa-at"></i><span>اسم المستخدم</span><strong style="margin-right:auto;direction:ltr;">@${escapeHtml(data?.handle || '—')}</strong></div>
+                <div class="settings-item"><i class="fas fa-id-card"></i><span>معرّف ميمر</span><strong style="margin-right:auto;direction:ltr;">${escapeHtml(data?.numericId || '—')}</strong></div>
+                <div class="settings-item"><i class="fas fa-triangle-exclamation"></i><span>التحذيرات</span><strong style="margin-right:auto;">${warningCount}</strong></div>
+                <div class="settings-item"><i class="fas fa-shield"></i><span>حالة الحساب</span><strong style="margin-right:auto;color:${ban?.status === 'banned' ? 'var(--danger)' : ban?.status === 'suspended' ? 'var(--warning)' : 'var(--success)'};">${ban?.status === 'banned' ? 'محظور' : ban?.status === 'suspended' ? 'مجمّد مؤقتاً' : 'نشط'}</strong></div>
+            </div>
+        </div>`;
 };
 
 window.showMutedWords = async function() {
