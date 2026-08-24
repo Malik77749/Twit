@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <rect width="512" height="512" rx="102" fill="#1d9bf0"/>
-  <path d="M384.9 129.3h13.2l-28.9 33 34 44.9H378l-20.8-27.2-23.8 27.2h-13.2l30.9-35.3-32.7-42.6h23.8l18.9 24.9 22.9-24.9zm-9.2 69.9h7.3L277 159.6h-7.8l167.9 39.6z" fill="white"/>
+  <defs><linearGradient id="mimer" x1="64" y1="54" x2="448" y2="458" gradientUnits="userSpaceOnUse"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs>
+  <rect width="512" height="512" rx="112" fill="#081225"/>
+  <rect x="32" y="32" width="448" height="448" rx="101" fill="url(#mimer)"/>
+  <path d="M128 334V178h54l74 91 74-91h54v156h-54v-78l-74 91-74-91v78h-54Z" fill="white"/>
+  <circle cx="386" cy="128" r="32" fill="#a7f3d0"/>
 </svg>

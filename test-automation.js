@@ -1,5 +1,5 @@
 /**
- * سكريبت اختبار تلقائي متقدم لمنصة Twit
+ * سكريبت اختبار تلقائي متقدم لمنصة ميمر
  * يقوم بـ:
  * - تسجيل 10 حسابات برقم هاتف
  * - نشر 10 منشورات لكل حساب
@@ -7,7 +7,7 @@
  * - اكتشاف وإصلاح الأخطاء تلقائياً
  */
 
-class TwitAutomationTester {
+class MimerAutomationTester {
     constructor() {
         this.accounts = [];
         this.testResults = {
@@ -19,7 +19,7 @@ class TwitAutomationTester {
         this.baseUrl = 'https://lawbook-beta.vercel.app';
         this.testData = {
             posts: [
-                'مرحبا بالجميع! هذا أول منشور لي على منصة Twit 🎉',
+                'مرحبا بالجميع! هذا أول منشور لي على منصة ميمر 🎉',
                 'أحب التكنولوجيا والبرمجة 💻',
                 'يوم جميل اليوم! كيفكم أنتم؟ 😊',
                 'نصيحة: تعلم البرمجة يغير حياتك! 🚀',
@@ -185,7 +185,7 @@ class TwitAutomationTester {
                 body: JSON.stringify({
                     bio: account.bio,
                     location: 'اليمن 🇾🇪',
-                    website: 'https://twit.local',
+                    website: 'https://mimer.local',
                     joinDate: new Date().toISOString()
                 })
             }).catch(err => {
@@ -214,7 +214,7 @@ class TwitAutomationTester {
      * تشغيل الاختبار الكامل
      */
     async runFullTest() {
-        console.log('\n🚀 بدء الاختبار الشامل لمنصة Twit\n');
+        console.log('\n🚀 بدء الاختبار الشامل لمنصة ميمر\n');
         console.log('═'.repeat(50));
 
         // المرحلة 1: تسجيل 10 حسابات
@@ -305,17 +305,17 @@ class TwitAutomationTester {
 // تشغيل الاختبار
 if (typeof window !== 'undefined') {
     // في المتصفح
-    window.TwitTester = new TwitAutomationTester();
-    window.runTwitTest = async () => {
-        const tester = new TwitAutomationTester();
+    window.MimerTester = new MimerAutomationTester();
+    window.runMimerTest = async () => {
+        const tester = new MimerAutomationTester();
         await tester.runFullTest();
         return tester.exportResults();
     };
 } else {
     // في Node.js
-    module.exports = TwitAutomationTester;
+    module.exports = MimerAutomationTester;
 }
 
 // يمكن تشغيل الاختبار مباشرة:
-// const tester = new TwitAutomationTester();
+// const tester = new MimerAutomationTester();
 // await tester.runFullTest();

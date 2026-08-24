@@ -630,7 +630,7 @@ if (typeof window !== 'undefined') {
     window.showFollowingList = showFollowingList;
 }
 
-// ===== TWIT_PROFILE_ENHANCEMENTS_V2 =====
+// ===== MIMER_PROFILE_ENHANCEMENTS_V2 =====
 (function () {
     const __originalShowProfile = showProfile;
     showProfile = async function(userId) {

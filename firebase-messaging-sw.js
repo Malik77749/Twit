@@ -20,11 +20,11 @@ messaging.onBackgroundMessage(function(payload) {
 
     const { title, body, icon, click_action } = payload.notification || payload.data || {};
 
-    self.registration.showNotification(title || 'Twit', {
+    self.registration.showNotification(title || 'ميمر Mimer', {
         body: body || 'لديك إشعار جديد',
         icon: icon || '/icon-192.svg',
         badge: '/icon-192.svg',
-        tag: payload.data?.tag || 'twit-notification',
+        tag: payload.data?.tag || 'mimer-notification',
         data: { url: click_action || '/' },
         vibrate: [200, 100, 200],
         actions: [

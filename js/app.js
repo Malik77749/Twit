@@ -1794,7 +1794,7 @@ try {
 }
 
 
-// ===== TWIT_UI_ENHANCEMENTS_V2 =====
+// ===== MIMER_UI_ENHANCEMENTS_V2 =====
 (function () {
     const originalNavigateTo = window.navigateTo;
     const originalShowHome = window.showHome;

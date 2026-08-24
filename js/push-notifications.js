@@ -128,10 +128,10 @@ function onForegroundMessage(callback) {
         if (Notification.permission === 'granted') {
             const { title, body, icon, click_action } = payload.notification || payload.data || {};
 
-            const notification = new Notification(title || 'Twit', {
+            const notification = new Notification(title || 'ميمر Mimer', {
                 body: body || 'لديك إشعار جديد',
                 icon: icon || '/icon-192.svg',
-                tag: payload.data?.tag || 'twit-notification',
+                tag: payload.data?.tag || 'mimer-notification',
                 data: { url: click_action || '/' }
             });
 

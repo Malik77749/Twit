@@ -1,4 +1,4 @@
-// ===== Twit Admin Panel — Main Controller =====
+// ===== Mimer Admin Panel — Main Controller =====
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref, get, set, update, remove, push, query, orderByChild, limitToLast, equalTo, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
@@ -1017,7 +1017,7 @@ async function loadSettings() {
         const snap = await get(ref(database, 'siteSettings'));
         if (snap.exists()) {
             const s = snap.val();
-            document.getElementById('setting-site-name').value = s.siteName || 'Twit';
+            document.getElementById('setting-site-name').value = s.siteName || 'Mimer';
             document.getElementById('setting-site-desc').value = s.siteDesc || '';
             document.getElementById('setting-registration').checked = s.registrationEnabled !== false;
             document.getElementById('setting-char-limit').value = s.charLimit || '500';
@@ -1034,7 +1034,7 @@ async function loadSettings() {
 window.saveSettings = async () => {
     try {
         const settings = {
-            siteName: document.getElementById('setting-site-name').value || 'Twit',
+            siteName: document.getElementById('setting-site-name').value || 'Mimer',
             siteDesc: document.getElementById('setting-site-desc').value || '',
             registrationEnabled: document.getElementById('setting-registration').checked,
             charLimit: document.getElementById('setting-char-limit').value,
@@ -1106,7 +1106,7 @@ window.exportUsersCSV = () => {
     const rows = allUsers.map(u => [
         u.id, u.name, u.email || '', u.phone || '', u.joinDate || '', getUserStatus(u), u.verified ? 'Yes' : 'No'
     ]);
-    downloadCSV(headers, rows, 'twit-users.csv');
+    downloadCSV(headers, rows, 'mimer-users.csv');
     showToast('تم تصدير المستخدمين', 'success');
 };
 
@@ -1115,7 +1115,7 @@ window.exportAuditCSV = () => {
     const rows = allAuditLogs.map(l => [
         l.timestamp, l.adminName, l.action, l.targetName || '', l.details || ''
     ]);
-    downloadCSV(headers, rows, 'twit-audit-log.csv');
+    downloadCSV(headers, rows, 'mimer-audit-log.csv');
     showToast('تم تصدير السجل', 'success');
 };
 

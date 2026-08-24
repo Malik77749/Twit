@@ -217,7 +217,7 @@ export {
 };
 
 
-// ===== TWIT_PAGINATION_IO_V2 =====
+// ===== MIMER_PAGINATION_IO_V2 =====
 let __ioObserver = null;
 initInfiniteScroll = function(containerSelector, database, renderCallback) {
     databaseRef = database;

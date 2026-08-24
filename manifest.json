@@ -1,6 +1,6 @@
 {
-    "name": "Twit - منصة تواصل اجتماعي",
-    "short_name": "Twit",
+    "name": "Mimer — منصة تواصل اجتماعي عربية",
+    "short_name": "Mimer",
     "description": "منصة تواصل اجتماعي بالعربية",
     "start_url": "./",
     "display": "standalone",

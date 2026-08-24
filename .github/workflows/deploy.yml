@@ -1,4 +1,4 @@
-name: Validate and deploy Twit
+name: Validate and deploy Mimer
 
 on:
   push:

@@ -223,7 +223,7 @@ function phoneToEmail(phone, countryCode) {
     // Combine country code + number
     const fullNumber = countryCode + cleaned;
 
-    return `${fullNumber}@twit.internal`;
+    return `${fullNumber}@mimer.internal`;
 }
 
 /**

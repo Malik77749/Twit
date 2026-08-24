@@ -197,7 +197,7 @@ function phoneToEmail(phone, countryCode) {
         cleaned = cleaned.substring(1);
     }
     const fullNumber = countryCode + cleaned;
-    return `${fullNumber}@twit.internal`;
+    return `${fullNumber}@mimer.internal`;
 }
 
 function isValidPhone(phone) {

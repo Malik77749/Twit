@@ -1,4 +1,4 @@
-/* Twit Professional UI System — final visual layer */
+/* Mimer Professional UI System — final visual layer */
 :root {
   --bg-primary: #0b1020;
   --bg-secondary: #11182b;
@@ -314,4 +314,28 @@ body { min-width: 0; }
 
 @supports not (height: 100dvh) {
   .modal-content, .post-detail, .settings-panel { max-height: calc(100vh - 24px); }
+}
+
+/* Mimer brand system */
+.auth-box .logo { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 14px; }
+.auth-box .logo svg { width: 64px; height: 64px; filter: drop-shadow(0 12px 24px rgba(37,99,235,.28)); }
+.brand-wordmark { display: inline-flex; align-items: baseline; gap: 8px; direction: rtl; line-height: 1; }
+.brand-wordmark strong { color: var(--text-primary); font-size: 25px; font-weight: 850; letter-spacing: -.04em; }
+.brand-wordmark small { color: var(--accent); font-size: 13px; font-weight: 750; letter-spacing: .04em; }
+.sidebar-logo { display: flex; align-items: center; justify-content: center; }
+.sidebar-logo svg { background: linear-gradient(135deg,#38bdf8,#2563eb); border-radius: 12px; padding: 5px; }
+@media (max-width: 360px) {
+  .auth-box .logo svg { width: 56px; height: 56px; }
+  .brand-wordmark strong { font-size: 22px; }
+  .brand-wordmark small { font-size: 12px; }
+}
+
+/* Mimer wordmark across application chrome */
+.sidebar-brand-name { display: inline-flex; align-items: baseline; gap: 6px; color: var(--text-primary); font-size: 18px; font-weight: 850; letter-spacing: -.04em; }
+.sidebar-brand-name small, .admin-sidebar-logo strong small, .admin-auth-box .logo strong small { color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .03em; }
+.admin-auth-box .logo { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.admin-auth-box .logo svg { width: 58px; height: 58px; }
+.admin-sidebar-logo strong { display: inline-flex; align-items: baseline; gap: 6px; color: var(--text-primary); font-size: 17px; }
+@media (max-width: 1100px) {
+  .sidebar-brand-name { display: none; }
 }

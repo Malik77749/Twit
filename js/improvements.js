@@ -1,5 +1,5 @@
 // ===== PROFESSIONAL PULL-TO-REFRESH IMPLEMENTATION =====
-// Inspired by X/Twitter - Professional threshold-based refresh
+// Mimer Arabic social platform - professional threshold-based refresh
 
 (function initProfessionalPullToRefresh() {
     const mainFeed = document.querySelector('.main-feed');

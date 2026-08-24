@@ -1,4 +1,4 @@
-const CACHE_NAME = 'twit-v6';
+const CACHE_NAME = 'mimer-v6';
 const APP_ROOT = new URL('./', self.location).pathname;
 const STATIC_ASSETS = [
     './',

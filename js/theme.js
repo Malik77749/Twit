@@ -35,7 +35,7 @@ let currentTheme = 'dark';
  * Initialize theme from saved preference
  */
 function init() {
-    const saved = localStorage.getItem('twit-theme') || 'dark';
+    const saved = localStorage.getItem('mimer-theme') || 'dark';
     setTheme(saved);
 }
 
@@ -53,7 +53,7 @@ function setTheme(themeName) {
     }
 
     currentTheme = themeName;
-    localStorage.setItem('twit-theme', themeName);
+    localStorage.setItem('mimer-theme', themeName);
 
     // Update theme meta tag for mobile browser
     const metaTheme = document.querySelector('meta[name="theme-color"]');

@@ -1,4 +1,4 @@
-# Twit — منصة تواصل اجتماعي بالعربية
+# ميمر Mimer — منصة تواصل اجتماعي عربية بالعربية
 
 نسخة مصغرة من X (تويتر) بالكامل بالعربية مع دعم RTL.
 
@@ -30,7 +30,7 @@
 ## 📂 بنية المشروع
 
 ```
-Twit/
+Mimer/
 ├── index.html              # الصفحة الرئيسية
 ├── database.rules.json     # قواعد أمان Firebase
 ├── README.md               # هذا الملف
@@ -59,7 +59,7 @@ Twit/
 1. استنساخ المستودع:
 ```bash
 git clone https://github.com/Malik77749/Twit.git
-cd Twit
+cd Mimer
 ```
 
 2. فتح `index.html` في المتصفح (أو استخدام Live Server)
@@ -80,7 +80,7 @@ cd Twit
 npm run check
 ```
 
-يُنفَّذ الفحص تلقائياً في GitHub Actions قبل أي نشر. كما أن Service Worker يستخدم مسارات نسبية، لذلك يعمل التطبيق عند نشره في جذر الموقع أو داخل مسار فرعي مثل `/Twit/` على GitHub Pages.
+يُنفَّذ الفحص تلقائياً في GitHub Actions قبل أي نشر. كما أن Service Worker يستخدم مسارات نسبية، لذلك يعمل التطبيق عند نشره في جذر الموقع أو داخل مسار فرعي مثل `/Mimer/` على GitHub Pages.
 
 ## 🌐 النشر
 
