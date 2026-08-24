@@ -339,3 +339,19 @@ body { min-width: 0; }
 @media (max-width: 1100px) {
   .sidebar-brand-name { display: none; }
 }
+
+/* First-visit Mimer brand experience */
+.mimer-splash { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; overflow: hidden; background: #030711; animation: mimer-splash-in .55s ease both; }
+.mimer-splash.is-leaving { animation: mimer-splash-out .52s cubic-bezier(.7,0,.2,1) both; pointer-events: none; }
+.mimer-splash-glow { position: absolute; width: min(86vw, 760px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(13,147,255,.23), rgba(13,93,255,.08) 36%, transparent 68%); filter: blur(22px); }
+.mimer-splash-content { position: relative; display: grid; justify-items: center; width: min(88vw, 560px); text-align: center; }
+.mimer-splash-logo { display: block; width: min(82vw, 460px); height: auto; filter: drop-shadow(0 24px 46px rgba(15,105,255,.22)); animation: mimer-logo-rise .85s cubic-bezier(.23,1,.32,1) .12s both; }
+.mimer-splash-welcome { margin: 8px 0 22px; color: #dbeafe; font-size: clamp(15px, 2.4vw, 20px); font-weight: 650; letter-spacing: -.02em; animation: mimer-logo-rise .7s cubic-bezier(.23,1,.32,1) .34s both; }
+.mimer-splash-continue { min-width: 158px; border: 1px solid rgba(125,211,252,.42); border-radius: 999px; padding: 12px 20px; color: #fff; background: linear-gradient(135deg, #0ea5e9, #2563eb); box-shadow: 0 12px 30px rgba(37,99,235,.28); font-weight: 800; cursor: pointer; animation: mimer-logo-rise .7s cubic-bezier(.23,1,.32,1) .48s both; }
+.mimer-splash-continue span { display: inline-block; margin-inline-start: 8px; transition: transform .2s ease; }
+.mimer-splash-continue:hover span, .mimer-splash-continue:focus-visible span { transform: translateX(-4px); }
+@keyframes mimer-splash-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mimer-splash-out { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+@keyframes mimer-logo-rise { from { opacity: 0; transform: translateY(20px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 480px) { .mimer-splash-logo { width: min(91vw, 390px); } .mimer-splash-welcome { margin-top: 0; } }
+@media (prefers-reduced-motion: reduce) { .mimer-splash, .mimer-splash.is-leaving, .mimer-splash-logo, .mimer-splash-welcome, .mimer-splash-continue { animation: none; } }

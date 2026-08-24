@@ -67,8 +67,34 @@
             }
         }, true);
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const splash = document.getElementById('mimer-splash');
+            if (!splash) return;
+            const closeSplash = () => {
+                splash.classList.add('is-leaving');
+                window.setTimeout(() => splash.remove(), 520);
+                try { localStorage.setItem('mimer-splash-seen-v1', '1'); } catch (_) {}
+            };
+            let seen = false;
+            try { seen = localStorage.getItem('mimer-splash-seen-v1') === '1'; } catch (_) {}
+            if (seen) { splash.remove(); return; }
+            splash.querySelector('[data-splash-continue]')?.addEventListener('click', closeSplash);
+            window.setTimeout(closeSplash, 5200);
+        });
+    </script>
 </head>
 <body>
+
+    <!-- Mimer first-visit brand experience -->
+    <section id="mimer-splash" class="mimer-splash" aria-label="مرحبًا بك في ميمر">
+        <div class="mimer-splash-glow" aria-hidden="true"></div>
+        <div class="mimer-splash-content">
+            <img class="mimer-splash-logo" src="assets/mimer-logo-lockup.svg" alt="ميمر Mimer — تواصل وشارك، أول منصة عربية">
+            <p class="mimer-splash-welcome">مرحبًا بك في مساحتك العربية</p>
+            <button type="button" class="mimer-splash-continue" data-splash-continue>ابدأ الآن <span aria-hidden="true">←</span></button>
+        </div>
+    </section>
 
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay" style="display: none;">
