@@ -182,6 +182,8 @@ window.switchAdminView = (view) => {
     document.querySelectorAll('.admin-nav-item').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.view === view);
     });
+    const mobileNav = document.getElementById('admin-mobile-nav');
+    if (mobileNav) mobileNav.value = view;
     // Refresh data on view switch
     if (view === 'users') renderUsersTable();
     if (view === 'posts') renderPostsTable();

@@ -60,6 +60,8 @@ body {
     height: 28px;
     fill: var(--text-primary);
 }
+.admin-sidebar-logo .mimer-inline-icon { width:32px; height:32px; object-fit:contain; flex:0 0 auto; }
+.admin-auth-box .mimer-inline-icon { width:72px; height:72px; object-fit:contain; display:block; margin:0 auto 8px; }
 .admin-sidebar-logo .admin-badge {
     background: var(--danger);
     color: white;
@@ -1150,3 +1152,66 @@ body {
 .admin-chat-compose { display:flex; gap:8px; padding:12px; border-top:1px solid var(--border-color); }
 .admin-chat-compose textarea { flex:1; min-height:48px; resize:vertical; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:12px; color:inherit; padding:10px; font:inherit; }
 @media (max-width: 760px) { .verification-admin-grid { grid-template-columns:1fr; } .admin-chat-panel { min-height:430px; } .admin-chat-compose { flex-direction:column; } .admin-chat-compose .action-btn { width:100%; } }
+
+
+/* ===== Mobile-first administration polish ===== */
+.admin-mobile-toolbar { display:none; }
+.admin-main, .admin-sidebar, .admin-right-panel { min-width:0; }
+.admin-header h2 { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.report-item, .admin-settings-item, .user-detail-info-row { overflow-wrap:anywhere; }
+.admin-chat-bubble { overflow-wrap:anywhere; }
+.admin-chat-compose textarea { min-width:0; }
+
+@media (max-width: 700px) {
+    body { min-width:0; padding-bottom:env(safe-area-inset-bottom); }
+    html, body { width:100%; min-width:0; overflow-x:hidden; }
+    .admin-layout { display:block; width:100%; min-height:100dvh; }
+    .admin-main { width:100%; max-width:none; min-height:100dvh; }
+    .admin-mobile-toolbar { position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:10px; min-height:58px; padding:8px 12px; background:rgba(0,0,0,.92); border-bottom:1px solid var(--border-color); backdrop-filter:blur(14px); }
+    .admin-mobile-logo { width:30px; height:30px; object-fit:contain; flex:0 0 auto; }
+    #admin-mobile-nav { flex:1; min-width:0; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:12px; padding:10px 12px; font:inherit; font-size:14px; outline:none; }
+    .admin-header { top:58px; min-height:54px; padding:10px 12px; }
+    .admin-header h2 { font-size:17px; }
+    .admin-header-actions { flex:0 0 auto; }
+    .admin-header-actions .action-btn { padding:7px 10px; font-size:12px; }
+    .stats-grid { gap:10px; padding:12px; }
+    .stat-card { padding:13px; }
+    .stat-card-value { font-size:24px; }
+    .admin-search-bar { padding:10px 12px; gap:8px; }
+    .admin-search-input { min-width:0; font-size:14px; }
+    .admin-filter-chips { padding:8px 12px; overflow-x:auto; flex-wrap:nowrap; scrollbar-width:none; }
+    .admin-filter-chips::-webkit-scrollbar { display:none; }
+    .filter-chip { flex:0 0 auto; }
+    .data-table-container { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .data-table { min-width:620px; }
+    .data-table th, .data-table td { padding:10px 12px; }
+    .admin-modal-overlay { align-items:flex-end; padding:0; }
+    .admin-modal { width:100%; max-width:none; max-height:92dvh; border-radius:20px 20px 0 0; padding-bottom:env(safe-area-inset-bottom); }
+    .admin-modal-header { padding:12px 14px; }
+    .admin-modal-body { padding:14px; }
+    .admin-modal-footer { padding:10px 14px; flex-direction:column-reverse; }
+    .admin-modal-footer .action-btn { width:100%; }
+    .verification-admin-grid { display:flex; flex-direction:column; gap:10px; min-height:0; padding:10px 12px; }
+    #verification-threads-list { max-height:34dvh; overflow:auto; }
+    .admin-verification-thread { margin-bottom:6px; padding:10px; }
+    .admin-chat-panel { min-height:calc(66dvh - 60px); max-height:66dvh; border-radius:14px; }
+    .admin-chat-messages { min-height:0; padding:12px; }
+    .admin-chat-bubble { max-width:88%; }
+    .admin-chat-compose { flex-direction:row; align-items:flex-end; padding:10px; }
+    .admin-chat-compose textarea { max-height:120px; }
+    .admin-chat-compose .action-btn { width:auto; min-height:44px; }
+    .report-actions, .user-detail-actions { flex-wrap:wrap; }
+    .report-actions .action-btn, .user-detail-actions .action-btn { flex:1 1 140px; min-height:42px; }
+    .admin-settings-item { align-items:flex-start; padding:13px 12px; }
+}
+
+@media (max-width:360px) {
+    .admin-mobile-toolbar { padding-inline:8px; }
+    .admin-header-actions .action-btn span { display:none; }
+    .admin-chat-compose { gap:5px; }
+    .admin-chat-compose .action-btn { padding-inline:11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}

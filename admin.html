@@ -84,6 +84,19 @@
 
         <!-- Main Content -->
         <main class="admin-main">
+            <div class="admin-mobile-toolbar">
+                <img src="assets/mimer-icon-original.png" alt="ميمر" class="admin-mobile-logo">
+                <select id="admin-mobile-nav" aria-label="قسم لوحة الإدارة" onchange="switchAdminView(this.value)">
+                    <option value="dashboard">لوحة المعلومات</option>
+                    <option value="users">المستخدمين</option>
+                    <option value="posts">المنشورات</option>
+                    <option value="reports">البلاغات</option>
+                    <option value="verification">رسائل التوثيق</option>
+                    <option value="communities">المجتمعات</option>
+                    <option value="settings">الإعدادات</option>
+                    <option value="audit">سجل العمليات</option>
+                </select>
+            </div>
 
             <!-- ===== DASHBOARD VIEW ===== -->
             <div id="dashboard-view">
