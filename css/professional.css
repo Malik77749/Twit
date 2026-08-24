@@ -355,3 +355,16 @@ body { min-width: 0; }
 @keyframes mimer-logo-rise { from { opacity: 0; transform: translateY(20px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (max-width: 480px) { .mimer-splash-logo { width: min(91vw, 390px); } .mimer-splash-welcome { margin-top: 0; } }
 @media (prefers-reduced-motion: reduce) { .mimer-splash, .mimer-splash.is-leaving, .mimer-splash-logo, .mimer-splash-welcome, .mimer-splash-continue { animation: none; } }
+
+/* Keep the complete lockup visible on short and tall screens */
+.mimer-splash { min-height: 100dvh; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+.mimer-splash-content { max-height: 100dvh; padding: 20px 0; }
+.mimer-splash-logo { width: auto; max-width: 88vw; max-height: min(67dvh, 650px); object-fit: contain; }
+.mimer-splash-welcome { margin: 5px 0 16px; }
+@media (max-height: 720px) {
+  .mimer-splash-content { padding: 10px 0; }
+  .mimer-splash-logo { max-height: 61dvh; }
+  .mimer-splash-welcome { margin: 2px 0 8px; font-size: 14px; }
+  .mimer-splash-continue { padding: 9px 18px; }
+}
+@media (max-width: 480px) and (min-height: 721px) { .mimer-splash-logo { max-height: 67dvh; } }
