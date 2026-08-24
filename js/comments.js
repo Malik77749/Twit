@@ -62,21 +62,15 @@ async function addComment(postId, parentCommentId, event) {
         // Record rate limit
         rateLimiter.recordAction(userId, 'comment');
 
-        // Read-only post lookup: commenters must not be able to mutate the post owner’s record.
-        // The live comments listener recalculates the visible count, so this remains smooth and secure.
-        const postSnap = await get(ref(database, `posts/${postId}`));
-        if (postSnap.exists() && postSnap.val().userId !== userId) {
-            const actorData = userData || await getUserData(database, userId);
-            const name = actorData.name || await getUserName(database, userId);
-            await addNotification(database, postSnap.val().userId, `رد ${name} على منشورك`, postId, {
-                actorId: userId,
-                actorName: name,
-                actorAvatar: actorData.profilePicture || DEFAULT_AVATAR,
-                type: 'mentions'
-            });
-        }
-
+        // Refresh comments immediately; notification creation must never block the interaction.
         loadComments(postId);
+        void get(ref(database, `posts/${postId}`)).then(async postSnap => {
+            if (postSnap.exists() && postSnap.val().userId !== userId) {
+                const actorData = userData || await getUserData(database, userId);
+                const name = actorData.name || await getUserName(database, userId);
+                void addNotification(database, postSnap.val().userId, `رد ${name} على منشورك`, postId, { actorId: userId, actorName: name, actorAvatar: actorData.profilePicture || DEFAULT_AVATAR, type: 'mentions' });
+            }
+        }).catch(() => {});
     } catch (error) {
         if (window.showToast) window.showToast('خطأ: ' + error.message);
     }

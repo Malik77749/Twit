@@ -1,5 +1,5 @@
 // Posts Module — Upgraded with Pagination, Rate Limiting, Denormalization
-import { ref, push, set, get, update, remove, increment, runTransaction, query, orderByChild, limitToLast, onValue, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, push, set, get, update, remove, increment, runTransaction, query, orderByChild, equalTo, limitToLast, onValue, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js?v=3';
 import { showLoading, hideLoading, showView } from './ui.js?v=3';
@@ -188,30 +188,26 @@ async function postTweet() {
         // Handle multiple media files
         const mediaUrls = [];
         if (selectedFiles.length > 0) {
-            for (const file of selectedFiles) {
+            const uploadedMedia = await Promise.all(selectedFiles.map(async file => {
                 try {
                     if (file.type.startsWith('image/')) {
-                        // Compress image before upload
                         const compressedFile = await imageCdn.compressImageFile(file, 1200, 0.8);
                         const imgRef = storageRef(storage, `posts/${postRef.key}/${compressedFile.name}`);
                         const snapshot = await uploadBytes(imgRef, compressedFile);
-                        mediaUrls.push({
-                            type: 'image',
-                            url: await getDownloadURL(snapshot.ref)
-                        });
-                    } else if (file.type.startsWith('video/')) {
-                        // Upload video without compression
+                        return { type: 'image', url: await getDownloadURL(snapshot.ref) };
+                    }
+                    if (file.type.startsWith('video/')) {
                         const vidRef = storageRef(storage, `posts/${postRef.key}/${file.name}`);
                         const snapshot = await uploadBytes(vidRef, file);
-                        mediaUrls.push({
-                            type: 'video',
-                            url: await getDownloadURL(snapshot.ref)
-                        });
+                        return { type: 'video', url: await getDownloadURL(snapshot.ref) };
                     }
+                    return null;
                 } catch (err) {
                     showToast(`خطأ في رفع ${file.name}`);
+                    return null;
                 }
-            }
+            }));
+            mediaUrls.push(...uploadedMedia.filter(Boolean));
             if (mediaUrls.length > 0) {
                 postData.media = mediaUrls;
                 // Use first image as preview
@@ -273,19 +269,14 @@ async function postTweet() {
         // Record rate limit
         rateLimiter.recordAction(userId, 'post');
 
-        // Track hashtags
+        // Index hashtags without blocking the visible post publish completion.
         if (content) {
-            const hashtags = content.match(/#[\u0600-\u06FFa-zA-Z0-9_]+/g);
-            if (hashtags) {
-                for (const tag of hashtags) {
-                    const tagKey = tag.substring(1).toLowerCase().replace(/[^\u0600-\u06FFa-zA-Z0-9_]/g, '');
-                    if (tagKey) {
-                        try {
-                            await set(ref(database, `hashtags/${tagKey}/${postRef.key}`), true);
-                        } catch (e) { /* non-blocking */ }
-                    }
-                }
-            }
+            const hashtags = content.match(/#[\u0600-\u06FFa-zA-Z0-9_]+/g) || [];
+            const hashtagWrites = hashtags.map(tag => {
+                const tagKey = tag.substring(1).toLowerCase().replace(/[^\u0600-\u06FFa-zA-Z0-9_]/g, '');
+                return tagKey ? set(ref(database, `hashtags/${tagKey}/${postRef.key}`), true).catch(() => {}) : Promise.resolve();
+            });
+            void Promise.all(hashtagWrites);
         }
 
         // Clear composer
@@ -303,14 +294,17 @@ async function postTweet() {
         } else {
             postsDiv.appendChild(container);
         }
-        await renderPost({ id: postRef.key, ...postData }, container);
-
-        showToast('تم النشر بنجاح! ✅');
+        container.innerHTML = `<article class="tweet new-post-pending"><div class="tweet-body"><div class="tweet-header"><strong>${escapeHtml(postData.userName)}</strong><span class="tweet-handle">@${escapeHtml(postData.userHandle || '')}</span></div><div class="tweet-content">${postData.content || ''}</div><small style="color:var(--text-secondary);">يتم تجهيز العرض…</small></div></article>`;
+        showToast('تم النشر بنجاح');
+        if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
+        void renderPost({ id: postRef.key, ...postData }, container).catch(error => {
+            console.error('Post render error:', error);
+            container.classList.remove('new-post-pending');
+        });
         // Remove undo timer - post is instant
         // undoTweetModule.startUndo(postRef.key, (deletedId) => {
         //     showToast('تم إلغاء المنشور');
         // });
-        if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
     } catch (error) {
         showToast('خطأ: ' + error.message);
         if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
@@ -395,35 +389,26 @@ async function likePost(postId, event) {
     }
 
     const likeRef = ref(database, `likes/${postId}/${userId}`);
+    const likeButtons = [...document.querySelectorAll(`[data-like-id="${postId}"]`)];
+    if (likeButtons.some(btn => btn.dataset.busy === 'true')) return;
+    likeButtons.forEach(btn => { btn.dataset.busy = 'true'; btn.setAttribute('aria-busy', 'true'); });
 
     try {
-        const snapshot = await get(likeRef);
-        const isLiked = snapshot.exists();
+        const likeTx = await runTransaction(likeRef, current => current ? null : { timestamp: new Date().toISOString() });
+        const isLiked = likeTx.snapshot.exists();
         const postRef = ref(database, `posts/${postId}`);
-        const postSnapshot = await get(postRef);
-        let likes = postSnapshot.exists() ? postSnapshot.val().likes || 0 : 0;
-
+        const likesTx = await runTransaction(ref(database, `posts/${postId}/likes`), current => Math.max(0, Number(current || 0) + (isLiked ? 1 : -1)));
+        const likes = Number(likesTx.snapshot.val() || 0);
         if (isLiked) {
-            await remove(likeRef);
-            likes = Math.max(0, likes - 1);
-        } else {
-            await set(likeRef, { timestamp: new Date().toISOString() });
-            likes += 1;
             rateLimiter.recordAction(userId, 'like');
-
-            if (postSnapshot.exists() && postSnapshot.val().userId !== userId) {
-                const likerData = await getUserData(database, userId);
-                const likerName = likerData.name || await getUserName(database, userId);
-                await addNotification(database, postSnapshot.val().userId, `أعجب ${likerName} بمنشورك`, postId, {
-                    actorId: userId,
-                    actorName: likerName,
-                    actorAvatar: likerData.profilePicture || DEFAULT_AVATAR,
-                    type: 'likes'
-                });
-            }
+            void get(ref(database, `posts/${postId}`)).then(async postSnapshot => {
+                if (postSnapshot.exists() && postSnapshot.val().userId !== userId) {
+                    const likerData = await getUserData(database, userId);
+                    const likerName = likerData.name || await getUserName(database, userId);
+                    void addNotification(database, postSnapshot.val().userId, `أعجب ${likerName} بمنشورك`, postId, { actorId: userId, actorName: likerName, actorAvatar: likerData.profilePicture || DEFAULT_AVATAR, type: 'likes' });
+                }
+            }).catch(() => {});
         }
-
-        await update(postRef, { likes });
 
         // Update all matching buttons with animation
         document.querySelectorAll(`[data-like-id="${postId}"]`).forEach(btn => {
@@ -440,6 +425,8 @@ async function likePost(postId, event) {
         });
     } catch (error) {
         showToast('خطأ: ' + error.message);
+    } finally {
+        likeButtons.forEach(btn => { delete btn.dataset.busy; btn.removeAttribute('aria-busy'); });
     }
 }
 
@@ -448,6 +435,8 @@ async function retweetPost(postId, event) {
     event?.stopPropagation();
 
     const userId = auth.currentUser.uid;
+    const retweetButtons = [...document.querySelectorAll(`[data-retweet-id="${postId}"]`)];
+    if (retweetButtons.some(btn => btn.dataset.busy === 'true')) return;
 
     // Rate limit check
     const limitCheck = rateLimiter.checkLimit(userId, 'retweet');
@@ -455,33 +444,25 @@ async function retweetPost(postId, event) {
         rateLimiter.showRateLimitToast(limitCheck.reason);
         return;
     }
+    retweetButtons.forEach(btn => { btn.dataset.busy = 'true'; btn.setAttribute('aria-busy', 'true'); });
 
-    const retweetsSnapshot = await get(ref(database, 'retweets'));
+    const retweetsSnapshot = await get(query(ref(database, 'retweets'), orderByChild('originalPostId'), equalTo(postId)));
     let existingKey = null;
-
-    if (retweetsSnapshot.exists()) {
-        for (const [key, val] of Object.entries(retweetsSnapshot.val())) {
-            if (val.originalPostId === postId && val.userId === userId) {
-                existingKey = key;
-                break;
-            }
-        }
-    }
+    if (retweetsSnapshot.exists()) retweetsSnapshot.forEach(child => { if (child.val()?.userId === userId) existingKey = child.key; });
 
     if (existingKey) {
-        if (!confirm('إلغاء إعادة التغريد؟')) return;
+        if (!confirm('إلغاء إعادة التغريد؟')) { retweetButtons.forEach(btn => { delete btn.dataset.busy; btn.removeAttribute('aria-busy'); }); return; }
         try {
             await remove(ref(database, 'retweets/' + existingKey));
-            const postRef = ref(database, `posts/${postId}`);
-            const postSnapshot = await get(postRef);
-            let retweets = postSnapshot.exists() ? postSnapshot.val().retweets || 0 : 0;
-            retweets = Math.max(0, retweets - 1);
-            await update(postRef, { retweets });
+            const retweetsTx = await runTransaction(ref(database, `posts/${postId}/retweets`), current => Math.max(0, Number(current || 0) - 1));
+            const retweets = Number(retweetsTx.snapshot.val() || 0);
             document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
                 btn.innerHTML = `<span class="icon-wrap"><i class="fas fa-retweet"></i></span><span>${retweets}</span>`;
             });
         } catch (error) {
             showToast('خطأ: ' + error.message);
+        } finally {
+            retweetButtons.forEach(btn => { delete btn.dataset.busy; btn.removeAttribute('aria-busy'); });
         }
         return;
     }
@@ -489,24 +470,16 @@ async function retweetPost(postId, event) {
     try {
         const retweetRef = push(ref(database, 'retweets'));
         await set(retweetRef, { originalPostId: postId, userId, timestamp: new Date().toISOString() });
-        const postRef = ref(database, `posts/${postId}`);
-        const postSnapshot = await get(postRef);
-        let retweets = postSnapshot.exists() ? postSnapshot.val().retweets || 0 : 0;
-        retweets += 1;
-        await update(postRef, { retweets });
-
+        const retweetsTx = await runTransaction(ref(database, `posts/${postId}/retweets`), current => Number(current || 0) + 1);
+        const retweets = Number(retweetsTx.snapshot.val() || 0);
         rateLimiter.recordAction(userId, 'retweet');
-
-        if (postSnapshot.exists() && postSnapshot.val().userId !== userId) {
-            const actorData = await getUserData(database, userId);
-            const name = actorData.name || await getUserName(database, userId);
-            await addNotification(database, postSnapshot.val().userId, `أعاد ${name} نشر تغريدتك`, postId, {
-                actorId: userId,
-                actorName: name,
-                actorAvatar: actorData.profilePicture || DEFAULT_AVATAR,
-                type: 'retweets'
-            });
-        }
+        void get(ref(database, `posts/${postId}`)).then(async postSnapshot => {
+            if (postSnapshot.exists() && postSnapshot.val().userId !== userId) {
+                const actorData = await getUserData(database, userId);
+                const name = actorData.name || await getUserName(database, userId);
+                void addNotification(database, postSnapshot.val().userId, `أعاد ${name} نشر تغريدتك`, postId, { actorId: userId, actorName: name, actorAvatar: actorData.profilePicture || DEFAULT_AVATAR, type: 'retweets' });
+            }
+        }).catch(() => {});
 
         document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
             btn.innerHTML = `<span class="icon-wrap"><i class="fas fa-retweet"></i></span><span>${retweets}</span>`;
@@ -514,6 +487,8 @@ async function retweetPost(postId, event) {
         showToast('تم إعادة النشر');
     } catch (error) {
         showToast('خطأ: ' + error.message);
+    } finally {
+        retweetButtons.forEach(btn => { delete btn.dataset.busy; btn.removeAttribute('aria-busy'); });
     }
 }
 
