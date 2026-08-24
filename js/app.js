@@ -1,7 +1,7 @@
 // Main Application Entry Point — Upgraded
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getDatabase, ref, get, update, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { getDatabase, ref, get, update, runTransaction, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { getStorage } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 import { firebaseConfig } from './config.js?v=3';
@@ -55,7 +55,7 @@ try {
     posts.init(authInstance, database, storage);
     comments.init(authInstance, database);
     notifications.init(authInstance, database);
-    profile.init(authInstance, database);
+    profile.init(authInstance, database, storage);
     dm.init(authInstance, database);
     blockMute.init(authInstance, database);
     polls.init(authInstance, database);
@@ -714,16 +714,84 @@ function updateDMBadge() {
 
 window.undoPost = undoTweet.undoPost;
 
-// ===== Google Sign-In =====
+// ===== Account onboarding / Google Sign-In =====
+
+function normalizeAccountHandle(value) {
+    return String(value || '').trim().replace(/^@+/, '').toLowerCase();
+}
+
+function isValidAccountHandle(value) {
+    return /^[a-z0-9_.]{3,20}$/.test(normalizeAccountHandle(value));
+}
+
+let onboardingCheckTimer;
+let onboardingHandleAvailable = false;
+
+async function checkOnboardingHandle(value) {
+    const handle = normalizeAccountHandle(value);
+    const feedback = document.getElementById('onboarding-handle-feedback');
+    const save = document.getElementById('onboarding-save');
+    onboardingHandleAvailable = false;
+    if (!feedback || !save) return;
+    save.disabled = true;
+    if (!handle) { feedback.textContent = 'استخدم 3 إلى 20 حرفًا إنجليزيًا أو رقمًا'; feedback.className = 'handle-feedback'; return; }
+    if (!isValidAccountHandle(handle)) { feedback.textContent = 'الأحرف المسموحة: a-z و0-9 و _ و .'; feedback.className = 'handle-feedback taken'; return; }
+    feedback.textContent = 'جاري التحقق من التوفر...'; feedback.className = 'handle-feedback checking';
+    try {
+        const snap = await get(ref(database, `handles/${handle}`));
+        if (snap.exists()) { feedback.textContent = '✗ الاسم مستخدم وغير متاح'; feedback.className = 'handle-feedback taken'; return; }
+        onboardingHandleAvailable = true;
+        feedback.textContent = '✓ الاسم متاح ويمكن استخدامه';
+        feedback.className = 'handle-feedback available';
+        save.disabled = false;
+    } catch (error) { feedback.textContent = 'تعذر التحقق، حاول مرة أخرى'; feedback.className = 'handle-feedback taken'; }
+}
+
+window.showUsernameOnboarding = function() {
+    const modal = document.getElementById('username-onboarding');
+    const input = document.getElementById('onboarding-handle');
+    if (!modal || !input) return;
+    modal.hidden = false;
+    input.focus();
+};
+
+window.saveUsernameOnboarding = async function() {
+    const input = document.getElementById('onboarding-handle');
+    const error = document.getElementById('onboarding-handle-error');
+    const save = document.getElementById('onboarding-save');
+    const uid = authInstance.currentUser?.uid;
+    const handle = normalizeAccountHandle(input?.value);
+    if (!uid || !isValidAccountHandle(handle)) { if (error) error.textContent = 'أدخل اسم مستخدم صالحًا'; return; }
+    save.disabled = true;
+    if (error) error.textContent = '';
+    try {
+        const claim = await runTransaction(ref(database, `handles/${handle}`), current => current === null ? uid : current);
+        if (!claim.committed || claim.snapshot.val() !== uid) throw new Error('TAKEN');
+        await update(ref(database, `users/${uid}`), { handle, needsUsername: false, usernameUpdatedAt: new Date().toISOString() });
+        document.getElementById('username-onboarding').hidden = true;
+        showToast('تم حجز اسم المستخدم بنجاح');
+    } catch (err) {
+        if (error) error.textContent = err.message === 'TAKEN' ? 'الاسم حُجز للتو، اختر اسمًا آخر' : 'تعذر حفظ الاسم، حاول مرة أخرى';
+        save.disabled = false;
+        checkOnboardingHandle(handle);
+    }
+};
 
 window.signInWithGoogle = async function() {
     const result = await googleAuth.signInWithGoogle();
     if (!result.success) {
         const errorEl = document.getElementById('error');
         if (errorEl) errorEl.innerText = result.message;
+        return;
     }
-    // Auth state listener handles the rest
+    if (result.needsUsername) window.showUsernameOnboarding();
 };
+
+document.getElementById('onboarding-handle')?.addEventListener('input', (event) => {
+    clearTimeout(onboardingCheckTimer);
+    onboardingCheckTimer = setTimeout(() => checkOnboardingHandle(event.target.value), 220);
+});
+document.getElementById('onboarding-save')?.addEventListener('click', window.saveUsernameOnboarding);
 
 // ===== Communities =====
 
@@ -1614,6 +1682,9 @@ async function checkUserRole(user) {
         loadWhoToFollow();
         updateDMBadge();
         updateTrending();
+        if (!userData.handle || userData.needsUsername) {
+            setTimeout(() => window.showUsernameOnboarding?.(), 250);
+        }
     } catch (error) {
         showAuth();
     }

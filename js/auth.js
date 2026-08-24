@@ -1,6 +1,6 @@
 // Authentication Module — Enhanced with Phone, Email, Google, CAPTCHA, and Persistence
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, sendEmailVerification, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { ref, get, set, query, orderByChild, equalTo } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, get, set, update, runTransaction, query, orderByChild, equalTo } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { showApp, showAuth, showLoading, hideLoading } from './ui.js?v=3';
 import { clearUserCache } from './firebase-helpers.js?v=3';
 
@@ -72,12 +72,36 @@ let handleCheckTimeout = null;
 let lastCheckedHandle = '';
 let lastCheckedResult = '';
 
+function normalizeHandle(handle) {
+    return String(handle || '').trim().replace(/^@+/, '').toLowerCase();
+}
+
 function validateHandleFormat(handle) {
-    return /^[a-zA-Z0-9_.]{3,20}$/.test(handle);
+    return /^[a-zA-Z0-9_.]{3,20}$/.test(normalizeHandle(handle));
+}
+
+function generateNumericId() {
+    return String(Math.floor(100000000 + Math.random() * 900000000));
+}
+
+async function reserveHandle(handle, uid) {
+    const normalized = normalizeHandle(handle);
+    const result = await runTransaction(ref(database, `handles/${normalized}`), current => current === null ? uid : current);
+    if (!result.committed || result.snapshot.val() !== uid) throw new Error('HANDLE_TAKEN');
+    return normalized;
+}
+
+async function reserveNumericId(uid) {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+        const numericId = generateNumericId();
+        const result = await runTransaction(ref(database, `numericIds/${numericId}`), current => current === null ? uid : current);
+        if (result.committed && result.snapshot.val() === uid) return numericId;
+    }
+    throw new Error('NUMERIC_ID_UNAVAILABLE');
 }
 
 async function checkHandleAvailability(handle) {
-    const lower = handle.toLowerCase();
+    const lower = normalizeHandle(handle);
     try {
         const snap = await get(ref(database, `handles/${lower}`));
         return !snap.exists();
@@ -187,7 +211,7 @@ async function validateHandleForSignup(handle) {
     if (!available) {
         return { valid: false, error: 'هذا الاسم مسجل مسبقاً، اختر اسماً آخر' };
     }
-    return { valid: true, handle: handle.toLowerCase() };
+    return { valid: true, handle: normalizeHandle(handle) };
 }
 
 // ===== Phone Number Utilities =====
@@ -389,11 +413,14 @@ async function signupWithPhone() {
         }
 
         const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
+        const reservedHandle = await reserveHandle(handleResult.handle, cred.user.uid);
+        const numericId = await reserveNumericId(cred.user.uid);
 
         const userData = {
             uid: cred.user.uid,
+            numericId,
             name: name,
-            handle: handleResult.handle,
+            handle: reservedHandle,
             phone: fullPhone,
             phoneDisplay: formatPhoneDisplay(phone, countryCode),
             email: fakeEmail,
@@ -406,7 +433,6 @@ async function signupWithPhone() {
         };
 
         await set(ref(database, `users/${cred.user.uid}`), userData);
-        await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
 
         errorEl.innerText = '';
         hideLoading();
@@ -415,7 +441,9 @@ async function signupWithPhone() {
         const messages = {
             'auth/email-already-in-use': 'رقم الهاتف مسجل بالفعل',
             'auth/invalid-email': 'البريد غير صالح',
-            'auth/weak-password': 'كلمة المرور ضعيفة'
+            'auth/weak-password': 'كلمة المرور ضعيفة',
+            'HANDLE_TAKEN': 'اسم المستخدم حُجز للتو من مستخدم آخر، اختر اسمًا مختلفًا',
+            'NUMERIC_ID_UNAVAILABLE': 'تعذر إنشاء المعرّف الرقمي، حاول مرة أخرى'
         };
         errorEl.innerText = messages[error.code] || error.message;
         hideLoading();
@@ -469,22 +497,25 @@ async function signup() {
 
     try {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
+        const reservedHandle = await reserveHandle(handleResult.handle, cred.user.uid);
+        const numericId = await reserveNumericId(cred.user.uid);
 
         const userData = {
             uid: cred.user.uid,
+            numericId,
             name: name,
-            handle: handleResult.handle,
+            handle: reservedHandle,
             email: email,
             joinDate: new Date().toISOString(),
             followers: 0,
             following: 0,
             profilePicture: DEFAULT_AVATAR,
             provider: 'email',
-            emailVerified: false
+            emailVerified: cred.user.emailVerified
         };
 
         await set(ref(database, `users/${cred.user.uid}`), userData);
-        await set(ref(database, `handles/${handleResult.handle}`), cred.user.uid);
+        await sendEmailVerification(cred.user).catch((verificationError) => console.warn('Email verification could not be sent:', verificationError));
 
         errorEl.innerText = '';
         hideLoading();
@@ -493,7 +524,9 @@ async function signup() {
         const messages = {
             'auth/email-already-in-use': 'البريد مستخدم بالفعل',
             'auth/invalid-email': 'البريد غير صالح',
-            'auth/weak-password': 'كلمة المرور ضعيفة'
+            'auth/weak-password': 'كلمة المرور ضعيفة',
+            'HANDLE_TAKEN': 'اسم المستخدم حُجز للتو من مستخدم آخر، اختر اسمًا مختلفًا',
+            'NUMERIC_ID_UNAVAILABLE': 'تعذر إنشاء المعرّف الرقمي، حاول مرة أخرى'
         };
         errorEl.innerText = messages[error.code] || error.message;
         hideLoading();

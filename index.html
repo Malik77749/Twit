@@ -139,6 +139,23 @@
 </head>
 <body>
 
+    <!-- New-account username onboarding -->
+    <section id="username-onboarding" class="account-onboarding" hidden aria-labelledby="username-onboarding-title">
+        <div class="account-onboarding-card" role="dialog" aria-modal="true">
+            <span class="onboarding-kicker">خطوة أخيرة</span>
+            <h2 id="username-onboarding-title">اختر هويتك على ميمر</h2>
+            <p>اسم المستخدم فريد وسيظهر للآخرين في ملفك ومنشوراتك. يمكنك تغييره لاحقًا من إعدادات الحساب.</p>
+            <label for="onboarding-handle">اسم المستخدم</label>
+            <div class="handle-input-wrap onboarding-handle-wrap">
+                <span class="handle-prefix">@</span>
+                <input id="onboarding-handle" class="auth-input handle-input" type="text" dir="ltr" maxlength="20" autocomplete="off" placeholder="username">
+            </div>
+            <div id="onboarding-handle-feedback" class="handle-feedback" role="status" aria-live="polite">استخدم 3 إلى 20 حرفًا إنجليزيًا أو رقمًا</div>
+            <div id="onboarding-handle-error" class="onboarding-error" role="alert"></div>
+            <button id="onboarding-save" class="auth-btn" type="button" disabled>متابعة إلى ميمر</button>
+        </div>
+    </section>
+
     <!-- Mimer first-visit brand experience -->
     <section id="mimer-splash" class="mimer-splash" aria-label="مرحبًا بك في ميمر">
         <div class="mimer-splash-glow" aria-hidden="true"></div>

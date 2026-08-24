@@ -1,5 +1,6 @@
 // Profile Module
-import { ref, get, update } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, get, update, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { showLoading, hideLoading, showView } from './ui.js?v=3';
 import { getUserData } from './firebase-helpers.js?v=3';
 import { renderPost, renderRetweet } from './posts.js?v=3';
@@ -7,12 +8,15 @@ import { escapeHtml } from './utils.js?v=3';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
-let auth, database;
+let auth, database, storage;
 let currentProfileUserId = null;
+let pendingCroppedImages = { avatar: null, banner: null };
+let cropState = null;
 
-function init(authInstance, databaseInstance) {
+function init(authInstance, databaseInstance, storageInstance) {
     auth = authInstance;
     database = databaseInstance;
+    storage = storageInstance;
 }
 
 async function showProfile(userId) {
@@ -91,8 +95,14 @@ async function showProfile(userId) {
                 <button class="profile-edit-btn" onclick="editProfile()">تعديل الملف الشخصي</button>
                 <div id="profile-edit-form" style="display:none;margin-top:12px;">
                     <input type="text" class="auth-input" id="profile-name-input" placeholder="الاسم الجديد" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.name || '')}">
-                    <input type="text" class="auth-input" id="profile-picture-url" placeholder="رابط صورة الملف الشخصي" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;">
-                    <input type="text" class="auth-input" id="profile-banner-url" placeholder="رابط صورة الغلاف" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.banner || '')}">
+                    <div class="profile-handle-edit"><span>@</span><input type="text" class="auth-input" id="profile-handle-input" placeholder="اسم المستخدم" dir="ltr" maxlength="20" autocomplete="off" value="${escapeHtml(userData.handle || '')}"></div>
+                    <div class="profile-media-pickers">
+                        <label class="profile-file-picker"><i class="fas fa-user-circle"></i><span>تغيير الصورة الشخصية</span><input type="file" id="profile-avatar-file" accept="image/jpeg,image/png,image/webp"></label>
+                        <label class="profile-file-picker"><i class="fas fa-panorama"></i><span>تغيير صورة الغلاف</span><input type="file" id="profile-banner-file" accept="image/jpeg,image/png,image/webp"></label>
+                    </div>
+                    <div class="profile-crop-hint">يمكنك تحريك الصورة وتكبيرها وقص الجزء المناسب قبل الحفظ.</div>
+                    <input type="text" class="auth-input" id="profile-picture-url" placeholder="أو رابط صورة الملف الشخصي" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;">
+                    <input type="text" class="auth-input" id="profile-banner-url" placeholder="أو رابط صورة الغلاف" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.banner || '')}">
                     <input type="text" class="auth-input" id="profile-bio-input" placeholder="نبذة عنك" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.bio || '')}">
                     <input type="text" class="auth-input" id="profile-website-input" placeholder="الموقع الإلكتروني" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.website || '')}">
                     <input type="text" class="auth-input" id="profile-location-input" placeholder="الموقع الجغرافي" style="font-size:14px;padding:8px 12px;margin-bottom:8px;max-width:250px;" value="${escapeHtml(userData.location || '')}">
@@ -125,8 +135,11 @@ async function showProfile(userId) {
         });
 
         // Reset to "posts" tab
-        tabs.forEach(t => t.classList.remove('active'));
+            tabs.forEach(t => t.classList.remove('active'));
         tabs[0]?.classList.add('active');
+
+        document.getElementById('profile-avatar-file')?.addEventListener('change', (event) => handleImageSelection(event.target.files?.[0], 'avatar'));
+        document.getElementById('profile-banner-file')?.addEventListener('change', (event) => handleImageSelection(event.target.files?.[0], 'banner'));
 
         showView('profile');
         loadProfilePosts(userId);
@@ -143,8 +156,63 @@ function editProfile() {
     }
 }
 
+function closeCropper() {
+    document.getElementById('mimer-image-cropper')?.remove();
+    if (cropState?.url) URL.revokeObjectURL(cropState.url);
+    cropState = null;
+}
+
+function drawCropper() {
+    if (!cropState) return;
+    const canvas = document.getElementById('mimer-crop-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const outW = cropState.type === 'banner' ? 840 : 420;
+    const outH = cropState.type === 'banner' ? 300 : 420;
+    canvas.width = outW; canvas.height = outH;
+    ctx.fillStyle = '#070b16'; ctx.fillRect(0, 0, outW, outH);
+    const image = cropState.image;
+    const scale = Math.max(outW / image.width, outH / image.height) * cropState.zoom;
+    const w = image.width * scale; const h = image.height * scale;
+    ctx.drawImage(image, (outW - w) / 2 + cropState.x, (outH - h) / 2 + cropState.y, w, h);
+}
+
+function openCropper(file, type) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+        closeCropper();
+        cropState = { type, url, image, zoom: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0 };
+        const modal = document.createElement('div');
+        modal.id = 'mimer-image-cropper';
+        modal.className = 'image-cropper-modal';
+        modal.innerHTML = `<div class="image-cropper-card" role="dialog" aria-modal="true" aria-label="قص الصورة"><div class="image-cropper-head"><strong>${type === 'banner' ? 'قص صورة الغلاف' : 'قص الصورة الشخصية'}</strong><button type="button" class="icon-btn" data-crop-cancel aria-label="إغلاق">×</button></div><canvas id="mimer-crop-canvas"></canvas><label class="crop-zoom-label">التكبير <input id="mimer-crop-zoom" type="range" min="1" max="3" step="0.05" value="1"></label><div class="image-cropper-actions"><button type="button" class="secondary-btn" data-crop-cancel>إلغاء</button><button type="button" class="primary-btn" data-crop-save>اعتماد القص</button></div></div>`;
+        document.body.appendChild(modal);
+        drawCropper();
+        const canvas = document.getElementById('mimer-crop-canvas');
+        canvas.addEventListener('pointerdown', (event) => { cropState.dragging = true; cropState.startX = event.clientX - cropState.x; cropState.startY = event.clientY - cropState.y; canvas.setPointerCapture(event.pointerId); });
+        canvas.addEventListener('pointermove', (event) => { if (!cropState.dragging) return; cropState.x = event.clientX - cropState.startX; cropState.y = event.clientY - cropState.startY; drawCropper(); });
+        canvas.addEventListener('pointerup', () => { cropState.dragging = false; });
+        document.getElementById('mimer-crop-zoom').addEventListener('input', (event) => { cropState.zoom = Number(event.target.value); drawCropper(); });
+        modal.querySelectorAll('[data-crop-cancel]').forEach((button) => button.addEventListener('click', closeCropper));
+        modal.querySelector('[data-crop-save]').addEventListener('click', () => canvas.toBlob((blob) => { pendingCroppedImages[type] = blob; closeCropper(); showToast('تم تجهيز الصورة للحفظ'); }, 'image/jpeg', 0.9));
+    };
+    image.src = url;
+}
+
+function handleImageSelection(file, type) { openCropper(file, type); }
+
+async function uploadCroppedImage(blob, type) {
+    if (!blob || !storage || !auth.currentUser) return null;
+    const target = storageRef(storage, `profiles/${auth.currentUser.uid}/${type}-${Date.now()}.jpg`);
+    await uploadBytes(target, blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000' });
+    return getDownloadURL(target);
+}
+
 async function saveProfile() {
     const nameInput = document.getElementById('profile-name-input');
+    const handleInput = document.getElementById('profile-handle-input');
     const picInput = document.getElementById('profile-picture-url');
     const bannerInput = document.getElementById('profile-banner-url');
     const bioInput = document.getElementById('profile-bio-input');
@@ -152,6 +220,7 @@ async function saveProfile() {
     const locationInput = document.getElementById('profile-location-input');
 
     const name = nameInput?.value.trim();
+    const newHandle = String(handleInput?.value || '').trim().replace(/^@+/, '').toLowerCase();
     const picUrl = picInput?.value.trim();
     const bannerUrl = bannerInput?.value.trim();
     const bio = bioInput?.value.trim();
@@ -160,23 +229,27 @@ async function saveProfile() {
     const isProtected = document.getElementById('profile-protected-input')?.checked || false;
 
     if (!name) { alert('أدخل اسمك'); return; }
+    if (!/^[a-z0-9_.]{3,20}$/.test(newHandle)) { alert('اسم المستخدم يجب أن يكون 3-20 حرفًا إنجليزيًا أو رقمًا'); return; }
 
     showLoading();
     try {
-        const updates = { name, isProtected };
+        const currentUserData = await getUserData(database, auth.currentUser.uid);
+        const oldHandle = String(currentUserData.handle || '').toLowerCase();
+        if (newHandle !== oldHandle) {
+            const claim = await runTransaction(ref(database, `handles/${newHandle}`), current => current === null ? auth.currentUser.uid : current);
+            if (!claim.committed || claim.snapshot.val() !== auth.currentUser.uid) throw new Error('HANDLE_TAKEN');
+            if (oldHandle) await update(ref(database), { [`handles/${oldHandle}`]: null });
+        }
+        const updates = { name, handle: newHandle, isProtected };
         if (bio !== undefined) updates.bio = bio;
         if (website !== undefined) updates.website = website;
         if (location !== undefined) updates.location = location;
 
-        if (picUrl) {
-            new URL(picUrl);
-            updates.profilePicture = picUrl;
-        }
+        if (pendingCroppedImages.avatar) updates.profilePicture = await uploadCroppedImage(pendingCroppedImages.avatar, 'avatar');
+        else if (picUrl) { new URL(picUrl); updates.profilePicture = picUrl; }
 
-        if (bannerUrl) {
-            new URL(bannerUrl);
-            updates.banner = bannerUrl;
-        }
+        if (pendingCroppedImages.banner) updates.banner = await uploadCroppedImage(pendingCroppedImages.banner, 'banner');
+        else if (bannerUrl) { new URL(bannerUrl); updates.banner = bannerUrl; }
 
         await update(ref(database, 'users/' + auth.currentUser.uid), updates);
 
@@ -187,17 +260,18 @@ async function saveProfile() {
         const currentHandle = document.getElementById('profile-handle').textContent.replace('@', '');
         document.getElementById('profile-handle').textContent = '@' + (currentHandle || name.replace(/\s/g, '').toLowerCase());
 
-        if (picUrl) {
-            document.getElementById('profile-picture').src = picUrl;
-            document.getElementById('sidebar-avatar').src = picUrl;
-            document.getElementById('composer-avatar').src = picUrl;
+        if (updates.profilePicture) {
+            document.getElementById('profile-picture').src = updates.profilePicture;
+            document.getElementById('sidebar-avatar').src = updates.profilePicture;
+            document.getElementById('composer-avatar').src = updates.profilePicture;
         }
 
+        pendingCroppedImages = { avatar: null, banner: null };
         // Update banner
-        if (bannerUrl) {
+        if (updates.banner) {
             const bannerEl = document.querySelector('.profile-banner');
             if (bannerEl) {
-                bannerEl.style.backgroundImage = `url(${bannerUrl})`;
+                bannerEl.style.backgroundImage = `url(${updates.banner})`;
                 bannerEl.style.backgroundSize = 'cover';
                 bannerEl.style.backgroundPosition = 'center';
                 const grad = bannerEl.querySelector('.profile-banner-gradient');
@@ -238,10 +312,11 @@ async function saveProfile() {
         document.getElementById('sidebar-name').textContent = name;
         document.getElementById('drawer-name').textContent = name;
 
+        document.getElementById('profile-handle').textContent = '@' + newHandle;
         document.getElementById('profile-edit-form').style.display = 'none';
-        showToast('تم التحديث');
+        showToast('تم تحديث الملف الشخصي');
     } catch (error) {
-        alert('رابط غير صالح أو خطأ');
+        alert(error.message === 'HANDLE_TAKEN' ? 'اسم المستخدم مستخدم بالفعل' : 'تعذر حفظ التعديلات، تحقق من البيانات وحاول مرة أخرى');
     } finally {
         hideLoading();
     }

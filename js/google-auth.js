@@ -1,6 +1,6 @@
 // Google Sign-In Module
 import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { ref, get, set, update } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, get, set, update, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -18,6 +18,15 @@ function init(authInstance, databaseInstance) {
 /**
  * Sign in with Google (popup)
  */
+async function reserveNumericId(uid) {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+        const numericId = String(Math.floor(100000000 + Math.random() * 900000000));
+        const result = await runTransaction(ref(database, `numericIds/${numericId}`), current => current === null ? uid : current);
+        if (result.committed && result.snapshot.val() === uid) return numericId;
+    }
+    throw new Error('تعذر إنشاء المعرّف الرقمي');
+}
+
 async function signInWithGoogle() {
     try {
         const result = await signInWithPopup(auth, googleProvider);
@@ -26,21 +35,11 @@ async function signInWithGoogle() {
         // Check if new user
         const userSnap = await get(ref(database, 'users/' + user.uid));
         if (!userSnap.exists()) {
-            // Generate unique handle from name
-            let handle = (user.displayName || 'user').replace(/\s/g, '').toLowerCase().replace(/[^a-z0-9_.]/g, '');
-            if (handle.length < 3) handle = 'user' + Math.floor(Math.random() * 99999);
-            if (handle.length > 20) handle = handle.substring(0, 20);
-
-            // Check if handle exists, add number if so
-            const handleSnap = await get(ref(database, `handles/${handle}`));
-            if (handleSnap.exists()) {
-                handle = handle + Math.floor(Math.random() * 9999);
-            }
-
-            // Create user profile
+            const numericId = await reserveNumericId(user.uid);
             await set(ref(database, 'users/' + user.uid), {
+                uid: user.uid,
+                numericId,
                 name: user.displayName || 'مستخدم',
-                handle: handle,
                 email: user.email,
                 profilePicture: user.photoURL || DEFAULT_AVATAR,
                 isAdmin: false,
@@ -48,19 +47,14 @@ async function signInWithGoogle() {
                 followers: 0,
                 following: 0,
                 bio: '',
-                provider: 'google'
+                provider: 'google',
+                needsUsername: true
             });
-
-            // Reserve handle
-            await set(ref(database, `handles/${handle}`), user.uid);
-        } else {
-            // Update last login
-            await update(ref(database, 'users/' + user.uid), {
-                lastLogin: new Date().toISOString()
-            });
+            return { success: true, user, needsUsername: true };
         }
 
-        return { success: true, user };
+        await update(ref(database, 'users/' + user.uid), { lastLogin: new Date().toISOString() });
+        return { success: true, user, needsUsername: !userSnap.val()?.handle };
     } catch (error) {
         console.error('Google sign-in error:', error);
 
@@ -89,7 +83,10 @@ async function handleRedirectResult() {
             const user = result.user;
             const userSnap = await get(ref(database, 'users/' + user.uid));
             if (!userSnap.exists()) {
+                const numericId = await reserveNumericId(user.uid);
                 await set(ref(database, 'users/' + user.uid), {
+                    uid: user.uid,
+                    numericId,
                     name: user.displayName || 'مستخدم',
                     email: user.email,
                     profilePicture: user.photoURL || DEFAULT_AVATAR,
@@ -98,10 +95,12 @@ async function handleRedirectResult() {
                     followers: 0,
                     following: 0,
                     bio: '',
-                    provider: 'google'
+                    provider: 'google',
+                    needsUsername: true
                 });
+                return { success: true, user, needsUsername: true };
             }
-            return { success: true, user };
+            return { success: true, user, needsUsername: !userSnap.val()?.handle };
         }
         return { success: false };
     } catch (error) {
