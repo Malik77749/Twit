@@ -10,6 +10,7 @@ let auth, database;
 let activeConversation = null;
 let conversationListeners = new Map();
 let conversationsListener = null;
+let unreadListener = null;
 
 function init(authInstance, databaseInstance) {
     auth = authInstance;
@@ -395,8 +396,9 @@ function getUnreadCount(callback) {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
 
+    if (unreadListener) unreadListener();
     const convRef = ref(database, 'conversations');
-    return onValue(convRef, (snapshot) => {
+    unreadListener = onValue(convRef, (snapshot) => {
         let total = 0;
         if (snapshot.exists()) {
             snapshot.forEach(child => {
@@ -408,6 +410,7 @@ function getUnreadCount(callback) {
         }
         callback(total);
     });
+    return unreadListener;
 }
 
 /**
@@ -429,6 +432,10 @@ function cleanup() {
     if (conversationsListener) {
         conversationsListener();
         conversationsListener = null;
+    }
+    if (unreadListener) {
+        unreadListener();
+        unreadListener = null;
     }
     conversationListeners.forEach(unsub => unsub());
     conversationListeners.clear();

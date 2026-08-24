@@ -82,7 +82,9 @@ function clearUserCache() {
  */
 async function addNotification(database, toUserId, message, postId, metadata = {}) {
     try {
-        const notificationRef = push(ref(database, `notifications/${toUserId}`));
+        const stableTypes = new Set(['likes', 'retweets', 'follows']);
+        const stableKey = stableTypes.has(metadata.type) && metadata.actorId ? `${metadata.type}_${metadata.actorId}_${postId || toUserId}`.replace(/[^a-zA-Z0-9_-]/g, '_') : null;
+        const notificationRef = stableKey ? ref(database, `notifications/${toUserId}/${stableKey}`) : push(ref(database, `notifications/${toUserId}`));
         await set(notificationRef, {
             message: message,
             postId: postId,
