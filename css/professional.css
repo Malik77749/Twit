@@ -368,3 +368,8 @@ body { min-width: 0; }
   .mimer-splash-continue { padding: 9px 18px; }
 }
 @media (max-width: 480px) and (min-height: 721px) { .mimer-splash-logo { max-height: 67dvh; } }
+
+/* Explicit sizing prevents the SVG lockup from being cropped by mobile browser chrome */
+.mimer-splash-logo { height: min(67dvh, 650px); width: auto; max-width: 88vw; }
+@media (max-height: 720px) { .mimer-splash-logo { height: 58dvh; max-height: none; } }
+@media (max-width: 480px) { .mimer-splash-logo { max-width: 92vw; } }
