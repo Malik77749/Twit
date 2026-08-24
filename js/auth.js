@@ -272,12 +272,14 @@ async function loginWithPhone() {
     if (!phone || !password) {
         errorEl.innerText = 'يرجى إدخال رقم الهاتف وكلمة المرور';
         hideLoading();
+        isLoggingIn = false;
         return;
     }
 
     if (!isValidPhone(phone)) {
         errorEl.innerText = 'رقم الهاتف غير صالح';
         hideLoading();
+        isLoggingIn = false;
         return;
     }
 
@@ -293,7 +295,11 @@ async function loginWithPhone() {
             'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
             'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
             'auth/network-request-failed': 'تحقق من اتصال الإنترنت',
-            'auth/user-disabled': 'هذا الحساب معطل'
+            'auth/user-disabled': 'هذا الحساب معطل',
+            'auth/operation-not-allowed': 'التسجيل بالبريد غير مفعّل في إعدادات ميمر حالياً',
+            'auth/configuration-not-found': 'خدمة التسجيل غير مفعّلة في Firebase حالياً',
+            'CONFIGURATION_NOT_FOUND': 'خدمة التسجيل غير مفعّلة في Firebase حالياً',
+            'auth/invalid-api-key': 'إعدادات الاتصال بخدمة ميمر غير صحيحة'
         };
         errorEl.innerText = messages[error.code] || messages[error.message] || error.message;
         hideLoading();
@@ -312,6 +318,7 @@ async function login() {
     if (!email || !password) {
         errorEl.innerText = 'يرجى إدخال البريد الإلكتروني وكلمة المرور';
         hideLoading();
+        isLoggingIn = false;
         return;
     }
 
@@ -325,7 +332,11 @@ async function login() {
             'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
             'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
             'auth/network-request-failed': 'تحقق من اتصال الإنترنت',
-            'auth/user-disabled': 'هذا الحساب معطل'
+            'auth/user-disabled': 'هذا الحساب معطل',
+            'auth/operation-not-allowed': 'التسجيل بالبريد غير مفعّل في إعدادات ميمر حالياً',
+            'auth/configuration-not-found': 'خدمة التسجيل غير مفعّلة في Firebase حالياً',
+            'CONFIGURATION_NOT_FOUND': 'خدمة التسجيل غير مفعّلة في Firebase حالياً',
+            'auth/invalid-api-key': 'إعدادات الاتصال بخدمة ميمر غير صحيحة'
         };
         errorEl.innerText = messages[error.code] || messages[error.message] || error.message;
         hideLoading();
@@ -350,21 +361,23 @@ async function signupWithPhone() {
     const termsChecked = document.getElementById('terms-checkbox').checked;
     const errorEl = document.getElementById('error');
 
-    if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); return; }
-    if (!handle) { errorEl.innerText = 'أدخل اسم المستخدم (المعرف)'; hideLoading(); return; }
-    if (!password) { errorEl.innerText = 'أدخل كلمة المرور'; hideLoading(); return; }
-    if (!phone) { errorEl.innerText = 'أدخل رقم الهاتف'; hideLoading(); return; }
+    if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); isSigningUp = false; return; }
+    if (!handle) { errorEl.innerText = 'أدخل اسم المستخدم (المعرف)'; hideLoading(); isSigningUp = false; return; }
+    if (!password) { errorEl.innerText = 'أدخل كلمة المرور'; hideLoading(); isSigningUp = false; return; }
+    if (!phone) { errorEl.innerText = 'أدخل رقم الهاتف'; hideLoading(); isSigningUp = false; return; }
 
     if (captchaInput !== currentCaptcha) {
         errorEl.innerText = 'رمز التحقق غير صحيح';
         refreshCaptcha();
         hideLoading();
+        isSigningUp = false;
         return;
     }
 
     if (!termsChecked) {
         errorEl.innerText = 'يجب الموافقة على الشروط والسياسة';
         hideLoading();
+        isSigningUp = false;
         return;
     }
 
@@ -372,18 +385,21 @@ async function signupWithPhone() {
     if (!handleResult.valid) {
         errorEl.innerText = handleResult.error;
         hideLoading();
+        isSigningUp = false;
         return;
     }
 
     if (!isValidPhone(phone)) {
         errorEl.innerText = 'رقم الهاتف غير صالح';
         hideLoading();
+        isSigningUp = false;
         return;
     }
 
     if (password.length < 6) {
         errorEl.innerText = 'كلمة المرور 6 أحرف على الأقل';
         hideLoading();
+        isSigningUp = false;
         return;
     }
 
@@ -444,6 +460,10 @@ async function signupWithPhone() {
             'auth/email-already-in-use': 'رقم الهاتف مسجل بالفعل',
             'auth/invalid-email': 'البريد غير صالح',
             'auth/weak-password': 'كلمة المرور ضعيفة',
+            'auth/operation-not-allowed': 'التسجيل بالبريد غير مفعّل في إعدادات ميمر حالياً',
+            'auth/configuration-not-found': 'خدمة التسجيل غير مفعّلة في Firebase حالياً',
+            'CONFIGURATION_NOT_FOUND': 'خدمة التسجيل غير مفعّلة في Firebase حالياً',
+            'auth/invalid-api-key': 'إعدادات الاتصال بخدمة ميمر غير صحيحة',
             'HANDLE_TAKEN': 'اسم المستخدم حُجز للتو من مستخدم آخر، اختر اسمًا مختلفًا',
             'NUMERIC_ID_UNAVAILABLE': 'تعذر إنشاء المعرّف الرقمي، حاول مرة أخرى'
         };
@@ -467,21 +487,23 @@ async function signup() {
     const termsChecked = document.getElementById('terms-checkbox').checked;
     const errorEl = document.getElementById('error');
 
-    if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); return; }
-    if (!email) { errorEl.innerText = 'أدخل بريدك الإلكتروني'; hideLoading(); return; }
-    if (!handle) { errorEl.innerText = 'أدخل اسم المستخدم (المعرف)'; hideLoading(); return; }
-    if (!password) { errorEl.innerText = 'أدخل كلمة المرور'; hideLoading(); return; }
+    if (!name) { errorEl.innerText = 'أدخل اسمك'; hideLoading(); isSigningUp = false; return; }
+    if (!email) { errorEl.innerText = 'أدخل بريدك الإلكتروني'; hideLoading(); isSigningUp = false; return; }
+    if (!handle) { errorEl.innerText = 'أدخل اسم المستخدم (المعرف)'; hideLoading(); isSigningUp = false; return; }
+    if (!password) { errorEl.innerText = 'أدخل كلمة المرور'; hideLoading(); isSigningUp = false; return; }
 
     if (captchaInput !== currentCaptcha) {
         errorEl.innerText = 'رمز التحقق غير صحيح';
         refreshCaptcha();
         hideLoading();
+        isSigningUp = false;
         return;
     }
 
     if (!termsChecked) {
         errorEl.innerText = 'يجب الموافقة على الشروط والسياسة';
         hideLoading();
+        isSigningUp = false;
         return;
     }
 
@@ -489,12 +511,14 @@ async function signup() {
     if (!handleResult.valid) {
         errorEl.innerText = handleResult.error;
         hideLoading();
+        isSigningUp = false;
         return;
     }
 
     if (password.length < 6) {
         errorEl.innerText = 'كلمة المرور 6 أحرف على الأقل';
         hideLoading();
+        isSigningUp = false;
         return;
     }
 
@@ -530,6 +554,10 @@ async function signup() {
             'auth/email-already-in-use': 'البريد مستخدم بالفعل',
             'auth/invalid-email': 'البريد غير صالح',
             'auth/weak-password': 'كلمة المرور ضعيفة',
+            'auth/operation-not-allowed': 'التسجيل بالبريد غير مفعّل في إعدادات ميمر حالياً',
+            'auth/configuration-not-found': 'خدمة التسجيل غير مفعّلة في Firebase حالياً',
+            'CONFIGURATION_NOT_FOUND': 'خدمة التسجيل غير مفعّلة في Firebase حالياً',
+            'auth/invalid-api-key': 'إعدادات الاتصال بخدمة ميمر غير صحيحة',
             'HANDLE_TAKEN': 'اسم المستخدم حُجز للتو من مستخدم آخر، اختر اسمًا مختلفًا',
             'NUMERIC_ID_UNAVAILABLE': 'تعذر إنشاء المعرّف الرقمي، حاول مرة أخرى'
         };
