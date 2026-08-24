@@ -597,6 +597,10 @@ function showLogin() {
 function showSignup() {
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('signup-section').style.display = 'block';
+    document.getElementById('signup-phone-form').style.display = 'none';
+    document.getElementById('signup-email-form').style.display = 'block';
+    document.getElementById('tab-signup-phone')?.classList.remove('active');
+    document.getElementById('tab-signup-email')?.classList.add('active');
     document.getElementById('error').innerText = '';
 }
 
