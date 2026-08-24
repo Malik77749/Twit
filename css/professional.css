@@ -417,3 +417,26 @@ body { min-width: 0; }
 
 .profile-numeric-id { margin-top:4px; color:var(--text-secondary); font-size:12px; direction:ltr; text-align:right; letter-spacing:.03em; }
 .profile-edit-form { width:100%; max-width:560px; padding:16px; border:1px solid rgba(148,163,184,.16); border-radius:16px; background:rgba(15,23,42,.55); }
+
+
+/* Final onboarding presentation */
+.mimer-splash { background:#030711; }
+.mimer-splash-glow { display:none; }
+.mimer-splash-content { width:100%; max-width:none; padding:0; }
+.mimer-splash-logo { width:clamp(180px, 64vw, 300px); height:auto; max-width:calc(100vw - 48px); max-height:none; object-fit:contain; filter:drop-shadow(0 14px 34px rgba(15,105,255,.18)); }
+.suggested-accounts-card { max-height:calc(100dvh - 32px); overflow:auto; }
+.onboarding-topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.onboarding-skip { border:0; background:transparent; color:var(--text-secondary); font:inherit; font-weight:700; cursor:pointer; padding:8px; }
+.suggested-accounts-list { display:grid; gap:8px; max-height:min(48dvh, 440px); overflow:auto; margin:0 0 16px; }
+.suggested-account-row { display:flex; align-items:center; gap:10px; min-width:0; padding:10px; border:1px solid rgba(148,163,184,.16); border-radius:14px; background:rgba(15,23,42,.54); }
+.suggested-account-row img { width:44px; height:44px; border-radius:50%; object-fit:cover; flex:0 0 auto; }
+.suggested-account-info { display:grid; min-width:0; flex:1; gap:1px; }
+.suggested-account-info strong, .suggested-account-info span, .suggested-account-info small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.suggested-account-info span, .suggested-account-info small { color:var(--text-secondary); font-size:12px; direction:ltr; text-align:right; }
+.suggested-account-row .follow-btn { flex:0 0 auto; min-width:78px; }
+@media (max-width:480px) {
+  .account-onboarding { padding:12px; }
+  .account-onboarding-card { max-height:calc(100dvh - 24px); overflow:auto; }
+  .suggested-account-row { padding:8px; }
+  .suggested-account-row .follow-btn { min-width:68px; padding-inline:9px; font-size:12px; }
+}

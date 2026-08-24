@@ -7,7 +7,7 @@ import { clearUserCache } from './firebase-helpers.js?v=3';
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
 let auth, database;
-let loginMethod = 'phone'; // 'phone' or 'email'
+let loginMethod = 'email'; // 'phone' or 'email'
 let currentCaptcha = '';
 
 function init(authInstance, databaseInstance) {
@@ -429,6 +429,8 @@ async function signupWithPhone() {
             following: 0,
             profilePicture: DEFAULT_AVATAR,
             provider: 'phone',
+            country: countryCode,
+            needsSuggestions: true,
             emailVerified: false
         };
 
@@ -458,6 +460,7 @@ async function signup() {
     const name = document.getElementById('signup-name').value.trim();
     const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value.trim();
+    const country = document.getElementById('signup-country-email')?.value || 'OTHER';
     const handleInput = document.getElementById('signup-handle-email');
     const handle = handleInput?.value?.trim() || '';
     const captchaInput = document.getElementById('captcha-input').value.trim().toUpperCase();
@@ -511,6 +514,8 @@ async function signup() {
             following: 0,
             profilePicture: DEFAULT_AVATAR,
             provider: 'email',
+            country,
+            needsSuggestions: true,
             emailVerified: cred.user.emailVerified
         };
 

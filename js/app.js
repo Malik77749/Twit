@@ -804,9 +804,11 @@ window.saveUsernameOnboarding = async function() {
     try {
         const claim = await runTransaction(ref(database, `handles/${handle}`), current => current === null ? uid : current);
         if (!claim.committed || claim.snapshot.val() !== uid) throw new Error('TAKEN');
-        await update(ref(database, `users/${uid}`), { handle, needsUsername: false, usernameUpdatedAt: new Date().toISOString() });
+        const country = document.getElementById('onboarding-country')?.value || 'OTHER';
+        await update(ref(database, `users/${uid}`), { handle, country, needsUsername: false, needsSuggestions: true, usernameUpdatedAt: new Date().toISOString() });
         document.getElementById('username-onboarding').hidden = true;
         showToast('تم حجز اسم المستخدم بنجاح');
+        window.showSuggestedAccountsOnboarding?.();
     } catch (err) {
         if (error) error.textContent = err.message === 'TAKEN' ? 'الاسم حُجز للتو، اختر اسمًا آخر' : 'تعذر حفظ الاسم، حاول مرة أخرى';
         save.disabled = false;
@@ -829,6 +831,42 @@ document.getElementById('onboarding-handle')?.addEventListener('input', (event) 
     onboardingCheckTimer = setTimeout(() => checkOnboardingHandle(event.target.value), 220);
 });
 document.getElementById('onboarding-save')?.addEventListener('click', window.saveUsernameOnboarding);
+
+async function finishSuggestedAccounts() {
+    const uid = authInstance.currentUser?.uid;
+    const modal = document.getElementById('suggested-accounts-onboarding');
+    if (uid) { try { await update(ref(database, `users/${uid}`), { needsSuggestions: false, suggestionsCompletedAt: new Date().toISOString() }); } catch (_) {} }
+    if (modal) modal.hidden = true;
+    showView('home');
+    posts.loadPosts();
+}
+
+window.showSuggestedAccountsOnboarding = async function() {
+    const uid = authInstance.currentUser?.uid;
+    const modal = document.getElementById('suggested-accounts-onboarding');
+    const list = document.getElementById('suggested-accounts-list');
+    if (!uid || !modal || !list) return finishSuggestedAccounts();
+    modal.hidden = false;
+    list.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+    try {
+        const [usersSnap, currentSnap] = await Promise.all([get(ref(database, 'users')), get(ref(database, `users/${uid}`))]);
+        const current = currentSnap.val() || {};
+        const candidates = [];
+        if (usersSnap.exists()) usersSnap.forEach(child => {
+            if (child.key === uid) return;
+            const user = { id: child.key, ...child.val() };
+            if (['banned', 'suspended', 'deleted'].includes(user.accountStatus)) return;
+            if (current.country && user.country && current.country !== user.country) return;
+            candidates.push(user);
+        });
+        candidates.sort((a, b) => Number(b.followers || 0) - Number(a.followers || 0));
+        const selected = candidates.slice(0, 8);
+        if (!selected.length) { await finishSuggestedAccounts(); return; }
+        list.innerHTML = selected.map(user => `<div class="suggested-account-row"><img src="${escapeHtml(user.profilePicture || DEFAULT_AVATAR)}" alt=""><div class="suggested-account-info"><strong>${escapeHtml(user.name || 'مستخدم')}</strong><span>@${escapeHtml(user.handle || 'mimer')}</span><small>${Number(user.followers || 0)} متابع</small></div><button class="follow-btn" data-follow-id="${user.id}" onclick="followUser('${user.id}', event)">متابعة</button></div>`).join('');
+    } catch (error) { list.innerHTML = '<div class="empty-state"><p>تعذر تحميل الاقتراحات.</p></div>'; }
+};
+document.getElementById('suggested-skip')?.addEventListener('click', finishSuggestedAccounts);
+document.getElementById('suggested-done')?.addEventListener('click', finishSuggestedAccounts);
 
 // ===== Communities =====
 
@@ -1769,6 +1807,8 @@ async function checkUserRole(user) {
         updateTrending();
         if (!userData.handle || userData.needsUsername) {
             setTimeout(() => window.showUsernameOnboarding?.(), 250);
+        } else if (userData.needsSuggestions) {
+            setTimeout(() => window.showSuggestedAccountsOnboarding?.(), 250);
         }
     } catch (error) {
         showAuth();

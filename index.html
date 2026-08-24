@@ -94,7 +94,7 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css?v=8">
-    <link rel="stylesheet" href="css/professional.css?v=1">
+    <link rel="stylesheet" href="css/professional.css?v=2">
 
     <!-- PWA Service Worker -->
     <script>
@@ -108,7 +108,7 @@
     </script>
 
     <script>
-        // Show auth section immediately
+        // Keep the login surface ready behind the short brand splash.
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('auth-section').style.display = 'flex';
         });
@@ -125,15 +125,11 @@
             const splash = document.getElementById('mimer-splash');
             if (!splash) return;
             const closeSplash = () => {
+                if (splash.classList.contains('is-leaving')) return;
                 splash.classList.add('is-leaving');
-                window.setTimeout(() => splash.remove(), 520);
-                try { localStorage.setItem('mimer-splash-seen-v1', '1'); } catch (_) {}
+                window.setTimeout(() => splash.remove(), 420);
             };
-            let seen = false;
-            try { seen = localStorage.getItem('mimer-splash-seen-v1') === '1'; } catch (_) {}
-            if (seen) { splash.remove(); return; }
-            splash.querySelector('[data-splash-continue]')?.addEventListener('click', closeSplash);
-            window.setTimeout(closeSplash, 5200);
+            window.setTimeout(closeSplash, 2000);
         });
     </script>
 </head>
@@ -151,18 +147,30 @@
                 <input id="onboarding-handle" class="auth-input handle-input" type="text" dir="ltr" maxlength="20" autocomplete="off" placeholder="username">
             </div>
             <div id="onboarding-handle-feedback" class="handle-feedback" role="status" aria-live="polite">استخدم 3 إلى 20 حرفًا إنجليزيًا أو رقمًا</div>
+            <label for="onboarding-country">البلد</label>
+            <select id="onboarding-country" class="auth-select" style="width:100%;margin-bottom:10px;">
+                <option value="YE">اليمن</option><option value="SA">السعودية</option><option value="AE">الإمارات</option><option value="EG">مصر</option><option value="JO">الأردن</option><option value="IQ">العراق</option><option value="MA">المغرب</option><option value="DZ">الجزائر</option><option value="TN">تونس</option><option value="SD">السودان</option><option value="OTHER">بلد آخر</option>
+            </select>
             <div id="onboarding-handle-error" class="onboarding-error" role="alert"></div>
             <button id="onboarding-save" class="auth-btn" type="button" disabled>متابعة إلى ميمر</button>
+        </div>
+    </section>
+
+    <section id="suggested-accounts-onboarding" class="account-onboarding" hidden aria-labelledby="suggested-accounts-title">
+        <div class="account-onboarding-card suggested-accounts-card" role="dialog" aria-modal="true">
+            <div class="onboarding-topbar"><span class="onboarding-kicker">اكتشف مساحتك</span><button type="button" class="onboarding-skip" id="suggested-skip">تخطي</button></div>
+            <h2 id="suggested-accounts-title">حسابات قد تهمك</h2>
+            <p>اختر الحسابات الأقوى والأقرب إلى بلدك لتبدأ بخلاصة تناسب اهتماماتك. يمكنك تغيير اختياراتك لاحقًا.</p>
+            <div id="suggested-accounts-list" class="suggested-accounts-list"></div>
+            <button id="suggested-done" class="auth-btn" type="button">تم، إلى ميمر</button>
         </div>
     </section>
 
     <!-- Mimer first-visit brand experience -->
     <section id="mimer-splash" class="mimer-splash" aria-label="مرحبًا بك في ميمر">
         <div class="mimer-splash-glow" aria-hidden="true"></div>
-        <div class="mimer-splash-content">
-            <img class="mimer-splash-logo" src="assets/mimer-launch-original.jpg" alt="ميمر Mimer — تواصل وشارك، أول منصة عربية">
-            <p class="mimer-splash-welcome">مرحبًا بك في مساحتك العربية</p>
-            <button type="button" class="mimer-splash-continue" data-splash-continue>ابدأ الآن <span aria-hidden="true">←</span></button>
+        <div class="mimer-splash-content" aria-hidden="true">
+            <img class="mimer-splash-logo" src="assets/mimer-launch-original.jpg" alt="ميمر Mimer">
         </div>
     </section>
 
@@ -183,12 +191,12 @@
             <!-- Login Method Tabs -->
             <div id="login-section">
                 <div class="auth-tabs">
-                    <button class="auth-tab active" id="tab-phone">رقم الهاتف</button>
-                    <button class="auth-tab" id="tab-email">البريد الإلكتروني</button>
+                    <button class="auth-tab" id="tab-phone">رقم الهاتف</button>
+                    <button class="auth-tab active" id="tab-email">البريد الإلكتروني</button>
                 </div>
 
                 <!-- Phone Login -->
-                <div id="phone-login-section">
+                <div id="phone-login-section" style="display:none;">
                     <div class="phone-input-row">
                         <select class="auth-select" id="login-country-code">
                             <option value="967">🇾🇪 +967</option>
@@ -221,7 +229,7 @@
                 </div>
 
                 <!-- Email Login -->
-                <div id="email-login-section" style="display:none;">
+                <div id="email-login-section">
                     <input type="email" class="auth-input" id="login-email" placeholder="البريد الإلكتروني">
                     <input type="password" class="auth-input" id="login-password" placeholder="كلمة المرور">
                     <button class="auth-btn" id="login-btn">تسجيل الدخول</button>
@@ -308,7 +316,9 @@
                     <div class="handle-feedback" id="handle-feedback-email"></div>
                     <input type="email" class="auth-input" id="signup-email" placeholder="البريد الإلكتروني">
                     <input type="password" class="auth-input" id="signup-password" placeholder="كلمة المرور (6 أحرف على الأقل)">
-                    
+                    <select class="auth-select" id="signup-country-email" style="width:100%;margin-bottom:12px;">
+                        <option value="YE">اليمن</option><option value="SA">السعودية</option><option value="AE">الإمارات</option><option value="EG">مصر</option><option value="JO">الأردن</option><option value="IQ">العراق</option><option value="MA">المغرب</option><option value="DZ">الجزائر</option><option value="TN">تونس</option><option value="SD">السودان</option><option value="OTHER">بلد آخر</option>
+                    </select>
                     <!-- CAPTCHA Verification -->
                     <div class="captcha-box">
                         <div class="captcha-display-row">
