@@ -3,13 +3,14 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-    apiKey: "AIzaSyApU1ph6_FlzjpkmykJR0tXnUbNUr4RF04",
-    authDomain: "amine-tv-live.firebaseapp.com",
-    databaseURL: "https://amine-tv-live-default-rtdb.firebaseio.com",
-    projectId: "amine-tv-live",
-    storageBucket: "amine-tv-live.firebasestorage.app",
-    messagingSenderId: "915423630143",
-    appId: "1:915423630143:android:98c04849211a2e75d7798a"
+    apiKey: "AIzaSyCQYolSIdkBvuunY0r1DnxSHCNzjPrTcYY",
+    authDomain: "mimer-23cf6.firebaseapp.com",
+    databaseURL: "https://mimer-23cf6-default-rtdb.firebaseio.com",
+    projectId: "mimer-23cf6",
+    storageBucket: "mimer-23cf6.firebasestorage.app",
+    messagingSenderId: "894290551568",
+    appId: "1:894290551568:web:5270deb5704f625284bb95",
+    measurementId: "G-QSGNW29K5B"
 });
 
 const messaging = firebase.messaging();

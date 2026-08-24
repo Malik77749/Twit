@@ -7,8 +7,8 @@ from pathlib import Path
 
 import requests
 
-API_KEY = "AIzaSyApU1ph6_FlzjpkmykJR0tXnUbNUr4RF04"
-DB = "https://amine-tv-live-default-rtdb.firebaseio.com"
+API_KEY = "AIzaSyCQYolSIdkBvuunY0r1DnxSHCNzjPrTcYY"
+DB = "https://mimer-23cf6-default-rtdb.firebaseio.com"
 AUTH = "https://identitytoolkit.googleapis.com/v1"
 RUN = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
 
