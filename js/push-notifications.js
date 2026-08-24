@@ -130,7 +130,7 @@ function onForegroundMessage(callback) {
 
             const notification = new Notification(title || 'ميمر Mimer', {
                 body: body || 'لديك إشعار جديد',
-                icon: icon || '/icon-192.svg',
+                icon: icon || './assets/mimer-icon-original.png',
                 tag: payload.data?.tag || 'mimer-notification',
                 data: { url: click_action || '/' }
             });

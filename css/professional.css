@@ -373,3 +373,10 @@ body { min-width: 0; }
 .mimer-splash-logo { height: min(67dvh, 650px); width: auto; max-width: 88vw; }
 @media (max-height: 720px) { .mimer-splash-logo { height: 58dvh; max-height: none; } }
 @media (max-width: 480px) { .mimer-splash-logo { max-width: 92vw; } }
+
+/* Use the supplied transparent Mimer mark everywhere inside the product */
+.mimer-inline-icon { display: block; width: 64px; height: 48px; object-fit: contain; object-position: center; background: transparent; }
+.auth-box .mimer-inline-icon { width: 96px; height: 70px; filter: drop-shadow(0 12px 22px rgba(20,110,245,.28)); }
+.sidebar-logo .mimer-inline-icon { width: 48px; height: 38px; }
+.admin-auth-box .mimer-inline-icon { width: 96px; height: 70px; }
+.admin-sidebar-logo .mimer-inline-icon { width: 42px; height: 34px; }

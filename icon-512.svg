@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <defs><linearGradient id="mimer" x1="64" y1="54" x2="448" y2="458" gradientUnits="userSpaceOnUse"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs>
-  <rect width="512" height="512" rx="112" fill="#081225"/>
-  <rect x="32" y="32" width="448" height="448" rx="101" fill="url(#mimer)"/>
-  <path d="M128 334V178h54l74 91 74-91h54v156h-54v-78l-74 91-74-91v78h-54Z" fill="white"/>
-  <circle cx="386" cy="128" r="32" fill="#a7f3d0"/>
-</svg>

@@ -22,8 +22,8 @@ messaging.onBackgroundMessage(function(payload) {
 
     self.registration.showNotification(title || 'ميمر Mimer', {
         body: body || 'لديك إشعار جديد',
-        icon: icon || '/icon-192.svg',
-        badge: '/icon-192.svg',
+        icon: icon || './assets/mimer-icon-original.png',
+        badge: './assets/mimer-icon-original.png',
         tag: payload.data?.tag || 'mimer-notification',
         data: { url: click_action || '/' },
         vibrate: [200, 100, 200],

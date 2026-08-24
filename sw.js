@@ -25,8 +25,8 @@ const STATIC_ASSETS = [
     './js/two-factor.js',
     './js/image-cdn.js',
     './manifest.json',
-    './icon-192.svg',
-    './icon-512.svg'
+    './assets/mimer-icon-original.png',
+    './assets/mimer-icon-original.png'
 ];
 
 function isExternalRequest(url) {
