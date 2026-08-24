@@ -1,9 +1,10 @@
-const CACHE_NAME = 'mimer-v6';
+const CACHE_NAME = 'mimer-v7';
 const APP_ROOT = new URL('./', self.location).pathname;
 const STATIC_ASSETS = [
     './',
     './index.html',
     './css/style.css',
+    './css/professional.css',
     './js/app.js',
     './js/auth.js',
     './js/config.js',
@@ -26,7 +27,10 @@ const STATIC_ASSETS = [
     './js/image-cdn.js',
     './manifest.json',
     './assets/mimer-icon-original.png',
-    './assets/mimer-icon-original.png'
+    './assets/mimer-icon-original.png',
+    './assets/mimer-launch-original.jpg',
+    './js/verification.js',
+    './js/verified.js'
 ];
 
 function isExternalRequest(url) {

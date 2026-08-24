@@ -246,12 +246,12 @@
 
             <div id="signup-section" style="display: none;">
                 <div class="auth-tabs">
-                    <button class="auth-tab active" id="tab-signup-phone" onclick="document.getElementById('signup-phone-form').style.display='block';document.getElementById('signup-email-form').style.display='none';this.classList.add('active');document.getElementById('tab-signup-email').classList.remove('active');">رقم الهاتف</button>
-                    <button class="auth-tab" id="tab-signup-email" onclick="document.getElementById('signup-phone-form').style.display='none';document.getElementById('signup-email-form').style.display='block';this.classList.add('active');document.getElementById('tab-signup-phone').classList.remove('active');">البريد الإلكتروني</button>
+                    <button class="auth-tab" id="tab-signup-phone" onclick="document.getElementById('signup-phone-form').style.display='block';document.getElementById('signup-email-form').style.display='none';this.classList.add('active');document.getElementById('tab-signup-email').classList.remove('active');">رقم الهاتف</button>
+                    <button class="auth-tab active" id="tab-signup-email" onclick="document.getElementById('signup-phone-form').style.display='none';document.getElementById('signup-email-form').style.display='block';this.classList.add('active');document.getElementById('tab-signup-phone').classList.remove('active');">البريد الإلكتروني</button>
                 </div>
 
                 <!-- Phone Signup -->
-                <div id="signup-phone-form">
+                <div id="signup-phone-form" style="display:none;">
                     <input type="text" class="auth-input" id="signup-name-phone" placeholder="الاسم الكامل">
                     <div class="handle-input-wrap">
                         <span class="handle-prefix">@</span>
@@ -307,7 +307,7 @@
                 </div>
 
                 <!-- Email Signup -->
-                <div id="signup-email-form" style="display:none;">
+                <div id="signup-email-form">
                     <input type="text" class="auth-input" id="signup-name" placeholder="الاسم الكامل">
                     <div class="handle-input-wrap">
                         <span class="handle-prefix">@</span>
