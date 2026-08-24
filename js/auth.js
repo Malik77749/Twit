@@ -295,7 +295,7 @@ async function loginWithPhone() {
             'auth/network-request-failed': 'تحقق من اتصال الإنترنت',
             'auth/user-disabled': 'هذا الحساب معطل'
         };
-        errorEl.innerText = messages[error.code] || error.message;
+        errorEl.innerText = messages[error.code] || messages[error.message] || error.message;
         hideLoading();
         isLoggingIn = false;
     }
@@ -327,7 +327,7 @@ async function login() {
             'auth/network-request-failed': 'تحقق من اتصال الإنترنت',
             'auth/user-disabled': 'هذا الحساب معطل'
         };
-        errorEl.innerText = messages[error.code] || error.message;
+        errorEl.innerText = messages[error.code] || messages[error.message] || error.message;
         hideLoading();
         isLoggingIn = false;
     }
@@ -445,7 +445,7 @@ async function signupWithPhone() {
             'HANDLE_TAKEN': 'اسم المستخدم حُجز للتو من مستخدم آخر، اختر اسمًا مختلفًا',
             'NUMERIC_ID_UNAVAILABLE': 'تعذر إنشاء المعرّف الرقمي، حاول مرة أخرى'
         };
-        errorEl.innerText = messages[error.code] || error.message;
+        errorEl.innerText = messages[error.code] || messages[error.message] || error.message;
         hideLoading();
         isSigningUp = false;
     }
@@ -528,7 +528,7 @@ async function signup() {
             'HANDLE_TAKEN': 'اسم المستخدم حُجز للتو من مستخدم آخر، اختر اسمًا مختلفًا',
             'NUMERIC_ID_UNAVAILABLE': 'تعذر إنشاء المعرّف الرقمي، حاول مرة أخرى'
         };
-        errorEl.innerText = messages[error.code] || error.message;
+        errorEl.innerText = messages[error.code] || messages[error.message] || error.message;
         hideLoading();
         isSigningUp = false;
     }

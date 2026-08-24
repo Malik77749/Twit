@@ -414,3 +414,6 @@ body { min-width: 0; }
 .primary-btn { color:#fff; background:linear-gradient(135deg,#0ea5e9,#2563eb); }
 .secondary-btn { color:#dbeafe; background:rgba(148,163,184,.14); }
 @media (max-width:560px) { .profile-media-pickers { grid-template-columns:1fr; } .account-onboarding-card { padding:24px 18px; } .image-cropper-card { padding:12px; } }
+
+.profile-numeric-id { margin-top:4px; color:var(--text-secondary); font-size:12px; direction:ltr; text-align:right; letter-spacing:.03em; }
+.profile-edit-form { width:100%; max-width:560px; padding:16px; border:1px solid rgba(148,163,184,.16); border-radius:16px; background:rgba(15,23,42,.55); }

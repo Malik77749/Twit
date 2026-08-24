@@ -35,6 +35,8 @@ async function showProfile(userId) {
         document.getElementById('profile-name').innerHTML = escapeHtml(userData.name || 'مستخدم') + protectedIcon;
         document.getElementById('profile-view-name').innerHTML = escapeHtml(userData.name || 'مستخدم') + protectedIcon;
         document.getElementById('profile-handle').textContent = '@' + (userData.handle || (userData.name || 'user').replace(/\s/g, '').toLowerCase());
+        const numericIdEl = document.getElementById('profile-numeric-id');
+        if (numericIdEl) numericIdEl.textContent = userData.numericId ? `معرّف ميمر: ${userData.numericId}` : 'معرّف ميمر: قيد التحديث';
         document.getElementById('profile-followers').textContent = userData.followers || 0;
         document.getElementById('profile-following').textContent = userData.following || 0;
         document.getElementById('profile-picture').src = userData.profilePicture || DEFAULT_AVATAR;
@@ -313,6 +315,8 @@ async function saveProfile() {
         document.getElementById('drawer-name').textContent = name;
 
         document.getElementById('profile-handle').textContent = '@' + newHandle;
+        const numericIdEl = document.getElementById('profile-numeric-id');
+        if (numericIdEl && currentUserData.numericId) numericIdEl.textContent = `معرّف ميمر: ${currentUserData.numericId}`;
         document.getElementById('profile-edit-form').style.display = 'none';
         showToast('تم تحديث الملف الشخصي');
     } catch (error) {
