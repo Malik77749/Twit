@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Public identity and discovery resources
+Sitemap: https://malik77749.github.io/Twit/sitemap.xml
+
+# Keep private/admin and test surfaces out of search results
+Disallow: /admin.html
+Disallow: /test-runner.html
+Disallow: /test-automation.js

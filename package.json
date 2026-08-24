@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node scripts/static-check.mjs"
+    "check": "node scripts/static-check.mjs && node scripts/seo-check.mjs",
+    "seo:check": "node scripts/seo-check.mjs"
   }
 }
