@@ -25,6 +25,7 @@ let allUsers = [];
 let allPosts = [];
 let allReports = [];
 let allAuditLogs = [];
+let allVerificationThreads = [];
 let currentUsersFilter = 'all';
 let currentPostsFilter = 'all';
 let currentReportsFilter = 'pending';
@@ -173,7 +174,7 @@ onAuthStateChanged(auth, async (user) => {
 
 // ===== Navigation =====
 window.switchAdminView = (view) => {
-    const views = ['dashboard', 'users', 'posts', 'reports', 'communities', 'settings', 'audit'];
+    const views = ['dashboard', 'users', 'posts', 'reports', 'verification', 'communities', 'settings', 'audit'];
     views.forEach(v => {
         const el = document.getElementById(`${v}-view`);
         if (el) el.style.display = v === view ? 'block' : 'none';
@@ -185,6 +186,7 @@ window.switchAdminView = (view) => {
     if (view === 'users') renderUsersTable();
     if (view === 'posts') renderPostsTable();
     if (view === 'reports') renderReportsList();
+    if (view === 'verification') loadVerificationInbox();
     if (view === 'audit') renderAuditList();
     if (view === 'communities') renderCommunitiesList();
     if (view === 'settings') loadSettings();
@@ -231,6 +233,18 @@ async function loadAllData() {
                 allReports.push({ id: child.key, ...child.val() });
             });
         }
+
+        // Load verification inbox
+        const verificationSnap = await get(ref(database, 'verificationThreads'));
+        allVerificationThreads = [];
+        if (verificationSnap.exists()) verificationSnap.forEach(child => {
+            const raw = child.val() || {};
+            allVerificationThreads.push({ id: child.key, ...(raw.meta || {}), messages: raw.messages || {} });
+        });
+        allVerificationThreads.sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
+        const verificationBadge = document.getElementById('verification-badge');
+        const unreadVerification = allVerificationThreads.filter(t => t.unreadForAdmin).length;
+        if (verificationBadge) { verificationBadge.textContent = unreadVerification; verificationBadge.style.display = unreadVerification ? 'flex' : 'none'; }
 
         // Load audit logs
         const auditSnap = await get(ref(database, 'auditLog'));
@@ -577,11 +591,22 @@ async function logAudit(action, targetId, targetName, details = '') {
 }
 
 window.verifyUser = async (uid) => {
+    const user = allUsers.find(u => u.id === uid);
+    const startInput = prompt('تاريخ بداية التوثيق (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
+    if (!startInput) return;
+    const endInput = prompt('تاريخ نهاية التوثيق (YYYY-MM-DD):', new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10));
+    if (!endInput) return;
+    const start = new Date(`${startInput}T00:00:00Z`);
+    const end = new Date(`${endInput}T23:59:59Z`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) { showToast('تواريخ التوثيق غير صحيحة', 'error'); return; }
     try {
-        await update(ref(database, `users/${uid}`), { verified: true });
-        const user = allUsers.find(u => u.id === uid);
-        if (user) user.verified = true;
-        await logAudit('verify', uid, getUserName(user || {}), 'توثيق الحساب');
+        await update(ref(database, `users/${uid}`), { verified: 'blue', verificationStart: start.toISOString(), verificationEnd: end.toISOString() });
+        const noticeRef = push(ref(database, `notifications/${uid}`));
+        await set(noticeRef, { type: 'verification', message: `تم توثيق حسابك في ميمر حتى ${endInput}. سنذكّرك عند اقتراب التجديد.`, from: 'admin', read: false, timestamp: new Date().toISOString() });
+        const days = Math.ceil((end.getTime() - Date.now()) / 86400000);
+        if (days <= 30) { const renewalRef = push(ref(database, `notifications/${uid}`)); await set(renewalRef, { type: 'verification-renewal', message: `ينتهي توثيق حسابك خلال ${Math.max(1, days)} يومًا. يمكنك طلب التجديد من إعدادات الحساب.`, from: 'admin', read: false, timestamp: new Date().toISOString() }); }
+        if (user) { user.verified = 'blue'; user.verificationStart = start.toISOString(); user.verificationEnd = end.toISOString(); }
+        await logAudit('verify', uid, getUserName(user || {}), `توثيق أزرق من ${startInput} إلى ${endInput}`);
         showToast('تم توثيق الحساب', 'success');
         openUserModal(uid);
         renderUsersTable();
@@ -592,7 +617,7 @@ window.verifyUser = async (uid) => {
 
 window.unverifyUser = async (uid) => {
     try {
-        await update(ref(database, `users/${uid}`), { verified: false });
+        await update(ref(database, `users/${uid}`), { verified: false, verificationStart: null, verificationEnd: null });
         const user = allUsers.find(u => u.id === uid);
         if (user) user.verified = false;
         await logAudit('unverify', uid, getUserName(user || {}), 'إلغاء التوثيق');
@@ -1042,6 +1067,14 @@ async function loadSettings() {
             document.getElementById('setting-maintenance').checked = s.maintenance || false;
             document.getElementById('setting-maintenance-msg').value = s.maintenanceMsg || '';
         }
+        const verificationSnap = await get(ref(database, 'verificationSettings'));
+        const v = verificationSnap.exists() ? verificationSnap.val() : {};
+        const autoReply = document.getElementById('setting-verification-auto-reply');
+        const autoText = document.getElementById('setting-verification-auto-text');
+        const available = document.getElementById('setting-verification-available');
+        if (autoReply) autoReply.checked = v.autoReplyEnabled === true;
+        if (autoText) autoText.value = v.autoReply || '';
+        if (available) available.checked = v.adminAvailable !== false;
     } catch (e) {
         console.error('Load settings error:', e);
     }
@@ -1062,7 +1095,13 @@ window.saveSettings = async () => {
             updatedBy: currentAdmin.uid
         };
         await set(ref(database, 'siteSettings'), settings);
-        await logAudit('update_settings', '', '', 'تحديث إعدادات الموقع');
+        await set(ref(database, 'verificationSettings'), {
+            autoReplyEnabled: document.getElementById('setting-verification-auto-reply')?.checked === true,
+            autoReply: document.getElementById('setting-verification-auto-text')?.value.trim().slice(0, 1000) || '',
+            adminAvailable: document.getElementById('setting-verification-available')?.checked !== false,
+            updatedAt: new Date().toISOString(), updatedBy: currentAdmin.uid
+        });
+        await logAudit('update_settings', '', '', 'تحديث إعدادات الموقع ورسائل التوثيق');
         showToast('تم حفظ الإعدادات', 'success');
     } catch (e) {
         showToast('خطأ: ' + e.message, 'error');
@@ -1258,3 +1297,60 @@ document.addEventListener('keydown', (e) => {
 });
 
 console.log('Admin panel loaded OK');
+
+
+// ===== Verification Messages =====
+window.loadVerificationInbox = async function() {
+    const list = document.getElementById('verification-threads-list');
+    if (!list) return;
+    try {
+        const snap = await get(ref(database, 'verificationThreads'));
+        allVerificationThreads = [];
+        if (snap.exists()) snap.forEach(child => {
+            const raw = child.val() || {};
+            allVerificationThreads.push({ id: child.key, ...(raw.meta || {}), messages: raw.messages || {} });
+        });
+        allVerificationThreads.sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
+        const unread = allVerificationThreads.filter(t => t.unreadForAdmin).length;
+        const badge = document.getElementById('verification-badge');
+        if (badge) { badge.textContent = unread; badge.style.display = unread ? 'flex' : 'none'; }
+        if (!allVerificationThreads.length) {
+            list.innerHTML = '<div class="admin-empty"><i class="fas fa-circle-check"></i><h3>لا توجد طلبات توثيق</h3><p>ستظهر المحادثات الجديدة هنا.</p></div>';
+            return;
+        }
+        list.innerHTML = allVerificationThreads.map(thread => `
+          <button class="admin-verification-thread ${thread.unreadForAdmin ? 'unread' : ''}" onclick="openVerificationAdminChat('${thread.id}')">
+            <img src="${getUserAvatar(thread)}" alt="">
+            <span><strong>${escapeHtml(thread.userName || 'مستخدم')}</strong><small>@${escapeHtml(thread.userHandle || '')}</small><em>${timeAgo(thread.lastMessageAt)}</em></span>
+          </button>`).join('');
+    } catch (error) { list.innerHTML = `<div class="admin-empty"><p>تعذر تحميل رسائل التوثيق: ${escapeHtml(error.message)}</p></div>`; }
+};
+
+window.openVerificationAdminChat = async function(uid) {
+    const panel = document.getElementById('verification-chat-panel');
+    const thread = allVerificationThreads.find(item => item.id === uid);
+    if (!panel || !thread) return;
+    await update(ref(database, `verificationThreads/${uid}/meta`), { unreadForAdmin: false });
+    const messages = Object.values(thread.messages || {}).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    panel.innerHTML = `
+      <div class="admin-chat-header"><img src="${getUserAvatar(thread)}" alt=""><div><strong>${escapeHtml(thread.userName || 'مستخدم')}</strong><small>@${escapeHtml(thread.userHandle || '')}</small></div></div>
+      <div id="admin-verification-messages" class="admin-chat-messages">${messages.length ? messages.map(m => `<div class="admin-chat-bubble ${m.senderRole === 'user' ? 'user' : 'admin'}"><div>${escapeHtml(m.text)}</div><small>${formatTime(m.timestamp)}</small></div>`).join('') : '<div class="admin-empty"><p>لا توجد رسائل بعد.</p></div>'}</div>
+      <div class="admin-chat-compose"><textarea id="admin-verification-reply" maxlength="1000" placeholder="اكتب ردًا للمستخدم..."></textarea><button class="action-btn primary" onclick="sendVerificationAdminReply('${uid}')"><i class="fas fa-paper-plane"></i> إرسال</button></div>`;
+    const messagesBox = document.getElementById('admin-verification-messages');
+    if (messagesBox) messagesBox.scrollTop = messagesBox.scrollHeight;
+};
+
+window.sendVerificationAdminReply = async function(uid) {
+    const input = document.getElementById('admin-verification-reply');
+    const text = input?.value.trim().slice(0, 1000);
+    if (!text) return;
+    try {
+        const now = new Date().toISOString();
+        await set(push(ref(database, `verificationThreads/${uid}/messages`)), { senderId: currentAdmin.uid, senderRole: 'admin', text, timestamp: now });
+        await update(ref(database, `verificationThreads/${uid}/meta`), { lastMessageAt: now, unreadForUser: true, unreadForAdmin: false, status: 'in_review' });
+        input.value = '';
+        await loadVerificationInbox();
+        openVerificationAdminChat(uid);
+        showToast('تم إرسال الرد', 'success');
+    } catch (error) { showToast('تعذر إرسال الرد: ' + error.message, 'error'); }
+};

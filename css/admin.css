@@ -1129,3 +1129,24 @@ body {
     background-color: var(--accent);
     border-radius: 2px;
 }
+
+
+/* Verification inbox */
+.verification-admin-grid { display:grid; grid-template-columns:minmax(240px, .8fr) minmax(360px, 1.6fr); gap:16px; min-height:520px; }
+.admin-verification-thread { width:100%; display:flex; align-items:center; gap:12px; text-align:right; color:inherit; background:var(--bg-secondary); border:1px solid var(--border-color); padding:13px; border-radius:14px; margin-bottom:8px; cursor:pointer; }
+.admin-verification-thread:hover, .admin-verification-thread.unread { border-color:var(--accent); background:rgba(29,155,240,.08); }
+.admin-verification-thread img, .admin-chat-header img { width:44px; height:44px; border-radius:50%; object-fit:cover; }
+.admin-verification-thread span { display:grid; min-width:0; flex:1; gap:3px; }
+.admin-verification-thread small, .admin-verification-thread em, .admin-chat-header small { color:var(--text-secondary); font-size:12px; font-style:normal; }
+.admin-verification-thread em { margin-top:2px; }
+.admin-chat-panel { background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:18px; min-height:520px; display:flex; flex-direction:column; overflow:hidden; }
+.admin-chat-header { display:flex; align-items:center; gap:12px; padding:16px; border-bottom:1px solid var(--border-color); }
+.admin-chat-header div { display:grid; gap:3px; }
+.admin-chat-messages { flex:1; overflow:auto; padding:16px; min-height:300px; }
+.admin-chat-bubble { max-width:78%; padding:10px 13px; border-radius:14px; margin:8px 0; line-height:1.6; }
+.admin-chat-bubble.user { margin-left:auto; background:rgba(29,155,240,.14); }
+.admin-chat-bubble.admin { margin-right:auto; background:var(--bg-hover); }
+.admin-chat-bubble small { display:block; color:var(--text-secondary); font-size:11px; margin-top:4px; }
+.admin-chat-compose { display:flex; gap:8px; padding:12px; border-top:1px solid var(--border-color); }
+.admin-chat-compose textarea { flex:1; min-height:48px; resize:vertical; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:12px; color:inherit; padding:10px; font:inherit; }
+@media (max-width: 760px) { .verification-admin-grid { grid-template-columns:1fr; } .admin-chat-panel { min-height:430px; } .admin-chat-compose { flex-direction:column; } .admin-chat-compose .action-btn { width:100%; } }

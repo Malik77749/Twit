@@ -31,6 +31,7 @@ import * as trending from './trending.js?v=3';
 import * as googleAuth from './google-auth.js?v=3';
 import * as communities from './communities.js?v=3';
 import * as twoFactor from './two-factor.js?v=4';
+import * as verification from './verification.js?v=1';
 import { getUserData } from './firebase-helpers.js?v=3';
 import './improvements.js?v=1';
 
@@ -68,6 +69,7 @@ try {
     googleAuth.init(authInstance, database);
     communities.init(authInstance, database);
     twoFactor.init(authInstance, database);
+    verification.init(authInstance, database);
     theme.init();
     shortcuts.init();
     a11y.init();
@@ -1118,6 +1120,11 @@ window.showSettings = async function() {
         adminLink.style.display = userData?.isAdmin === true ? 'flex' : 'none';
     }
     load2FAStatus();
+};
+
+window.showVerificationCenter = function() {
+    const container = document.getElementById('settings-content');
+    if (container) verification.renderVerificationCenter(container);
 };
 
 window.showAccountSecurity = async function() {

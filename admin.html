@@ -52,6 +52,10 @@
                     <i class="fas fa-flag"></i><span>البلاغات</span>
                     <span class="nav-badge" id="reports-badge" style="display:none;"></span>
                 </button>
+                <button class="admin-nav-item" data-view="verification" onclick="switchAdminView('verification')">
+                    <i class="fas fa-circle-check"></i><span>رسائل التوثيق</span>
+                    <span class="nav-badge" id="verification-badge" style="display:none;"></span>
+                </button>
                 <button class="admin-nav-item" data-view="communities" onclick="switchAdminView('communities')">
                     <i class="fas fa-people-group"></i><span>المجتمعات</span>
                 </button>
@@ -231,6 +235,18 @@
                 </div>
             </div>
 
+            <!-- ===== VERIFICATION MESSAGES VIEW ===== -->
+            <div id="verification-view" style="display:none;">
+                <div class="admin-header">
+                    <h2>رسائل طلبات التوثيق</h2>
+                    <div class="admin-header-actions"><button class="action-btn outline small" onclick="loadVerificationInbox()"><i class="fas fa-refresh"></i> تحديث</button></div>
+                </div>
+                <div class="verification-admin-grid">
+                    <div id="verification-threads-list"><div class="admin-spinner"></div></div>
+                    <div id="verification-chat-panel" class="admin-chat-panel"><div class="admin-empty"><i class="fas fa-comments"></i><h3>اختر محادثة</h3><p>ستظهر هنا رسائل طلبات التوثيق.</p></div></div>
+                </div>
+            </div>
+
             <!-- ===== COMMUNITIES VIEW ===== -->
             <div id="communities-view" style="display:none;">
                 <div class="admin-header">
@@ -259,6 +275,12 @@
                             <span>وصف الموقع</span>
                             <input type="text" class="admin-input" id="setting-site-desc" style="max-width:250px;margin-right:auto;" placeholder="منصة تواصل اجتماعي">
                         </div>
+                    </div>
+                    <div class="admin-settings-section">
+                        <h3 class="admin-settings-title">رسائل التوثيق</h3>
+                        <div class="admin-settings-item"><i class="fas fa-robot"></i><span>الرد الآلي عند عدم التوفر</span><label class="admin-toggle"><input type="checkbox" id="setting-verification-auto-reply"><span class="admin-toggle-slider"></span></label></div>
+                        <div class="admin-settings-item"><i class="fas fa-message"></i><input type="text" class="admin-input" id="setting-verification-auto-text" style="flex:1;" maxlength="1000" placeholder="شكرًا لتواصلك. سيرد فريق ميمر عند توفره."></div>
+                        <div class="admin-settings-item"><i class="fas fa-headset"></i><span>الإدارة متاحة الآن</span><label class="admin-toggle"><input type="checkbox" id="setting-verification-available" checked><span class="admin-toggle-slider"></span></label></div>
                     </div>
                     <div class="admin-settings-section">
                         <h3 class="admin-settings-title">التسجيل</h3>

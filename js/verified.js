@@ -14,8 +14,10 @@ async function isVerified(userId) {
     if (!userId) return false;
 
     try {
-        const snapshot = await get(ref(database, `users/${userId}/verified`));
-        if (snapshot.exists()) return snapshot.val();
+        const userSnap = await get(ref(database, `users/${userId}`));
+        const user = userSnap.exists() ? userSnap.val() : {};
+        if (user.verified && user.verificationEnd && Date.now() > new Date(user.verificationEnd).getTime()) return false;
+        if (user.verified) return user.verified === true ? 'blue' : user.verified;
 
         // Check admin status as fallback
         const adminSnap = await get(ref(database, `users/${userId}/isAdmin`));

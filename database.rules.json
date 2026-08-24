@@ -4,7 +4,7 @@
       ".indexOn": ["phone", "handle"],
       "$uid": {
         ".read": true,
-        ".write": "auth.uid === $uid",
+        ".write": "auth.uid === $uid && (!data.exists() || (newData.child('isAdmin').val() === data.child('isAdmin').val() && newData.child('verified').val() === data.child('verified').val() && newData.child('verificationStart').val() === data.child('verificationStart').val() && newData.child('verificationEnd').val() === data.child('verificationEnd').val()))",
         "name": {
           ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 50"
         },
@@ -19,8 +19,10 @@
         },
         "verified": {
           ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
-          ".validate": "newData.isBoolean()"
+          ".validate": "newData.isBoolean() || newData.val() === 'blue'"
         },
+        "verificationStart": { ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true", ".validate": "newData.isString() || newData.val() === null" },
+        "verificationEnd": { ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true", ".validate": "newData.isString() || newData.val() === null" },
         "followers": {
           ".validate": "newData.isNumber()"
         },
@@ -210,6 +212,25 @@
       }
     },
 
+    "verificationThreads": {
+      "$uid": {
+        ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('isAdmin').val() === true",
+        "meta": {
+          ".write": "auth.uid === $uid || root.child('users').child(auth.uid).child('isAdmin').val() === true",
+          ".validate": "newData.hasChildren(['userId','status','lastMessageAt']) && newData.child('userId').val() === $uid && newData.child('status').isString() && newData.child('lastMessageAt').isString()"
+        },
+        "messages": {
+          "$messageId": {
+            ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && auth.uid === $uid && newData.child('senderId').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['senderId','senderRole','text','timestamp']) && newData.child('senderId').isString() && newData.child('senderRole').isString() && newData.child('text').isString() && newData.child('text').val().length <= 1000 && newData.child('timestamp').isString()"
+          }
+        }
+      }
+    },
+    "verificationSettings": {
+      ".read": "auth != null",
+      ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true"
+    },
     "warnings": {
       "$uid": {
         ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('isAdmin').val() === true",
