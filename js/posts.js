@@ -1,5 +1,5 @@
 // Posts Module — Upgraded with Pagination, Rate Limiting, Denormalization
-import { ref, push, set, get, update, remove, increment, query, orderByChild, limitToLast, onValue, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, push, set, get, update, remove, increment, runTransaction, query, orderByChild, limitToLast, onValue, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js?v=3';
 import { showLoading, hideLoading, showView } from './ui.js?v=3';
@@ -535,20 +535,10 @@ async function followUser(userId, event) {
     const followRef = ref(database, `followers/${userId}/${currentUserId}`);
 
     try {
-        const snapshot = await get(followRef);
-        const isFollowing = snapshot.exists();
-        const updates = {};
-
-        if (isFollowing) {
-            await remove(followRef);
-            updates[`users/${userId}/followers`] = increment(-1);
-            updates[`users/${currentUserId}/following`] = increment(-1);
-        } else {
-            await set(followRef, { timestamp: new Date().toISOString() });
-            updates[`users/${userId}/followers`] = increment(1);
-            updates[`users/${currentUserId}/following`] = increment(1);
+        const transaction = await runTransaction(followRef, current => current ? null : { timestamp: new Date().toISOString() });
+        const isFollowing = transaction.snapshot.exists();
+        if (!isFollowing) {
             rateLimiter.recordAction(currentUserId, 'follow');
-
             const actorData = await getUserData(database, currentUserId);
             const name = actorData.name || await getUserName(database, currentUserId);
             await addNotification(database, userId, `بدأ ${name} بمتابعتك`, null, {
@@ -559,8 +549,6 @@ async function followUser(userId, event) {
             });
         }
 
-        await update(ref(database), updates);
-
         document.querySelectorAll(`[data-follow-id="${userId}"]`).forEach(btn => {
             if (isFollowing) {
                 btn.className = 'follow-btn';
@@ -570,7 +558,12 @@ async function followUser(userId, event) {
                 btn.textContent = 'متابَع';
             }
         });
-
+        const liveTargetFollowers = await get(ref(database, `followers/${userId}`));
+        const liveAllFollowers = await get(ref(database, 'followers'));
+        const liveFollowing = liveAllFollowers.exists() ? Object.values(liveAllFollowers.val() || {}).filter(record => record && Object.prototype.hasOwnProperty.call(record, currentUserId)).length : 0;
+        if (window.currentProfileUserId === userId) document.getElementById('profile-followers')?.replaceChildren(document.createTextNode(String(liveTargetFollowers.exists() ? Object.keys(liveTargetFollowers.val() || {}).length : 0)));
+        if (window.currentProfileUserId === currentUserId) document.getElementById('profile-following')?.replaceChildren(document.createTextNode(String(liveFollowing)));
+        document.getElementById('drawer-following')?.replaceChildren(document.createTextNode(String(liveFollowing)));
         showToast(isFollowing ? 'تم إلغاء المتابعة' : 'تمت المتابعة');
     } catch (error) {
         showToast('خطأ: ' + error.message);

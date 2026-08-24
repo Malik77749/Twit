@@ -671,7 +671,9 @@
                         <button class="back-btn" onclick="closeDMChat()"><i class="fas fa-arrow-right"></i></button>
                         <img id="dm-chat-avatar" src="" alt="" class="dm-chat-header-avatar">
                         <span id="dm-chat-name" class="dm-chat-header-name"></span>
+                        <button id="dm-delete-conversation-btn" class="icon-btn" title="حذف المحادثة" style="margin-right:auto;" onclick="deleteActiveDMConversation()"><i class="fas fa-trash"></i></button>
                     </div>
+                    <div id="dm-request-banner" style="display:none;"></div>
                     <div id="dm-messages-list" class="dm-messages-list"></div>
                     <div class="dm-input-bar">
                         <input type="text" id="dm-input" placeholder="اكتب رسالة..." autocomplete="off">
@@ -779,6 +781,15 @@
                     </div>
                     <div class="settings-section">
                         <h3 class="settings-title">الخصوصية والأمان</h3>
+                        <div class="settings-item" style="cursor:default;">
+                            <i class="fas fa-envelope"></i><span style="flex:1;">من يستطيع مراسلتي؟</span>
+                            <select id="message-privacy-select" onchange="saveMessagePrivacy(this.value)" style="background:var(--bg-secondary);color:inherit;border:1px solid var(--border-color);border-radius:10px;padding:8px;max-width:210px;">
+                                <option value="everyone">الجميع</option>
+                                <option value="following">الحسابات التي أتابعها</option>
+                                <option value="mutual">المتابعة المتبادلة</option>
+                                <option value="none">لا أحد</option>
+                            </select>
+                        </div>
                         <button class="settings-item" onclick="showBlockedUsers()">
                             <i class="fas fa-ban"></i><span>المحظورون</span><i class="fas fa-chevron-left settings-arrow"></i>
                         </button>

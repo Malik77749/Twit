@@ -1,7 +1,7 @@
 // Direct Messages Module — Real-time Messaging
-import { ref, push, set, get, update, onValue, query, orderByChild, limitToLast, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, push, set, get, update, runTransaction, onValue, query, orderByChild, limitToLast, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { escapeHtml } from './utils.js?v=3';
-import { getUserData } from './firebase-helpers.js?v=3';
+import { getUserData, addNotification } from './firebase-helpers.js?v=3';
 import * as rateLimiter from './rate-limiter.js?v=3';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
@@ -19,8 +19,32 @@ function init(authInstance, databaseInstance) {
 /**
  * Get or create conversation between two users
  */
+async function canMessageUser(otherUserId) {
+    const currentUserId = auth.currentUser?.uid;
+    if (!currentUserId || !otherUserId || currentUserId === otherUserId) return false;
+    const [targetSnap, blockedByMe, blockedMe, followsTarget, followsMe] = await Promise.all([
+        get(ref(database, `users/${otherUserId}`)),
+        get(ref(database, `blocks/${currentUserId}/${otherUserId}`)),
+        get(ref(database, `blocks/${otherUserId}/${currentUserId}`)),
+        get(ref(database, `followers/${otherUserId}/${currentUserId}`)),
+        get(ref(database, `followers/${currentUserId}/${otherUserId}`))
+    ]);
+    if (!targetSnap.exists() || blockedByMe.exists() || blockedMe.exists()) return false;
+    const target = targetSnap.val() || {};
+    if (['banned', 'suspended', 'deleted'].includes(target.accountStatus)) return false;
+    const privacy = target.messagePrivacy || 'everyone';
+    if (privacy === 'none') return false;
+    if (privacy === 'following' && !followsTarget.exists()) return false;
+    if (privacy === 'mutual' && (!followsTarget.exists() || !followsMe.exists())) return false;
+    return true;
+}
+
 async function getOrCreateConversation(otherUserId) {
-    const currentUserId = auth.currentUser.uid;
+    const currentUserId = auth.currentUser?.uid;
+    if (!(await canMessageUser(otherUserId))) {
+        window.showToast?.('هذا الحساب لا يسمح بالمراسلة أو لا يمكن مراسلته حاليًا');
+        return null;
+    }
     if (currentUserId === otherUserId) return null;
 
     // Create deterministic conversation ID (smaller uid first)
@@ -51,6 +75,10 @@ async function getOrCreateConversation(otherUserId) {
                 }
             },
             createdAt: new Date().toISOString(),
+            status: 'pending',
+            requestedBy: currentUserId,
+            requesterId: currentUserId,
+            recipientId: otherUserId,
             lastMessage: null,
             lastMessageTime: null
         });
@@ -65,7 +93,34 @@ async function getOrCreateConversation(otherUserId) {
 async function sendMessage(conversationId, text, replyToId) {
     if (!text.trim()) return;
 
-    const userId = auth.currentUser.uid;
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    const conversationSnap = await get(ref(database, `conversations/${conversationId}`));
+    if (!conversationSnap.exists() || !conversationSnap.val().participants?.[userId]) {
+        window.showToast?.('المحادثة غير صالحة');
+        return;
+    }
+    const conversation = conversationSnap.val();
+    if (conversation.status === 'rejected' || (conversation.status === 'pending' && conversation.requestedBy !== userId)) {
+        window.showToast?.(conversation.status === 'rejected' ? 'تم رفض طلب المحادثة' : 'بانتظار قبول طلب المحادثة');
+        return;
+    }
+    if (!(await canMessageUser(Object.keys(conversation.participants).find(id => id !== userId)))) return;
+
+    // Daily backend-backed usage counter for unverified accounts
+    const userDataForLimit = await getUserData(database, userId);
+    const verifiedUntil = userDataForLimit.verificationEnd ? new Date(userDataForLimit.verificationEnd).getTime() : 0;
+    const isVerified = !!userDataForLimit.verified && (!verifiedUntil || verifiedUntil >= Date.now());
+    const dayKey = new Date().toISOString().slice(0, 10);
+    let usageRef;
+    if (!isVerified) {
+        usageRef = ref(database, `messageUsage/${userId}/${dayKey}`);
+        const usageTx = await runTransaction(usageRef, value => (value || 0) < 100 ? (value || 0) + 1 : value);
+        if (!usageTx.committed || usageTx.snapshot.val() > 100) {
+            window.showToast?.('وصلت إلى الحد اليومي 100 رسالة للحسابات غير الموثقة');
+            return;
+        }
+    }
 
     // Rate limit
     const limitCheck = rateLimiter.checkLimit(userId, 'comment'); // Reuse comment limits
@@ -106,16 +161,18 @@ async function sendMessage(conversationId, text, replyToId) {
             lastSenderId: userId
         });
 
+        // Notify only about a new message/request; opening the chat never emits a read receipt.
+        const recipientId = Object.keys(conversation.participants).find(pid => pid !== userId);
+        const senderName = userData.name || 'مستخدم';
+        if (recipientId) await addNotification(database, recipientId, conversation.status === 'pending' ? `أرسل ${senderName} طلب محادثة` : `أرسل ${senderName} رسالة`, null, { actorId: userId, actorName: senderName, actorAvatar: userData.profilePicture || DEFAULT_AVATAR, type: conversation.status === 'pending' ? 'message_request' : 'messages', conversationId });
+
         // Update unread count for recipient
         const convSnap = await get(ref(database, `conversations/${conversationId}`));
         if (convSnap.exists()) {
             const participants = convSnap.val().participants;
             for (const pid of Object.keys(participants)) {
                 if (pid !== userId) {
-                    const currentUnread = convSnap.val().unreadCounts?.[pid] || 0;
-                    await update(ref(database, `conversations/${conversationId}/unreadCounts`), {
-                        [pid]: currentUnread + 1
-                    });
+                    await runTransaction(ref(database, `conversations/${conversationId}/unreadCounts/${pid}`), value => (value || 0) + 1);
                 }
             }
         }
@@ -147,7 +204,7 @@ function loadConversations(callback) {
         if (snapshot.exists()) {
             snapshot.forEach(child => {
                 const conv = child.val();
-                if (conv.participants && conv.participants[userId]) {
+                if (conv.participants && conv.participants[userId] && !conv.deletedFor?.[userId]) {
                     conversations.push({
                         id: child.key,
                         ...conv
@@ -178,7 +235,9 @@ function loadConversations(callback) {
                     participantInfo: conv.participantInfo,
                     lastMessage: conv.lastMessage || 'لا توجد رسائل',
                     lastMessageTime: conv.lastMessageTime || conv.createdAt,
-                    unreadCount: unreadCount
+                    unreadCount: unreadCount,
+                    status: conv.status || 'accepted',
+                    requestedBy: conv.requestedBy
                 });
             } else {
                 // 1-on-1 conversation
@@ -194,7 +253,9 @@ function loadConversations(callback) {
                     otherUserAvatar: otherUserInfo.profilePicture || DEFAULT_AVATAR,
                     lastMessage: conv.lastMessage || 'لا توجد رسائل',
                     lastMessageTime: conv.lastMessageTime || conv.createdAt,
-                    unreadCount: unreadCount
+                    unreadCount: unreadCount,
+                    status: conv.status || 'accepted',
+                    requestedBy: conv.requestedBy
                 });
             }
         }
@@ -295,6 +356,41 @@ async function deleteMessage(conversationId, messageId) {
 /**
  * Get total unread count
  */
+async function acceptConversation(conversationId) {
+    const userId = auth.currentUser?.uid;
+    const snap = await get(ref(database, `conversations/${conversationId}`));
+    if (!userId || !snap.exists()) return false;
+    const conv = snap.val();
+    if (!conv.participants?.[userId] || conv.status !== 'pending' || conv.requestedBy === userId) return false;
+    const now = new Date().toISOString();
+    await update(ref(database, `conversations/${conversationId}`), { status: 'accepted', acceptedBy: userId, acceptedAt: now });
+    const requester = conv.requesterId;
+    if (requester) { const data = await getUserData(database, userId); await addNotification(database, requester, `${data.name || 'المستخدم'} قبل طلب المحادثة`, null, { actorId: userId, actorName: data.name || 'مستخدم', actorAvatar: data.profilePicture || DEFAULT_AVATAR, type: 'message_request_accepted', conversationId }); }
+    return true;
+}
+
+async function rejectConversation(conversationId) {
+    const userId = auth.currentUser?.uid;
+    const snap = await get(ref(database, `conversations/${conversationId}`));
+    if (!userId || !snap.exists()) return false;
+    const conv = snap.val();
+    if (!conv.participants?.[userId] || conv.status !== 'pending' || conv.requestedBy === userId) return false;
+    const now = new Date().toISOString();
+    await update(ref(database, `conversations/${conversationId}`), { status: 'rejected', rejectedBy: userId, rejectedAt: now });
+    const requester = conv.requesterId;
+    if (requester) { const data = await getUserData(database, userId); await addNotification(database, requester, `${data.name || 'المستخدم'} رفض طلب المحادثة`, null, { actorId: userId, actorName: data.name || 'مستخدم', actorAvatar: data.profilePicture || DEFAULT_AVATAR, type: 'message_request_rejected', conversationId }); }
+    return true;
+}
+
+async function deleteConversation(conversationId) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return false;
+    const snap = await get(ref(database, `conversations/${conversationId}`));
+    if (!snap.exists() || !snap.val().participants?.[userId]) return false;
+    await update(ref(database, `conversations/${conversationId}/deletedFor`), { [userId]: true });
+    return true;
+}
+
 function getUnreadCount(callback) {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
@@ -404,7 +500,7 @@ function renderConversationsList(conversations, container, onConversationClick) 
                         <span class="dm-time">${formatMessageTime(conv.lastMessageTime)}</span>
                     </div>
                     ${membersHtml}
-                    <div class="dm-preview ${hasUnread ? 'dm-unread-text' : ''}">${escapeHtml(conv.lastMessage || '').substring(0, 50)}</div>
+                    <div class="dm-preview ${hasUnread ? 'dm-unread-text' : ''}">${conv.status === 'pending' ? 'طلب محادثة · ' : conv.status === 'rejected' ? 'مرفوضة · ' : ''}${escapeHtml(conv.lastMessage || '').substring(0, 50)}</div>
                 </div>
                 ${hasUnread ? `<span class="dm-unread-badge">${conv.unreadCount}</span>` : ''}
             </div>
@@ -587,6 +683,10 @@ export {
     deleteMessage,
     getUnreadCount,
     openConversation,
+    canMessageUser,
+    acceptConversation,
+    rejectConversation,
+    deleteConversation,
     cleanup,
     formatMessageTime,
     renderConversationsList,

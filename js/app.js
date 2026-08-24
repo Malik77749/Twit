@@ -32,7 +32,7 @@ import * as googleAuth from './google-auth.js?v=3';
 import * as communities from './communities.js?v=3';
 import * as twoFactor from './two-factor.js?v=4';
 import * as verification from './verification.js?v=1';
-import { getUserData } from './firebase-helpers.js?v=3';
+import { getUserData, clearUserCache } from './firebase-helpers.js?v=3';
 import './improvements.js?v=1';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
@@ -567,6 +567,7 @@ window.likePost = posts.likePost;
 window.retweetPost = posts.retweetPost;
 window.followUser = posts.followUser;
 window.reportPost = posts.reportPost;
+window.canMessageUser = dm.canMessageUser;
 window.handleImageSelect = posts.handleImageSelect;
 window.removePreview = posts.removePreview;
 window.toggleUrlInput = posts.toggleUrlInput;
@@ -622,7 +623,28 @@ window.openDMConversation = async function(targetId, isGroup) {
     // Show chat view
     document.getElementById('dm-conversations-view').style.display = 'none';
     document.getElementById('dm-chat-view').style.display = 'flex';
+    const currentUserId = authInstance.currentUser.uid;
+    const conversationSnap = await get(ref(database, `conversations/${conversationId}`));
+    const conversation = conversationSnap.exists() ? conversationSnap.val() : {};
+    const requestBanner = document.getElementById('dm-request-banner');
+    const sendButton = document.getElementById('dm-send-btn');
+    const messageInput = document.getElementById('dm-input');
+    if (requestBanner) {
+        if (conversation.status === 'pending' && conversation.requestedBy !== currentUserId) {
+            requestBanner.style.display = 'block';
+            requestBanner.innerHTML = `<div style="padding:12px 16px;background:var(--accent-soft);display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong>طلب محادثة</strong><span style="color:var(--text-secondary);">يريد هذا الحساب بدء محادثة معك.</span><button class="follow-btn" onclick="acceptDMRequest('${conversationId}')">قبول</button><button class="follow-btn following" onclick="rejectDMRequest('${conversationId}')">رفض</button></div>`;
+        } else if (conversation.status === 'rejected') {
+            requestBanner.style.display = 'block';
+            requestBanner.innerHTML = '<div style="padding:12px 16px;background:rgba(244,33,46,.10);color:var(--danger);">تم رفض طلب المحادثة. لا يمكن إرسال رسائل جديدة.</div>';
+        } else {
+            requestBanner.style.display = 'none';
+            requestBanner.innerHTML = '';
+        }
+    }
+    if (sendButton) sendButton.disabled = conversation.status === 'rejected' || (conversation.status === 'pending' && conversation.requestedBy !== currentUserId);
+    if (messageInput) messageInput.disabled = sendButton?.disabled || false;
 
+    window.activeDMConversationId = conversationId;
     // Load messages
     const messagesContainer = document.getElementById('dm-messages-list');
     dm.loadMessages(conversationId, (messages) => {
@@ -687,6 +709,19 @@ window.showCreateGroupUI = async function() {
         showToast('تم إنشاء المجموعة');
         showMessages();
     }
+};
+
+window.acceptDMRequest = async function(conversationId) {
+    if (await dm.acceptConversation(conversationId)) { showToast('تم قبول طلب المحادثة'); closeDMChat(); await openDMConversation(conversationId, true); }
+};
+window.rejectDMRequest = async function(conversationId) {
+    if (await dm.rejectConversation(conversationId)) { showToast('تم رفض طلب المحادثة'); closeDMChat(); await openDMConversation(conversationId, true); }
+};
+window.deleteActiveDMConversation = async function() {
+    const name = document.getElementById('dm-chat-name')?.textContent || 'هذه المحادثة';
+    if (!confirm(`حذف ${name} من قائمتك؟`)) return;
+    const conversationId = window.activeDMConversationId;
+    if (conversationId && await dm.deleteConversation(conversationId)) { showToast('تم حذف المحادثة من قائمتك'); closeDMChat(); }
 };
 
 window.closeDMChat = function() {
@@ -1118,8 +1153,21 @@ window.showSettings = async function() {
     if (adminLink) {
         const userData = await getUserData(database, authInstance.currentUser?.uid);
         adminLink.style.display = userData?.isAdmin === true ? 'flex' : 'none';
+        const privacySelect = document.getElementById('message-privacy-select');
+        if (privacySelect) privacySelect.value = userData?.messagePrivacy || 'everyone';
     }
     load2FAStatus();
+};
+
+window.saveMessagePrivacy = async function(value) {
+    const uid = authInstance.currentUser?.uid;
+    const allowed = ['everyone', 'following', 'mutual', 'none'];
+    if (!uid || !allowed.includes(value)) return;
+    try {
+        await update(ref(database, `users/${uid}`), { messagePrivacy: value });
+        clearUserCache();
+        showToast('تم تحديث خصوصية المراسلة');
+    } catch (error) { showToast('تعذر حفظ إعداد المراسلة: ' + error.message); }
 };
 
 window.showVerificationCenter = function() {

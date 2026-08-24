@@ -35,9 +35,8 @@
         "numericId": {
           ".validate": "newData.isString() && newData.val().matches(/^[0-9]{6,12}$/) && (data.val() === newData.val() || root.child('numericIds').child(newData.val()).val() === auth.uid)"
         },
-        "$other": {
-          ".validate": true
-        }
+        "messagePrivacy": { ".validate": "newData.isString() && (newData.val() === 'everyone' || newData.val() === 'following' || newData.val() === 'mutual' || newData.val() === 'none')" },
+        "$other": { ".validate": true }
       }
     },
 
@@ -199,7 +198,8 @@
       "$uid": {
         "$notifId": {
           ".read": "auth.uid === $uid",
-          ".write": "auth != null"
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('isAdmin').val() === true || newData.child('actorId').val() === auth.uid || auth.uid === $uid)",
+          ".validate": "newData.hasChildren(['timestamp','read']) && newData.child('timestamp').isString() && newData.child('read').isBoolean()"
         }
       }
     },
@@ -296,37 +296,44 @@
 
     "conversations": {
       "$convId": {
-        ".read": "data.child('participants').hasChild(auth.uid)",
-        ".write": "auth != null && (data.child('participants').hasChild(auth.uid) || newData.child('participants').hasChild(auth.uid))",
-        "participants": {
-          ".validate": true
+        ".read": "auth != null && data.child('participants').hasChild(auth.uid)",
+        ".write": "auth != null && !data.exists() && newData.child('participants').hasChild(auth.uid) && newData.child('requesterId').val() === auth.uid",
+        "participants": { ".validate": "newData.hasChildren()" },
+        "requesterId": { ".validate": "newData.isString()" },
+        "recipientId": { ".validate": "newData.isString()" },
+        "status": {
+          ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('recipientId').val() === auth.uid && data.child('status').val() === 'pending' && (newData.val() === 'accepted' || newData.val() === 'rejected')",
+          ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'accepted' || newData.val() === 'rejected')"
         },
-        "isGroup": {
-          ".validate": "newData.isBoolean()"
-        },
-        "groupName": {
-          ".validate": "newData.isString() && newData.val().length <= 50"
-        },
-        "$other": {
-          ".validate": true
-        }
+        "acceptedBy": { ".write": "auth.uid === data.child('recipientId').val() && data.child('status').val() === 'pending'", ".validate": "newData.isString()" },
+        "acceptedAt": { ".write": "auth.uid === data.child('recipientId').val() && data.child('status').val() === 'pending'", ".validate": "newData.isString()" },
+        "rejectedBy": { ".write": "auth.uid === data.child('recipientId').val() && data.child('status').val() === 'pending'", ".validate": "newData.isString()" },
+        "rejectedAt": { ".write": "auth.uid === data.child('recipientId').val() && data.child('status').val() === 'pending'", ".validate": "newData.isString()" },
+        "lastMessage": { ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('status').val() !== 'rejected'", ".validate": "newData.isString() || newData.val() === null" },
+        "lastMessageTime": { ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('status').val() !== 'rejected'", ".validate": "newData.isString() || newData.val() === null" },
+        "lastSenderId": { ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('status').val() !== 'rejected'", ".validate": "newData.isString()" },
+        "unreadCounts": { ".write": "auth != null && data.child('participants').hasChild(auth.uid)", ".validate": "newData.isObject()" },
+        "deletedFor": { "$uid": { ".write": "auth.uid === $uid && data.parent().parent().child('participants').hasChild(auth.uid)", ".validate": "newData.isBoolean()" } },
+        "$other": { ".validate": true }
       }
     },
 
     "messages": {
       "$convId": {
-        ".read": "root.child('conversations').child($convId).child('participants').hasChild(auth.uid)",
-        ".write": "root.child('conversations').child($convId).child('participants').hasChild(auth.uid)",
+        ".read": "auth != null && root.child('conversations').child($convId).child('participants').hasChild(auth.uid)",
         "$msgId": {
-          "senderId": {
-            ".validate": "newData.isString() && newData.val() === auth.uid"
-          },
-          "text": {
-            ".validate": "newData.isString() && newData.val().length <= 1000"
-          },
-          "$other": {
-            ".validate": true
-          }
+          ".write": "auth != null && root.child('conversations').child($convId).child('participants').hasChild(auth.uid) && root.child('conversations').child($convId).child('status').val() !== 'rejected' && root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('accountStatus').val() !== 'banned' && root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('accountStatus').val() !== 'suspended' && !root.child('blocks').child(auth.uid).child(root.child('conversations').child($convId).child('recipientId').val()).exists() && !root.child('blocks').child(root.child('conversations').child($convId).child('recipientId').val()).child(auth.uid).exists() && (root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('messagePrivacy').val() === null || root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('messagePrivacy').val() === 'everyone' || (root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('messagePrivacy').val() === 'following' && root.child('followers').child(root.child('conversations').child($convId).child('recipientId').val()).child(auth.uid).exists()) || (root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('messagePrivacy').val() === 'mutual' && root.child('followers').child(root.child('conversations').child($convId).child('recipientId').val()).child(auth.uid).exists() && root.child('followers').child(auth.uid).child(root.child('conversations').child($convId).child('recipientId').val()).exists())) && ((!data.exists() && newData.child('senderId').val() === auth.uid && (root.child('conversations').child($convId).child('status').val() === 'accepted' || (root.child('conversations').child($convId).child('status').val() === 'pending' && root.child('conversations').child($convId).child('requesterId').val() === auth.uid))) || (data.exists() && data.child('senderId').val() === auth.uid) || (data.exists() && data.child('senderId').val() !== auth.uid && newData.child('read').val() === true))",
+          ".validate": "newData.hasChildren(['senderId','text','timestamp','read']) && newData.child('senderId').isString() && newData.child('text').isString() && newData.child('text').val().length <= 1000 && newData.child('timestamp').isString() && newData.child('read').isBoolean()"
+        }
+      }
+    },
+
+    "messageUsage": {
+      "$uid": {
+        "$dayKey": {
+          ".read": "auth.uid === $uid",
+          ".write": "auth.uid === $uid && newData.isNumber() && newData.val() >= 0 && newData.val() <= 100 && (!data.exists() || newData.val() >= data.val())",
+          ".validate": "$dayKey.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
         }
       }
     }

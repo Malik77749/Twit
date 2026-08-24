@@ -23,7 +23,6 @@ async function showProfile(userId) {
     showLoading();
     userId = userId || auth.currentUser?.uid;
     if (!userId) { hideLoading(); return; }
-
     currentProfileUserId = userId;
     window.currentProfileUserId = userId;
 
@@ -37,8 +36,12 @@ async function showProfile(userId) {
         document.getElementById('profile-handle').textContent = '@' + (userData.handle || (userData.name || 'user').replace(/\s/g, '').toLowerCase());
         const numericIdEl = document.getElementById('profile-numeric-id');
         if (numericIdEl) numericIdEl.textContent = userData.numericId ? `معرّف ميمر: ${userData.numericId}` : 'معرّف ميمر: قيد التحديث';
-        document.getElementById('profile-followers').textContent = userData.followers || 0;
-        document.getElementById('profile-following').textContent = userData.following || 0;
+        const followerRecords = await get(ref(database, `followers/${userId}`));
+        const allFollowerRecords = await get(ref(database, 'followers'));
+        let liveFollowingCount = 0;
+        if (allFollowerRecords.exists()) allFollowerRecords.forEach(target => { if (target.hasChild(userId)) liveFollowingCount += 1; });
+        document.getElementById('profile-followers').textContent = followerRecords.exists() ? Object.keys(followerRecords.val() || {}).length : 0;
+        document.getElementById('profile-following').textContent = liveFollowingCount;
         document.getElementById('profile-picture').src = userData.profilePicture || DEFAULT_AVATAR;
 
         // Join date
@@ -118,8 +121,9 @@ async function showProfile(userId) {
         } else {
             const followSnap = await get(ref(database, `followers/${userId}/${auth.currentUser.uid}`));
             const isFollowing = followSnap.exists();
+            const canMessage = typeof window.canMessageUser === 'function' ? await window.canMessageUser(userId) : true;
             actionsDiv.innerHTML = `
-                <button class="follow-btn" onclick="openDMWithUser('${userId}')" style="margin-right:8px;"><i class="far fa-envelope"></i></button>
+                ${canMessage ? `<button class="follow-btn" onclick="openDMWithUser('${userId}')" style="margin-right:8px;"><i class="far fa-envelope"></i></button>` : ''}
                 <button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${userId}" onclick="followUser('${userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>
                 <button class="follow-btn" onclick="openPostMenu(null, '${userId}', false, event)" style="padding:6px 10px;"><i class="fas fa-ellipsis"></i></button>
             `;

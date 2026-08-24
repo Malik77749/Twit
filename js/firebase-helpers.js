@@ -91,7 +91,8 @@ async function addNotification(database, toUserId, message, postId, metadata = {
             actorId: metadata.actorId || null,
             actorName: metadata.actorName || null,
             actorAvatar: metadata.actorAvatar || null,
-            type: metadata.type || null
+            type: metadata.type || null,
+            conversationId: metadata.conversationId || null
         });
     } catch (error) {
         console.error('Failed to add notification:', error);
