@@ -4,7 +4,7 @@
       ".indexOn": ["phone", "handle"],
       "$uid": {
         ".read": true,
-        ".write": "auth.uid === $uid && (!data.exists() || (newData.child('isAdmin').val() === data.child('isAdmin').val() && newData.child('verified').val() === data.child('verified').val() && newData.child('verificationStart').val() === data.child('verificationStart').val() && newData.child('verificationEnd').val() === data.child('verificationEnd').val()))",
+        ".write": "auth.uid === $uid && ((!data.exists() && newData.child('isAdmin').val() !== true && newData.child('verified').val() !== 'blue') || (data.exists() && newData.child('uid').val() === data.child('uid').val() && newData.child('numericId').val() === data.child('numericId').val() && newData.child('isAdmin').val() === data.child('isAdmin').val() && newData.child('verified').val() === data.child('verified').val() && newData.child('verificationStart').val() === data.child('verificationStart').val() && newData.child('verificationEnd').val() === data.child('verificationEnd').val() && newData.child('accountStatus').val() === data.child('accountStatus').val() && newData.child('provider').val() === data.child('provider').val()))",
         "name": {
           ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 50"
         },
@@ -198,7 +198,7 @@
       "$uid": {
         "$notifId": {
           ".read": "auth.uid === $uid",
-          ".write": "auth != null && (root.child('users').child(auth.uid).child('isAdmin').val() === true || newData.child('actorId').val() === auth.uid || auth.uid === $uid)",
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && newData.child('actorId').val() === auth.uid) || (auth.uid === $uid && data.exists() && newData.child('message').val() === data.child('message').val() && newData.child('actorId').val() === data.child('actorId').val() && newData.child('type').val() === data.child('type').val() && newData.child('read').val() === true))",
           ".validate": "newData.hasChildren(['timestamp','read']) && newData.child('timestamp').isString() && newData.child('read').isBoolean()"
         }
       }
@@ -207,7 +207,7 @@
     "reports": {
       "$reportId": {
         ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
-        ".write": "auth != null && ((!data.exists() && newData.child('reporterId').val() === auth.uid) || (data.exists() && root.child('users').child(auth.uid).child('isAdmin').val() === true))",
+        ".write": "auth != null && ((!data.exists() && newData.child('reporterId').val() === auth.uid && newData.child('status').val() === 'pending') || (data.exists() && root.child('users').child(auth.uid).child('isAdmin').val() === true))",
         ".validate": "newData.hasChildren(['reporterId','reason','status','timestamp','type']) && newData.child('reporterId').isString() && newData.child('reason').isString() && newData.child('reason').val().length <= 500 && newData.child('status').isString() && newData.child('type').isString()"
       }
     },
