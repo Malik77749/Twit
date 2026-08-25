@@ -6,12 +6,12 @@ import { firebaseConfig } from './config.js?v=9';
 import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=10';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=10';
-import * as posts from './posts.js?v=16';
-import * as comments from './comments.js?v=16';
+import * as posts from './posts.js?v=20';
+import * as comments from './comments.js?v=20';
 import * as notifications from './notifications.js?v=18';
 import * as profile from './profile.js?v=18';
 import * as pagination from './pagination.js?v=10';
-import * as rateLimiter from './rate-limiter.js?v=9';
+import * as rateLimiter from './rate-limiter.js?v=10';
 import * as pushNotif from './push-notifications.js?v=12';
 import * as dm from './dm.js?v=9';
 import * as blockMute from './block-mute.js?v=9';
@@ -1895,6 +1895,7 @@ function renderDetailMedia(post) {
 }
 
 window.openPostDetail = async function(postId) {
+    comments.unmountDetailReplyDock?.();
     hideAllViews();
     document.getElementById('post-detail-view').style.display = 'block';
     document.getElementById('post-detail-view').classList.add('view-enter');
@@ -2017,6 +2018,7 @@ window.openPostDetail = async function(postId) {
             });
         });
         comments.loadComments(postId);
+        comments.mountDetailReplyDock?.(postId, safeAvatar);
 
         if (!isOwnPost) {
             void runTransaction(ref(database, `posts/${postId}/views`), current => {
@@ -2030,6 +2032,7 @@ window.openPostDetail = async function(postId) {
 };
 
 window.goBackFromPost = function() {
+    comments.unmountDetailReplyDock?.();
     hideAllViews();
     setActiveNav('home');
     showView('home');
@@ -2450,6 +2453,7 @@ try {
     };
 
     window.showHome = function() {
+        comments.unmountDetailReplyDock?.();
         originalShowHome();
         document.querySelector('.main-feed')?.scrollTo({ top: 0, behavior: 'smooth' });
         window.scrollTo({ top: 0, behavior: 'smooth' });

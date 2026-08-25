@@ -9,7 +9,7 @@ const LIMITS = {
         burstWindowMs: 300000   // 5 minutes burst window
     },
     comment: {
-        cooldownMs: 10000,      // 10 seconds between comments
+        cooldownMs: 1500,       // 1.5 seconds between comments for responsive replies
         dailyMax: 200,          // max 200 comments per day
         burstMax: 10,           // max 10 comments in burst window
         burstWindowMs: 300000   // 5 minutes burst window

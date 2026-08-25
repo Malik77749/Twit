@@ -3,8 +3,8 @@ import { ref, push, set, get, update, remove, increment, runTransaction, query, 
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js?v=9';
 import { showLoading, hideLoading, showView } from './ui.js?v=10';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=9';
-import { loadComments } from './comments.js?v=16';
-import * as rateLimiter from './rate-limiter.js?v=9';
+import { loadComments } from './comments.js?v=20';
+import * as rateLimiter from './rate-limiter.js?v=10';
 import * as pagination from './pagination.js?v=10';
 import * as blockMute from './block-mute.js?v=9';
 import * as pollsModule from './polls.js?v=9';
