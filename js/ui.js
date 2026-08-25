@@ -19,6 +19,7 @@ function showApp() {
 function showAuth() {
     hideLoading();
     document.body.classList.remove('mimer-authenticated');
+    document.getElementById('mobile-nav')?.style.setProperty('display', 'none', 'important');
     document.getElementById('auth-section').style.display = 'flex';
     document.getElementById('app-section').style.display = 'none';
 }

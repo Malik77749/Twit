@@ -180,9 +180,9 @@ button, .nav-item, .tweet, .sidebar-profile { transition: background .2s ease, b
 .nav-item:active, .sidebar-more-btn:active, .mobile-nav-item:active, button:active { transform: scale(.97); }
 
 /* Authentication screens must not reserve or show app navigation. */
-body:not(.mimer-authenticated) .mobile-nav,
-body:not(.mimer-authenticated) .mobile-fab { display: none !important; }
+body:not(.mimer-authenticated) .mobile-nav { display: none !important; }
 .mobile-nav-icon { width: 22px; height: 22px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
 .mobile-nav-item.active .mobile-nav-icon { fill: var(--accent-soft); stroke: var(--accent); }
 
 .sidebar-more-dropdown, .dropdown-menu, .more-menu {
@@ -249,7 +249,6 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 
 @media (max-width: 700px) {
     body.mimer-authenticated .mobile-nav { display: flex !important; }
-    body.mimer-authenticated .mobile-fab { display: flex !important; }
     .main-feed { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
   .mobile-header { min-height: 56px; padding-inline: 14px; }
   .mobile-nav-item { min-height: 48px; border-radius: 12px; }
