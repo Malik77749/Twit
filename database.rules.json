@@ -347,6 +347,7 @@
     },
 
     "communityMembers": {
+      ".read": "auth != null",
       "$communityId": {
         ".read": "auth != null",
         "$uid": {
