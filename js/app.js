@@ -1641,7 +1641,7 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
     deleteBtn.onclick = () => { dropdown.style.display = 'none'; posts.deletePost(postId); };
     pinBtn.onclick = () => { dropdown.style.display = 'none'; posts.pinPost(postId); };
     bookmarkBtn.onclick = () => { dropdown.style.display = 'none'; posts.toggleBookmark(postId); };
-    quoteBtn.onclick = () => { dropdown.style.display = 'none'; quoteTweet(postId); };
+    quoteBtn.onclick = () => { dropdown.style.display = 'none'; startQuoteTweet(postId); };
     reportBtn.onclick = () => { dropdown.style.display = 'none'; posts.reportPost(postId, userId); };
     followBtn.onclick = () => { dropdown.style.display = 'none'; posts.followUser(userId, { preventDefault:()=>{}, stopPropagation:()=>{} }); };
     muteBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.muteUser(userId); };
@@ -1668,7 +1668,7 @@ window.clearQuoteTweet = function() {
     const preview = document.getElementById('quote-preview');
     if (preview) { preview.hidden = true; preview.innerHTML = ''; }
 };
-function quoteTweet(postId) {
+function startQuoteTweet(postId) {
     window.currentQuotePostId = postId;
     showHome();
     const composer = document.getElementById('postContent');
@@ -2461,7 +2461,7 @@ try {
 
     // Share sheet: copy link / quote / DM
     window.quoteTweet = function(postId) {
-        quoteTweet(postId);
+        startQuoteTweet(postId);
     };
 
     window.sendPostByDM = async function(postId) {
