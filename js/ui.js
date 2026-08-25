@@ -22,7 +22,15 @@ function showAuth() {
 }
 
 function showLoading() {
-    document.getElementById('loading-overlay').style.display = 'flex';
+    const overlay = document.getElementById('loading-overlay');
+    const authSection = document.getElementById('auth-section');
+    const appSection = document.getElementById('app-section');
+    if (!overlay) return;
+    // Never cover the public login/register surface with a blocking loader.
+    const authVisible = authSection && getComputedStyle(authSection).display !== 'none';
+    const appVisible = appSection && getComputedStyle(appSection).display !== 'none';
+    if (authVisible && !appVisible) return;
+    overlay.style.display = 'flex';
 }
 
 function hideLoading() {
