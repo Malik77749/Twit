@@ -1595,6 +1595,37 @@ window.toggleEmojiPicker = function() {
     composerBody.appendChild(picker);
 };
 
+// ===== Quote composer =====
+async function activateQuoteComposer(postId) {
+    window.currentQuotePostId = String(postId || '').trim();
+    if (!window.currentQuotePostId) return;
+    showHome();
+    const composer = document.getElementById('postContent');
+    const preview = document.getElementById('quote-preview');
+    if (!composer || !preview) return;
+    composer.focus();
+    composer.placeholder = 'أضف تعليقك على الاقتباس...';
+    composer.dispatchEvent(new Event('input'));
+    preview.hidden = false;
+    preview.innerHTML = '<span>جاري تجهيز الاقتباس...</span>';
+    try {
+        const snapshot = await get(ref(database, `posts/${window.currentQuotePostId}`));
+        if (!snapshot.exists()) throw new Error('POST_NOT_FOUND');
+        const post = snapshot.val() || {};
+        preview.innerHTML = `<div class="quote-preview-label">اقتباس منشور</div><div class="quote-preview-content"><strong>${escapeHtml(post.userName || 'مستخدم')}</strong><span>@${escapeHtml(post.userHandle || '')}</span>${post.content ? `<p>${parseContent(post.content)}</p>` : ''}</div><button type="button" class="quote-preview-remove" aria-label="إلغاء الاقتباس" onclick="clearQuoteTweet()"><i class="fas fa-times"></i></button>`;
+    } catch (error) {
+        window.clearQuoteTweet();
+        showToast('تعذر تحميل المنشور المقتبس');
+    }
+}
+window.clearQuoteTweet = function() {
+    window.currentQuotePostId = '';
+    const preview = document.getElementById('quote-preview');
+    if (preview) { preview.hidden = true; preview.innerHTML = ''; }
+};
+window.startQuoteTweet = activateQuoteComposer;
+window.quoteTweet = activateQuoteComposer;
+
 // ===== Post Dropdown Menu =====
 
 let currentDropdownPostId = null;
@@ -1641,7 +1672,7 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
     deleteBtn.onclick = () => { dropdown.style.display = 'none'; posts.deletePost(postId); };
     pinBtn.onclick = () => { dropdown.style.display = 'none'; posts.pinPost(postId); };
     bookmarkBtn.onclick = () => { dropdown.style.display = 'none'; posts.toggleBookmark(postId); };
-    quoteBtn.onclick = () => { dropdown.style.display = 'none'; startQuoteTweet(postId); };
+    quoteBtn.onclick = () => { dropdown.style.display = 'none'; window.startQuoteTweet?.(postId); };
     reportBtn.onclick = () => { dropdown.style.display = 'none'; posts.reportPost(postId, userId); };
     followBtn.onclick = () => { dropdown.style.display = 'none'; posts.followUser(userId, { preventDefault:()=>{}, stopPropagation:()=>{} }); };
     muteBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.muteUser(userId); };
@@ -2460,9 +2491,7 @@ try {
     handleScrollTopBtn();
 
     // Share sheet: copy link / quote / DM
-    window.quoteTweet = function(postId) {
-        window.startQuoteTweet?.(postId);
-    };
+    window.quoteTweet = activateQuoteComposer;
 
     window.sendPostByDM = async function(postId) {
         const handle = prompt('اسم المستخدم لإرسال الرابط في الرسائل الخاصة (بدون @):');
