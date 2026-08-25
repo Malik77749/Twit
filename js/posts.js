@@ -457,14 +457,15 @@ async function likePost(postId, event) {
 
     const userId = auth.currentUser.uid;
 
-    // Rate limit check
-    const limitCheck = rateLimiter.checkLimit(userId, 'like');
-    if (!limitCheck.allowed) {
-        rateLimiter.showRateLimitToast(limitCheck.reason);
-        return;
-    }
-
     const likeRef = ref(database, `likes/${postId}/${userId}`);
+    const existingLike = await get(likeRef);
+    if (!existingLike.exists()) {
+        const limitCheck = rateLimiter.checkLimit(userId, 'like');
+        if (!limitCheck.allowed) {
+            rateLimiter.showRateLimitToast(limitCheck.reason);
+            return;
+        }
+    }
     const likeButtons = [...document.querySelectorAll(`[data-like-id="${postId}"]`)];
     if (likeButtons.some(btn => btn.dataset.busy === 'true')) return;
     likeButtons.forEach(btn => { btn.dataset.busy = 'true'; btn.setAttribute('aria-busy', 'true'); });
@@ -517,18 +518,18 @@ async function retweetPost(postId, event) {
     const retweetButtons = [...document.querySelectorAll(`[data-retweet-id="${postId}"]`)];
     if (retweetButtons.some(btn => btn.dataset.busy === 'true')) return;
 
-    // Rate limit check
-    const limitCheck = rateLimiter.checkLimit(userId, 'retweet');
-    if (!limitCheck.allowed) {
-        rateLimiter.showRateLimitToast(limitCheck.reason);
-        return;
-    }
-    retweetButtons.forEach(btn => { btn.dataset.busy = 'true'; btn.setAttribute('aria-busy', 'true'); });
-
+        retweetButtons.forEach(btn => { btn.dataset.busy = 'true'; btn.setAttribute('aria-busy', 'true'); });
     const retweetsSnapshot = await get(query(ref(database, 'retweets'), orderByChild('originalPostId'), equalTo(postId)));
     let existingKey = null;
-    if (retweetsSnapshot.exists()) retweetsSnapshot.forEach(child => { if (child.val()?.userId === userId) existingKey = child.key; });
-
+        if (retweetsSnapshot.exists()) retweetsSnapshot.forEach(child => { if (child.val()?.userId === userId) existingKey = child.key; });
+    if (!existingKey) {
+        const limitCheck = rateLimiter.checkLimit(userId, 'retweet');
+        if (!limitCheck.allowed) {
+            rateLimiter.showRateLimitToast(limitCheck.reason);
+            retweetButtons.forEach(btn => { delete btn.dataset.busy; btn.removeAttribute('aria-busy'); });
+            return;
+        }
+    }
     if (existingKey) {
         if (!confirm('إلغاء إعادة التغريد؟')) { retweetButtons.forEach(btn => { delete btn.dataset.busy; btn.removeAttribute('aria-busy'); }); return; }
         try {
