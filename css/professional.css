@@ -1337,3 +1337,33 @@ body.detail-reply-open #post-detail-view { padding-bottom:calc(88px + env(safe-a
 #pull-to-refresh .ptr-spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:ptr-spin .72s linear infinite; }
 #pull-to-refresh.refreshing .ptr-spinner { animation-duration:.58s; }
 @media (max-width:760px) { #pull-to-refresh { top:4px; width:32px; height:32px; } #pull-to-refresh .ptr-spinner { width:17px; height:17px; } }
+
+/* Conversation detail: one fixed composer, complete action rail on every comment */
+#post-detail-content .comment-input-row { display:none !important; }
+#post-detail-content .comment-actions.comment-engagement-bar { display:flex !important; visibility:visible !important; opacity:1 !important; align-items:center; min-height:38px; padding:5px 0 2px; }
+#post-detail-content .comment-engagement-bar > button { display:inline-flex !important; visibility:visible !important; opacity:1 !important; flex:0 0 auto; }
+#post-detail-content .comment-body { overflow:visible; }
+.detail-reply-symbol { display:inline-flex; align-items:center; justify-content:center; min-width:18px; min-height:18px; color:currentColor; font-size:18px; font-weight:500; line-height:1; }
+.detail-reply-gif { font-size:10px; letter-spacing:-.02em; }
+.detail-reply-dock { bottom:var(--mimer-keyboard-offset, 0px); transition:bottom .18s cubic-bezier(.23,1,.32,1), transform .18s ease; }
+.detail-reply-dock:has(.detail-reply-input:focus) { box-shadow:0 -16px 42px rgba(0,0,0,.48); }
+@media (max-width:760px) {
+  #post-detail-content .comment-engagement-bar { justify-content:space-between; gap:2px; }
+  #post-detail-content .comment-engagement-bar > button { min-width:42px; min-height:36px; }
+  #post-detail-content .comment-engagement-bar .comment-more-btn { margin-inline-start:0; }
+  .detail-reply-dock { padding-bottom:calc(10px + env(safe-area-inset-bottom)); }
+  .detail-reply-row { min-height:48px; }
+  .detail-reply-symbol { font-size:19px; }
+}
+
+/* Source-like line icon system for comments */
+.comment-ui-icon { display:block; width:18px; height:18px; flex:0 0 18px; fill:none; stroke:currentColor; stroke-width:1.85; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
+.comment-ui-icon.is-filled { fill:currentColor; stroke:currentColor; stroke-width:1.55; }
+.comment-engagement-btn .comment-ui-icon, .comment-more-btn .comment-ui-icon { width:19px; height:19px; }
+.detail-reply-tool .comment-ui-icon, .detail-reply-send .comment-ui-icon { width:19px; height:19px; }
+.detail-reply-send .comment-ui-icon { stroke-width:1.65; }
+#post-detail-content .comment-reply-input { display:none !important; }
+@media (max-width:760px) {
+  .comment-engagement-btn .comment-ui-icon, .comment-more-btn .comment-ui-icon { width:20px; height:20px; }
+  .detail-reply-tool .comment-ui-icon, .detail-reply-send .comment-ui-icon { width:20px; height:20px; }
+}

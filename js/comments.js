@@ -146,8 +146,23 @@ function formatSmartCount(value) {
     catch { return String(count); }
 }
 
+const COMMENT_ICON_PATHS = {
+    reply: '<path d="M4 5.5h16v10H9l-5 4v-4H4z"></path>',
+    heart: '<path d="M20.5 8.7c0 5-8.5 9.8-8.5 9.8S3.5 13.7 3.5 8.7A4.2 4.2 0 0 1 12 6.5a4.2 4.2 0 0 1 8.5 2.2z"></path>',
+    share: '<circle cx="18" cy="5" r="2.3"></circle><circle cx="6" cy="12" r="2.3"></circle><circle cx="18" cy="19" r="2.3"></circle><path d="m8 11 7.6-4.5M8 13l7.6 4.5"></path>',
+    more: '<circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle>',
+    expand: '<path d="M8 4H4v4M4 4l6 6M16 20h4v-4M20 20l-6-6"></path>',
+    image: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><circle cx="8.5" cy="9" r="1.4"></circle><path d="m5.5 17 4.2-4 3.2 2.7 2.2-2 3.4 3.3"></path>',
+    send: '<path d="m21 3-7.2 18-3.8-7-7-3.8z"></path><path d="M21 3 10 14"></path>'
+};
+function commentIcon(name, filled = false) {
+    const fill = filled ? ' fill="currentColor"' : '';
+    return `<svg class="comment-ui-icon${filled ? ' is-filled' : ''}" viewBox="0 0 24 24" aria-hidden="true"${fill}>${COMMENT_ICON_PATHS[name] || ''}</svg>`;
+}
+
 function unmountDetailReplyDock() {
     const dock = document.getElementById('detail-reply-dock');
+    dock?._cleanup?.();
     dock?.remove();
     document.body.classList.remove('detail-reply-open');
 }
@@ -160,9 +175,23 @@ function mountDetailReplyDock(postId, avatar) {
     dock.id = 'detail-reply-dock';
     dock.className = 'detail-reply-dock';
     dock.dataset.postId = postId;
-    dock.innerHTML = `<div class="detail-reply-context" hidden><span class="detail-reply-context-text">الرد على التعليق</span><button type="button" class="detail-reply-cancel" aria-label="إلغاء الرد">×</button></div><div class="detail-reply-row"><img class="detail-reply-avatar" src="${escapeHtml(String(avatar || DEFAULT_AVATAR))}" alt=""><button type="button" class="detail-reply-tool" data-tool="expand" aria-label="توسيع مربع الرد"><i class="fas fa-expand"></i></button><textarea class="detail-reply-input" rows="1" maxlength="500" placeholder="أنشر ردك…" aria-label="اكتب ردك"></textarea><button type="button" class="detail-reply-tool detail-reply-gif" data-tool="gif" aria-label="إضافة GIF">GIF</button><button type="button" class="detail-reply-tool" data-tool="media" aria-label="إضافة صورة"><i class="far fa-image"></i></button><button type="button" class="detail-reply-send" aria-label="إرسال الرد"><i class="fas fa-paper-plane"></i></button></div>`;
+    dock.innerHTML = `<div class="detail-reply-context" hidden><span class="detail-reply-context-text">الرد على التعليق</span><button type="button" class="detail-reply-cancel" aria-label="إلغاء الرد">×</button></div><div class="detail-reply-row"><img class="detail-reply-avatar" src="${escapeHtml(String(avatar || DEFAULT_AVATAR))}" alt=""><button type="button" class="detail-reply-tool" data-tool="expand" aria-label="توسيع مربع الرد">${commentIcon('expand')}</button><textarea class="detail-reply-input" rows="1" maxlength="500" placeholder="أنشر ردك…" aria-label="اكتب ردك"></textarea><button type="button" class="detail-reply-tool detail-reply-gif" data-tool="gif" aria-label="إضافة GIF">GIF</button><button type="button" class="detail-reply-tool" data-tool="media" aria-label="إضافة صورة">${commentIcon('image')}</button><button type="button" class="detail-reply-send" aria-label="إرسال الرد">${commentIcon('send')}</button></div>`;
     host.appendChild(dock);
     document.body.classList.add('detail-reply-open');
+    const syncKeyboardOffset = () => {
+        const viewport = window.visualViewport;
+        const keyboardOffset = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
+        dock.style.bottom = `${Math.round(keyboardOffset)}px`;
+        document.documentElement.style.setProperty('--mimer-keyboard-offset', `${Math.round(keyboardOffset)}px`);
+    };
+    syncKeyboardOffset();
+    window.visualViewport?.addEventListener('resize', syncKeyboardOffset);
+    window.visualViewport?.addEventListener('scroll', syncKeyboardOffset);
+    dock._cleanup = () => {
+        window.visualViewport?.removeEventListener('resize', syncKeyboardOffset);
+        window.visualViewport?.removeEventListener('scroll', syncKeyboardOffset);
+        document.documentElement.style.removeProperty('--mimer-keyboard-offset');
+    };
     const input = dock.querySelector('.detail-reply-input');
     const context = dock.querySelector('.detail-reply-context');
     const contextText = dock.querySelector('.detail-reply-context-text');
@@ -358,7 +387,8 @@ function loadComments(postId) {
         const viewerAvatar = escapeHtml(String(viewerData?.profilePicture || DEFAULT_AVATAR));
         const viewerLikesSnapshot = viewerId ? await get(ref(database, `commentLikes/${postId}`)).catch(() => null) : null;
         const viewerLikes = viewerLikesSnapshot?.exists() ? viewerLikesSnapshot.val() || {} : {};
-        const composerHtml = `<div class="comment-input-row"><img src="${viewerAvatar}" alt=""><input type="text" id="comment-input-${postId}" placeholder="أضف ردًا إلى المحادثة..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)"><button type="button" onclick="addComment('${postId}',null,event)" aria-label="إرسال الرد">إرسال</button></div>`;
+        const isDetailSection = Boolean(commentSection.closest('#post-detail-view'));
+        const composerHtml = isDetailSection ? '' : `<div class="comment-input-row"><img src="${viewerAvatar}" alt=""><input type="text" id="comment-input-${postId}" placeholder="أضف ردًا إلى المحادثة..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)"><button type="button" onclick="addComment('${postId}',null,event)" aria-label="إرسال الرد">إرسال</button></div>`;
 
         // Keep the card and detail counters synchronized with the live comments snapshot.
         updateCommentCounters(postId, commentCount);
@@ -390,7 +420,7 @@ function loadComments(postId) {
                     <div class="comment-body">
                         <div class="comment-meta"><span class="name">${escapeHtml(name)}</span><span class="time">${formatCommentTime(comment.timestamp)}</span></div>
                         <div class="comment-text">${escapeHtml(comment.content)}${comment.edited ? ' <span class="comment-edited">(معدّل)</span>' : ''}</div>
-                        <div class="comment-actions comment-engagement-bar"><button type="button" class="comment-engagement-btn comment-reply-btn" onclick="showCommentReplyInput('${postId}','${safeCommentId}',event)" aria-label="الرد على التعليق"><i class="far fa-comment-dots"></i><span class="comment-reply-count">${formatSmartCount(replies.length)}</span></button><button type="button" class="comment-engagement-btn comment-like-btn ${viewerLikes?.[comment.id]?.[viewerId] ? 'active' : ''}" data-comment-like-id="${safeCommentId}" onclick="toggleCommentLike('${postId}','${safeCommentId}',event)" aria-label="الإعجاب بالتعليق"><i class="${viewerLikes?.[comment.id]?.[viewerId] ? 'fas' : 'far'} fa-heart"></i><span class="comment-like-count">${formatSmartCount(comment.likeCount || 0)}</span></button><button type="button" class="comment-engagement-btn" onclick="copyCommentLink('${postId}','${safeCommentId}',event)" aria-label="مشاركة التعليق"><i class="fas fa-share-nodes"></i></button><button type="button" class="comment-more-btn" onclick="openCommentOptions('${postId}','${safeCommentId}','${escapeHtml(String(comment.userId || ''))}',${canModerate},event)" aria-label="خيارات التعليق"><i class="fas fa-ellipsis"></i></button></div>
+                        <div class="comment-actions comment-engagement-bar"><button type="button" class="comment-engagement-btn comment-reply-btn" onclick="showCommentReplyInput('${postId}','${safeCommentId}',event)" aria-label="الرد على التعليق">${commentIcon('reply')}<span class="comment-reply-count">${formatSmartCount(replies.length)}</span></button><button type="button" class="comment-engagement-btn comment-like-btn ${viewerLikes?.[comment.id]?.[viewerId] ? 'active' : ''}" data-comment-like-id="${safeCommentId}" onclick="toggleCommentLike('${postId}','${safeCommentId}',event)" aria-label="الإعجاب بالتعليق">${commentIcon('heart', Boolean(viewerLikes?.[comment.id]?.[viewerId]))}<span class="comment-like-count">${formatSmartCount(comment.likeCount || 0)}</span></button><button type="button" class="comment-engagement-btn" onclick="copyCommentLink('${postId}','${safeCommentId}',event)" aria-label="مشاركة التعليق">${commentIcon('share')}</button><button type="button" class="comment-more-btn" onclick="openCommentOptions('${postId}','${safeCommentId}','${escapeHtml(String(comment.userId || ''))}',${canModerate},event)" aria-label="خيارات التعليق">${commentIcon('more')}</button></div>
                         <div class="comment-reply-input" id="comment-reply-${postId}-${safeCommentId}" hidden>
                             <input type="text" id="comment-input-${postId}-${safeCommentId}" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')addComment('${postId}','${safeCommentId}',event)">
                             <button type="button" class="follow-btn" onclick="addComment('${postId}','${safeCommentId}',event)">إرسال</button>
@@ -408,7 +438,7 @@ function loadComments(postId) {
                         <div class="comment-body">
                             <div class="comment-meta"><span class="name">${escapeHtml(replyName)}</span><span class="time">${formatCommentTime(reply.timestamp)}</span></div>
                             <div class="comment-text">${escapeHtml(reply.content)}${reply.edited ? ' <span class="comment-edited">(معدّل)</span>' : ''}</div>
-                            <div class="comment-actions comment-engagement-bar"><button type="button" class="comment-engagement-btn" onclick="showCommentReplyInput('${postId}','${escapeHtml(String(reply.id))}',event)" aria-label="الرد على الرد"><i class="far fa-comment-dots"></i><span class="comment-reply-count">0</span></button><button type="button" class="comment-engagement-btn comment-like-btn ${viewerLikes?.[reply.id]?.[viewerId] ? 'active' : ''}" data-comment-like-id="${escapeHtml(String(reply.id))}" onclick="toggleCommentLike('${postId}','${escapeHtml(String(reply.id))}',event)" aria-label="الإعجاب بالرد"><i class="${viewerLikes?.[reply.id]?.[viewerId] ? 'fas' : 'far'} fa-heart"></i><span class="comment-like-count">${formatSmartCount(reply.likeCount || 0)}</span></button><button type="button" class="comment-engagement-btn" onclick="copyCommentLink('${postId}','${escapeHtml(String(reply.id))}',event)" aria-label="مشاركة الرد"><i class="fas fa-share-nodes"></i></button><button type="button" class="comment-more-btn" onclick="openCommentOptions('${postId}','${escapeHtml(String(reply.id))}','${escapeHtml(String(reply.userId || ''))}',${canModerate},event)" aria-label="خيارات الرد"><i class="fas fa-ellipsis"></i></button></div>
+                            <div class="comment-actions comment-engagement-bar"><button type="button" class="comment-engagement-btn" onclick="showCommentReplyInput('${postId}','${escapeHtml(String(reply.id))}',event)" aria-label="الرد على الرد">${commentIcon('reply')}<span class="comment-reply-count">0</span></button><button type="button" class="comment-engagement-btn comment-like-btn ${viewerLikes?.[reply.id]?.[viewerId] ? 'active' : ''}" data-comment-like-id="${escapeHtml(String(reply.id))}" onclick="toggleCommentLike('${postId}','${escapeHtml(String(reply.id))}',event)" aria-label="الإعجاب بالرد">${commentIcon('heart', Boolean(viewerLikes?.[reply.id]?.[viewerId]))}<span class="comment-like-count">${formatSmartCount(reply.likeCount || 0)}</span></button><button type="button" class="comment-engagement-btn" onclick="copyCommentLink('${postId}','${escapeHtml(String(reply.id))}',event)" aria-label="مشاركة الرد">${commentIcon('share')}</button><button type="button" class="comment-more-btn" onclick="openCommentOptions('${postId}','${escapeHtml(String(reply.id))}','${escapeHtml(String(reply.userId || ''))}',${canModerate},event)" aria-label="خيارات الرد">${commentIcon('more')}</button></div>
                         </div>
                     </article>
                 `;
