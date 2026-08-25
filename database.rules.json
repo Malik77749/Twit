@@ -193,6 +193,30 @@
       }
     },
 
+    "lists": {
+      "$ownerUid": {
+        ".read": "auth.uid === $ownerUid",
+        "$listId": {
+          ".read": "auth.uid === $ownerUid",
+          ".write": "auth.uid === $ownerUid",
+          ".validate": "newData.hasChildren(['name','isPrivate','memberCount','createdAt','updatedAt']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 80 && newData.child('isPrivate').isBoolean() && newData.child('memberCount').isNumber() && newData.child('memberCount').val() >= 0 && newData.child('createdAt').isString() && newData.child('updatedAt').isString()"
+        }
+      }
+    },
+
+    "listMembers": {
+      "$ownerUid": {
+        ".read": "auth.uid === $ownerUid",
+        "$listId": {
+          ".read": "auth.uid === $ownerUid",
+          "$memberUid": {
+            ".write": "auth.uid === $ownerUid && root.child('lists').child($ownerUid).child($listId).exists()",
+            ".validate": "newData.hasChildren(['addedAt']) && newData.child('addedAt').isString()"
+          }
+        }
+      }
+    },
+
     "retweets": {
       ".read": "auth != null",
       ".indexOn": ["originalPostId"],
