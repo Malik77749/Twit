@@ -1085,6 +1085,7 @@ async function renderCommunitiesList() {
         container.innerHTML = '<div class="admin-empty"><p>تعذر تحميل المجتمعات. حاول تحديث الصفحة.</p></div>';
     }
 }
+window.renderCommunitiesList = renderCommunitiesList;
 window.filterCommunities = () => renderCommunitiesList();
 window.setCommunitiesFilter = (filter, btn) => {
     currentCommunitiesFilter = filter;

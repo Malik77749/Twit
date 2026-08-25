@@ -214,6 +214,7 @@
     },
 
     "reports": {
+      ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
       "$reportId": {
         ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
         ".write": "auth != null && ((!data.exists() && newData.child('reporterId').val() === auth.uid && newData.child('status').val() === 'pending') || (data.exists() && root.child('users').child(auth.uid).child('isAdmin').val() === true))",
@@ -222,6 +223,7 @@
     },
 
     "verificationThreads": {
+      ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
       "$uid": {
         ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('isAdmin').val() === true",
         "meta": {
@@ -250,6 +252,7 @@
       }
     },
     "bans": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('isAdmin').val() === true",
       "$uid": {
         ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('isAdmin').val() === true",
                 ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
@@ -261,6 +264,7 @@
       }
     },
     "auditLog": {
+      ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
       "$logId": {
         ".read": "root.child('users').child(auth.uid).child('isAdmin').val() === true",
         ".write": "root.child('users').child(auth.uid).child('isAdmin').val() === true"
