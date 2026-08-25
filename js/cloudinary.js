@@ -1,4 +1,4 @@
-import { cloudinaryConfig } from './config.js?v=10';
+import { cloudinaryConfig } from './config.js?v=9';
 
 const MAX_MEDIA_BYTES = 50 * 1024 * 1024;
 const ALLOWED_MEDIA_TYPES = new Set([

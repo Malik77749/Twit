@@ -1,17 +1,17 @@
 // Posts Module — Upgraded with Pagination, Rate Limiting, Denormalization
 import { ref, push, set, get, update, remove, increment, query, orderByChild, limitToLast, onValue, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
-import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js?v=3';
-import { showLoading, hideLoading, showView } from './ui.js?v=3';
-import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=3';
-import { loadComments } from './comments.js?v=3';
-import * as rateLimiter from './rate-limiter.js?v=3';
-import * as pagination from './pagination.js?v=7';
-import * as blockMute from './block-mute.js?v=3';
-import * as pollsModule from './polls.js?v=3';
-import * as imageCompress from './image-compress.js?v=3';
-import * as undoTweetModule from './undo-tweet.js?v=3';
-import * as imageCdn from './image-cdn.js?v=3';
+import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js?v=9';
+import { showLoading, hideLoading, showView } from './ui.js?v=10';
+import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=9';
+import { loadComments } from './comments.js?v=9';
+import * as rateLimiter from './rate-limiter.js?v=9';
+import * as pagination from './pagination.js?v=9';
+import * as blockMute from './block-mute.js?v=9';
+import * as pollsModule from './polls.js?v=9';
+import * as imageCompress from './image-compress.js?v=9';
+import * as undoTweetModule from './undo-tweet.js?v=9';
+import * as imageCdn from './image-cdn.js?v=9';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 

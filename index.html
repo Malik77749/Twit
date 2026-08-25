@@ -95,7 +95,7 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=6">
+    <link rel="stylesheet" href="css/professional.css?v=7">
 
     <!-- PWA Service Worker -->
     <script>
@@ -398,9 +398,6 @@
                 </button>
                 <button class="drawer-item" onclick="showCommunities(); closeDrawer();">
                     <i class="fas fa-people-group"></i><span>المجتمعات</span>
-                </button>
-                <button class="drawer-item" onclick="closeDrawer()">
-                    <i class="fas fa-circle-check"></i><span>الاشتراك المميز</span>
                 </button>
                 <button class="drawer-item" onclick="showSettings(); closeDrawer();">
                     <i class="fas fa-gear"></i><span>الإعدادات</span>
@@ -944,15 +941,6 @@
                 </div>
             </div>
 
-            <!-- Subscribe Card -->
-            <div class="trending-card">
-                <h3>اشترك في Premium</h3>
-                <div style="padding:12px 16px;">
-                    <p style="font-size:15px;margin-bottom:12px;">اشترك لفتح ميزات جديدة والحصول على حصة من الإيرادات.</p>
-                    <button class="follow-btn" style="background:var(--accent);color:white;font-size:15px;padding:8px 16px;">اشترك</button>
-                </div>
-            </div>
-
             <!-- Trending (Dynamic) -->
             <div class="trending-card" id="trending-card">
                 <h3>الأكثر تداولاً</h3>
@@ -982,6 +970,49 @@
     <div class="lightbox" id="lightbox" onclick="closeLightbox()">
         <button class="lightbox-close" onclick="closeLightbox()"><i class="fas fa-times"></i></button>
         <img id="lightbox-img" src="" alt="">
+    </div>
+
+    <!-- Mimer Help Center -->
+    <div class="help-center-modal" id="help-center-modal" role="dialog" aria-modal="true" aria-labelledby="help-center-title" aria-hidden="true">
+        <div class="help-center-card" role="document">
+            <div class="help-center-header">
+                <div>
+                    <span class="help-center-kicker">مركز ميمر</span>
+                    <h2 id="help-center-title">كيف يمكننا مساعدتك؟</h2>
+                </div>
+                <button class="icon-btn" type="button" aria-label="إغلاق مركز المساعدة" onclick="closeHelpCenter()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="help-center-search-row">
+                <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                <input id="help-center-search" type="search" placeholder="ابحث في الأسئلة الشائعة" oninput="filterHelpCenter(this.value)">
+            </div>
+            <div class="help-center-topics" id="help-center-topics">
+                <details open data-help-topic>
+                    <summary>كيف أنشئ منشورًا؟</summary>
+                    <p>اكتب فكرتك في صندوق النشر، ثم أضف صورة أو فيديو أو GIF أو استطلاعًا أو موقعًا، واختر الجمهور واضغط «نشر».</p>
+                </details>
+                <details data-help-topic>
+                    <summary>كيف أحفظ منشورًا أو أبلغ عنه؟</summary>
+                    <p>افتح قائمة المزيد في بطاقة المنشور. ستجد الحفظ والاقتباس والإبلاغ والكتم والحظر بحسب صلاحيات الحساب.</p>
+                </details>
+                <details data-help-topic>
+                    <summary>أين أجد المجتمعات والمسودات؟</summary>
+                    <p>من صورة الحساب أو زر المزيد افتح القائمة الجانبية، ثم اختر المجتمعات أو المسودات أو القوائم أو الإحصائيات.</p>
+                </details>
+                <details data-help-topic>
+                    <summary>كيف أعدل ملفي الشخصي؟</summary>
+                    <p>افتح الملف الشخصي ثم اختر تعديل الملف. يمكنك تغيير الاسم واسم المستخدم والنبذة والصور وإعداد الحساب الخاص.</p>
+                </details>
+                <details data-help-topic>
+                    <summary>كيف أحمي حسابي؟</summary>
+                    <p>من الإعدادات يمكنك إدارة الخصوصية والرسائل والحظر والكتم والإشعارات والمصادقة الثنائية.</p>
+                </details>
+            </div>
+            <div class="help-center-footer">
+                <span>لم تجد الإجابة؟ استخدم طلب التوثيق للتواصل مع إدارة ميمر.</span>
+                <button class="follow-btn" type="button" onclick="closeHelpCenter(); showVerificationCenter();">تواصل مع الإدارة</button>
+            </div>
+        </div>
     </div>
 
     <!-- Post Dropdown Menu (hidden, shown on demand) -->
@@ -1041,6 +1072,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=16"></script>
+    <script type="module" src="js/app.js?v=18"></script>
 </body>
 </html>

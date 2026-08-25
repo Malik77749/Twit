@@ -2,10 +2,8 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref, get, update, runTransaction, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { getStorage } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
-
 import { firebaseConfig } from './config.js?v=9';
-import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=9';
+import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=10';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=9';
 import * as posts from './posts.js?v=9';
@@ -51,12 +49,11 @@ function detailIcon(name) {
 }
 
 // Initialize Firebase
-let app, authInstance, database, storage;
+let app, authInstance, database;
 try {
     app = initializeApp(firebaseConfig);
     authInstance = getAuth(app);
     database = getDatabase(app);
-    storage = getStorage(app);
     console.log('Firebase initialized OK');
 } catch (error) {
     console.error('Firebase initialization error:', error);
@@ -66,10 +63,10 @@ try {
 // Initialize all modules
 try {
     auth.init(authInstance, database);
-    posts.init(authInstance, database, storage);
+    posts.init(authInstance, database);
     comments.init(authInstance, database);
     notifications.init(authInstance, database);
-    profile.init(authInstance, database, storage);
+    profile.init(authInstance, database);
     dm.init(authInstance, database);
     blockMute.init(authInstance, database);
     polls.init(authInstance, database);
@@ -2228,7 +2225,35 @@ try {
         }
     });
     window.showKeyboardShortcuts = function() { shortcuts.showShortcutsHelp(); };
-    window.showHelpCenter = function() { showToast('مركز المساعدة قريباً'); };
+    window.showHelpCenter = function() {
+        const modal = document.getElementById('help-center-modal');
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        window.setTimeout(() => document.getElementById('help-center-search')?.focus(), 80);
+    };
+    window.closeHelpCenter = function() {
+        const modal = document.getElementById('help-center-modal');
+        if (!modal) return;
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+    };
+    window.filterHelpCenter = function(value = '') {
+        const query = String(value).trim().toLocaleLowerCase('ar');
+        document.querySelectorAll('#help-center-topics [data-help-topic]').forEach(topic => {
+            const matches = !query || topic.textContent.toLocaleLowerCase('ar').includes(query);
+            topic.hidden = !matches;
+            if (matches && query) topic.open = true;
+        });
+    };
+    document.getElementById('help-center-modal')?.addEventListener('click', event => {
+        if (event.target.id === 'help-center-modal') window.closeHelpCenter?.();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') window.closeHelpCenter?.();
+    });
 
     window.currentExploreSection = 'foryou';
     window.switchExploreTab = function(section, btn) {

@@ -100,13 +100,13 @@ function parseContent(text) {
  */
 function searchAndShowUser(username) {
     const lower = username.toLowerCase();
-    import('./firebase-helpers.js?v=3').then(({ searchUserByHandle }) => {
+    import('./firebase-helpers.js?v=9').then(({ searchUserByHandle }) => {
         searchUserByHandle(lower).then(userId => {
             if (userId) {
                 window.showProfile(userId);
             } else {
                 // Fallback: search by name
-                import('./firebase-helpers.js?v=3').then(({ searchUserByName }) => {
+                import('./firebase-helpers.js?v=9').then(({ searchUserByName }) => {
                     searchUserByName(lower).then(nameId => {
                         if (nameId) {
                             window.showProfile(nameId);

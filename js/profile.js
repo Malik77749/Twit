@@ -1,12 +1,12 @@
 // Profile Module
 import { ref, get, update, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { showLoading, hideLoading, showView } from './ui.js?v=3';
-import { getUserData } from './firebase-helpers.js?v=3';
-import { showToast } from './utils.js?v=3';
+import { showLoading, hideLoading, showView } from './ui.js?v=10';
+import { getUserData } from './firebase-helpers.js?v=9';
+import { showToast } from './utils.js?v=9';
 import { renderPost, renderRetweet } from './posts.js?v=9';
-import { escapeHtml } from './utils.js?v=3';
+import { escapeHtml } from './utils.js?v=9';
 import * as cloudinary from './cloudinary.js?v=10';
-import * as imageCdn from './image-cdn.js?v=3';
+import * as imageCdn from './image-cdn.js?v=9';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -20,15 +20,14 @@ function isSafeRemoteImageUrl(value) {
     return /^(https:\/\/|http:\/\/|data:image\/)/i.test(raw);
 }
 
-let auth, database, storage;
+let auth, database;
 let currentProfileUserId = null;
 let pendingCroppedImages = { avatar: null, banner: null };
 let cropState = null;
 
-function init(authInstance, databaseInstance, storageInstance) {
+function init(authInstance, databaseInstance) {
     auth = authInstance;
     database = databaseInstance;
-    storage = storageInstance;
 }
 
 function renderProfileError(container, message = 'تعذر تحميل البيانات') {
