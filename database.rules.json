@@ -196,6 +196,7 @@
 
     "notifications": {
       "$uid": {
+        ".read": "auth.uid === $uid",
         "$notifId": {
           ".read": "auth.uid === $uid",
           ".write": "auth != null && (root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && newData.child('actorId').val() === auth.uid) || (auth.uid === $uid && data.exists() && newData.child('message').val() === data.child('message').val() && newData.child('actorId').val() === data.child('actorId').val() && newData.child('type').val() === data.child('type').val() && newData.child('read').val() === true))",
@@ -302,17 +303,17 @@
         "requesterId": { ".validate": "newData.isString()" },
         "recipientId": { ".validate": "newData.isString()" },
         "status": {
-          ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('recipientId').val() === auth.uid && data.child('status').val() === 'pending' && (newData.val() === 'accepted' || newData.val() === 'rejected')",
+          ".write": "auth != null && data.parent().child('participants').hasChild(auth.uid) && data.parent().child('recipientId').val() === auth.uid && data.parent().child('status').val() === 'pending' && (newData.val() === 'accepted' || newData.val() === 'rejected')",
           ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'accepted' || newData.val() === 'rejected')"
         },
-        "acceptedBy": { ".write": "auth.uid === data.child('recipientId').val() && data.child('status').val() === 'pending'", ".validate": "newData.isString()" },
-        "acceptedAt": { ".write": "auth.uid === data.child('recipientId').val() && data.child('status').val() === 'pending'", ".validate": "newData.isString()" },
-        "rejectedBy": { ".write": "auth.uid === data.child('recipientId').val() && data.child('status').val() === 'pending'", ".validate": "newData.isString()" },
-        "rejectedAt": { ".write": "auth.uid === data.child('recipientId').val() && data.child('status').val() === 'pending'", ".validate": "newData.isString()" },
+        "acceptedBy": { ".write": "auth != null && auth.uid === data.parent().child('recipientId').val() && data.parent().child('status').val() === 'pending'", ".validate": "newData.isString()" },
+        "acceptedAt": { ".write": "auth != null && auth.uid === data.parent().child('recipientId').val() && data.parent().child('status').val() === 'pending'", ".validate": "newData.isString()" },
+        "rejectedBy": { ".write": "auth != null && auth.uid === data.parent().child('recipientId').val() && data.parent().child('status').val() === 'pending'", ".validate": "newData.isString()" },
+        "rejectedAt": { ".write": "auth != null && auth.uid === data.parent().child('recipientId').val() && data.parent().child('status').val() === 'pending'", ".validate": "newData.isString()" },
         "lastMessage": { ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('status').val() !== 'rejected'", ".validate": "newData.isString() || newData.val() === null" },
         "lastMessageTime": { ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('status').val() !== 'rejected'", ".validate": "newData.isString() || newData.val() === null" },
         "lastSenderId": { ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('status').val() !== 'rejected'", ".validate": "newData.isString()" },
-        "unreadCounts": { ".write": "auth != null && data.child('participants').hasChild(auth.uid)", ".validate": "newData.isObject()" },
+        "unreadCounts": { ".write": "auth != null && data.child('participants').hasChild(auth.uid)", ".validate": "newData.hasChildren() || newData.val() === null" },
         "deletedFor": { "$uid": { ".write": "auth.uid === $uid && data.parent().parent().child('participants').hasChild(auth.uid)", ".validate": "newData.isBoolean()" } },
         "$other": { ".validate": true }
       }

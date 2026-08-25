@@ -4,5 +4,14 @@
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Mimer",
+        "supportEmail": "malik5sent@gmail.com"
+      }
+    }
   }
 }

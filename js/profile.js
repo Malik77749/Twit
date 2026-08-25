@@ -3,6 +3,7 @@ import { ref, get, update, runTransaction } from 'https://www.gstatic.com/fireba
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { showLoading, hideLoading, showView } from './ui.js?v=3';
 import { getUserData } from './firebase-helpers.js?v=3';
+import { showToast } from './utils.js?v=3';
 import { renderPost, renderRetweet } from './posts.js?v=3';
 import { escapeHtml } from './utils.js?v=3';
 
@@ -251,11 +252,27 @@ async function saveProfile() {
         if (website !== undefined) updates.website = website;
         if (location !== undefined) updates.location = location;
 
-        if (pendingCroppedImages.avatar) updates.profilePicture = await uploadCroppedImage(pendingCroppedImages.avatar, 'avatar');
-        else if (picUrl) { new URL(picUrl); updates.profilePicture = picUrl; }
+        if (pendingCroppedImages.avatar) {
+            try {
+                const uploadedAvatar = await uploadCroppedImage(pendingCroppedImages.avatar, 'avatar');
+                if (uploadedAvatar) updates.profilePicture = uploadedAvatar;
+                else throw new Error('STORAGE_UNAVAILABLE');
+            } catch (uploadError) {
+                pendingCroppedImages.avatar = null;
+                showToast('تم حفظ بيانات الملف، لكن رفع الصورة يحتاج تفعيل Storage المدفوع');
+            }
+        } else if (picUrl) { new URL(picUrl); updates.profilePicture = picUrl; }
 
-        if (pendingCroppedImages.banner) updates.banner = await uploadCroppedImage(pendingCroppedImages.banner, 'banner');
-        else if (bannerUrl) { new URL(bannerUrl); updates.banner = bannerUrl; }
+        if (pendingCroppedImages.banner) {
+            try {
+                const uploadedBanner = await uploadCroppedImage(pendingCroppedImages.banner, 'banner');
+                if (uploadedBanner) updates.banner = uploadedBanner;
+                else throw new Error('STORAGE_UNAVAILABLE');
+            } catch (uploadError) {
+                pendingCroppedImages.banner = null;
+                showToast('تم حفظ بيانات الملف، لكن رفع صورة الغلاف يحتاج تفعيل Storage المدفوع');
+            }
+        } else if (bannerUrl) { new URL(bannerUrl); updates.banner = bannerUrl; }
 
         await update(ref(database, 'users/' + auth.currentUser.uid), updates);
 
