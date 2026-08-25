@@ -121,7 +121,7 @@ async function addComment(postId, parentCommentId, event) {
             if (targetUserId && targetUserId !== userId) {
                 const actorData = userData || await getUserData(database, userId);
                 const name = actorData.name || await getUserName(database, userId);
-                const text = parentOwnerId ? `رد ${name} على تعليقك` : `رد ${name} على منشورك`;
+                const text = parentOwnerId ? `رد ${name} على تعليقك` : `علّق ${name} على منشورك`;
                 void addNotification(database, targetUserId, text, postId, { actorId: userId, actorName: name, actorAvatar: actorData.profilePicture || DEFAULT_AVATAR, type: parentCommentId ? 'replies' : 'comments' });
             }
         }).catch(() => {});
