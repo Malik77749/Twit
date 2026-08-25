@@ -106,7 +106,7 @@ window.setTimeout(() => {
 const allViews = [
     'home', 'notifications', 'profile', 'search', 'messages', 'bookmarks',
     'post-detail', 'lists', 'analytics', 'settings', 'drafts', 'communities',
-    'dm-chat'
+    'dm-chat', 'dm-conversations'
 ];
 
 function hideAllViews() {
