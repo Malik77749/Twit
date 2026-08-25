@@ -818,6 +818,8 @@ window.saveUsernameOnboarding = async function() {
         if (!claim.committed || claim.snapshot.val() !== uid) throw new Error('TAKEN');
         const country = document.getElementById('onboarding-country')?.value || 'OTHER';
         await update(ref(database, `users/${uid}`), { handle, country, needsUsername: false, needsSuggestions: true, usernameUpdatedAt: new Date().toISOString() });
+        const refreshedUser = { ...(await get(ref(database, `users/${uid}`))).val(), handle, country };
+        updateSidebar(refreshedUser);
         document.getElementById('username-onboarding').hidden = true;
         document.body.classList.remove('mimer-onboarding-required');
         showToast('تم حجز اسم المستخدم بنجاح');
