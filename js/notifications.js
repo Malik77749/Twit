@@ -11,6 +11,8 @@ let currentNotificationsFilter = 'all';
 let observedUserId = null;
 let seenRealtimeNotificationIds = new Set();
 let realtimeSnapshotReady = false;
+let realtimePollTimer = null;
+let realtimePollInFlight = false;
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -145,6 +147,19 @@ function showRealtimeNotification(notif) {
     banner._hideTimer = setTimeout(() => banner.classList.remove('is-visible'), 7000);
 }
 
+function processRealtimeNotifications(userId, notifications) {
+    const userChanged = observedUserId !== userId;
+    if (userChanged) {
+        observedUserId = userId;
+        seenRealtimeNotificationIds = new Set();
+        realtimeSnapshotReady = false;
+    }
+    const freshNotifications = notifications.filter(notif => !seenRealtimeNotificationIds.has(notif.id));
+    notifications.forEach(notif => seenRealtimeNotificationIds.add(notif.id));
+    if (realtimeSnapshotReady) freshNotifications.slice(0, 3).forEach(showRealtimeNotification);
+    realtimeSnapshotReady = true;
+}
+
 function updateBadges(unread) {
     const mobileBadge = document.getElementById('notif-badge');
     const desktopBadge = document.getElementById('notif-badge-desktop');
@@ -166,17 +181,25 @@ function loadNotifications() {
     const list = document.getElementById('notifications-list');
     if (list) list.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
+    if (realtimePollTimer) clearInterval(realtimePollTimer);
+    realtimePollTimer = setInterval(async () => {
+        if (document.hidden || realtimePollInFlight || auth.currentUser?.uid !== userId) return;
+        realtimePollInFlight = true;
+        try {
+            const snapshot = await get(ref(database, `notifications/${userId}`));
+            const notifications = [];
+            if (snapshot.exists()) snapshot.forEach(child => notifications.push({ id: child.key, ...child.val() }));
+            processRealtimeNotifications(userId, notifications);
+            updateBadges(notifications.filter(n => !n.read).length);
+        } catch (_) { /* realtime listener remains the primary path */ }
+        finally { realtimePollInFlight = false; }
+    }, 5000);
+
     notificationsUnsub = onValue(ref(database, `notifications/${userId}`), async snapshot => {
-        const userChanged = observedUserId !== userId;
-        if (userChanged) {
-            observedUserId = userId;
-            seenRealtimeNotificationIds = new Set();
-            realtimeSnapshotReady = false;
-        }
         if (!snapshot.exists()) {
+            processRealtimeNotifications(userId, []);
             if (list) list.innerHTML = '<div class="empty-state"><h3>الإشعارات</h3><p>لا توجد إشعارات</p></div>';
             updateBadges(0);
-            realtimeSnapshotReady = true;
             return;
         }
 
@@ -184,10 +207,7 @@ function loadNotifications() {
         snapshot.forEach(child => notifications.push({ id: child.key, ...child.val() }));
         notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        const freshNotifications = notifications.filter(notif => !seenRealtimeNotificationIds.has(notif.id));
-        notifications.forEach(notif => seenRealtimeNotificationIds.add(notif.id));
-        if (realtimeSnapshotReady) freshNotifications.slice(0, 3).forEach(showRealtimeNotification);
-        realtimeSnapshotReady = true;
+        processRealtimeNotifications(userId, notifications);
 
         const unread = notifications.filter(n => !n.read).length;
         updateBadges(unread);
