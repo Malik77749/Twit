@@ -1243,3 +1243,10 @@ body { min-width: 0; }
 @media (max-width:760px) {
   #post-detail-content .comment-section { padding-bottom:calc(90px + env(safe-area-inset-bottom)); }
 }
+
+.comment-delete-btn { min-height:28px; padding:3px 9px; border:0; border-radius:999px; color:#fb7185; background:transparent; font-size:12px; font-weight:700; }
+.comment-delete-btn:hover { color:#fff; background:rgba(244,63,94,.16); }
+@media (max-width:760px) {
+  .comment-actions { flex-wrap:wrap; }
+  .comment-delete-btn, .comment-reply-btn { min-height:30px; }
+}

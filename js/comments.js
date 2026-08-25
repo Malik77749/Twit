@@ -1,5 +1,5 @@
 // Comments Module — Upgraded with Rate Limiting + Denormalization
-import { ref, push, set, get, update, runTransaction, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, push, set, get, remove, update, runTransaction, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { escapeHtml } from './utils.js?v=9';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=9';
 import * as rateLimiter from './rate-limiter.js?v=9';
@@ -100,6 +100,37 @@ async function addComment(postId, parentCommentId, event) {
     }
 }
 
+async function deleteComment(postId, commentId, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const uid = auth?.currentUser?.uid;
+    if (!uid) { window.showToast?.('سجّل الدخول أولاً'); return false; }
+    try {
+        const [postSnap, commentsSnap, actorData] = await Promise.all([
+            get(ref(database, `posts/${postId}`)),
+            get(ref(database, `comments/${postId}`)),
+            getUserData(database, uid).catch(() => ({}))
+        ]);
+        const post = postSnap.exists() ? postSnap.val() : null;
+        const allComments = commentsSnap.exists() ? commentsSnap.val() : {};
+        const target = allComments?.[commentId];
+        if (!target) { window.showToast?.('التعليق غير موجود'); return false; }
+        const allowed = target.userId === uid || post?.userId === uid || actorData?.isAdmin === true;
+        if (!allowed) {
+            window.showToast?.('لا يمكنك حذف هذا التعليق');
+            return false;
+        }
+        const idsToDelete = [commentId, ...Object.entries(allComments).filter(([, value]) => value?.parentCommentId === commentId).map(([id]) => id)];
+        await Promise.all(idsToDelete.map(id => remove(ref(database, `comments/${postId}/${id}`))));
+        await runTransaction(ref(database, `posts/${postId}/commentCount`), current => Math.max(0, (Number(current) || 0) - idsToDelete.length));
+        window.showToast?.('تم حذف التعليق');
+        return true;
+    } catch (error) {
+        window.showToast?.('تعذر حذف التعليق');
+        return false;
+    }
+}
+
 function loadComments(postId) {
     const commentSection = getVisibleCommentSection(postId);
     if (!commentSection) return;
@@ -113,6 +144,9 @@ function loadComments(postId) {
         const commentCount = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
         const viewerId = auth?.currentUser?.uid;
         const viewerData = viewerId ? (await getUserData(database, viewerId).catch(() => ({}))) : {};
+        const postSnapshot = await get(ref(database, `posts/${postId}`)).catch(() => null);
+        const postOwnerId = postSnapshot?.exists() ? postSnapshot.val()?.userId : null;
+        const canModerate = Boolean(viewerId && (viewerId === postOwnerId || viewerData?.isAdmin === true));
         const viewerAvatar = escapeHtml(String(viewerData?.profilePicture || DEFAULT_AVATAR));
         const composerHtml = `<div class="comment-input-row"><img src="${viewerAvatar}" alt=""><input type="text" id="comment-input-${postId}" placeholder="أضف ردًا إلى المحادثة..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)"><button type="button" onclick="addComment('${postId}',null,event)" aria-label="إرسال الرد">إرسال</button></div>`;
 
@@ -148,7 +182,7 @@ function loadComments(postId) {
                     <div class="comment-body">
                         <div class="comment-meta"><span class="name">${escapeHtml(name)}</span><span class="time">${formatCommentTime(comment.timestamp)}</span></div>
                         <div class="comment-text">${escapeHtml(comment.content)}</div>
-                        <div class="comment-actions"><button type="button" class="comment-reply-btn" onclick="showCommentReplyInput('${postId}','${safeCommentId}',event)">رد</button>${replies.length ? `<span class="comment-replies-count">${replies.length} ${replies.length === 1 ? 'رد' : 'ردود'}</span>` : ''}</div>
+                        <div class="comment-actions"><button type="button" class="comment-reply-btn" onclick="showCommentReplyInput('${postId}','${safeCommentId}',event)">رد</button>${(canModerate || comment.userId === viewerId) ? `<button type="button" class="comment-delete-btn" onclick="deleteComment('${postId}','${safeCommentId}',event)">حذف</button>` : ''}${replies.length ? `<span class="comment-replies-count">${replies.length} ${replies.length === 1 ? 'رد' : 'ردود'}</span>` : ''}</div>
                         <div class="comment-reply-input" id="comment-reply-${postId}-${safeCommentId}" hidden>
                             <input type="text" id="comment-input-${postId}-${safeCommentId}" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')addComment('${postId}','${safeCommentId}',event)">
                             <button type="button" class="follow-btn" onclick="addComment('${postId}','${safeCommentId}',event)">إرسال</button>
@@ -166,6 +200,7 @@ function loadComments(postId) {
                         <div class="comment-body">
                             <div class="comment-meta"><span class="name">${escapeHtml(replyName)}</span><span class="time">${formatCommentTime(reply.timestamp)}</span></div>
                             <div class="comment-text">${escapeHtml(reply.content)}</div>
+                            ${(canModerate || reply.userId === viewerId) ? `<div class="comment-actions"><button type="button" class="comment-delete-btn" onclick="deleteComment('${postId}','${escapeHtml(String(reply.id))}',event)">حذف</button></div>` : ''}
                         </div>
                     </article>
                 `;
@@ -210,4 +245,4 @@ function toggleComments(postId, event) {
     }
 }
 
-export { init, addComment, loadComments, toggleComments, showCommentReplyInput };
+export { init, addComment, deleteComment, loadComments, toggleComments, showCommentReplyInput };
