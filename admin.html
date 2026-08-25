@@ -7,7 +7,7 @@
     <title>Mimer Admin — لوحة التحكم</title>
     <meta name="theme-color" content="#000000">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/admin.css?v=2">
+    <link rel="stylesheet" href="css/admin.css?v=3">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -138,6 +138,16 @@
                     </div>
                 </div>
 
+                <section class="admin-command-center" aria-label="إجراءات سريعة">
+                    <div class="section-heading"><div><span class="eyebrow">مركز الإشراف</span><h3>إجراءات سريعة</h3></div><span class="live-status"><span></span> مباشر</span></div>
+                    <div class="admin-command-grid">
+                        <button class="admin-command-card reports" onclick="switchAdminView('reports')"><i class="fas fa-flag"></i><span><strong>مراجعة البلاغات</strong><small>افتح قائمة البلاغات المعلقة</small></span><b>›</b></button>
+                        <button class="admin-command-card users" onclick="switchAdminView('users')"><i class="fas fa-users"></i><span><strong>إدارة المستخدمين</strong><small>بحث، توثيق، إيقاف، وحظر</small></span><b>›</b></button>
+                        <button class="admin-command-card verify" onclick="switchAdminView('verification')"><i class="fas fa-circle-check"></i><span><strong>طلبات التوثيق</strong><small>راجع الرسائل والطلبات الجديدة</small></span><b>›</b></button>
+                        <button class="admin-command-card communities" onclick="switchAdminView('communities')"><i class="fas fa-people-group"></i><span><strong>سلامة المجتمعات</strong><small>تابع الأعضاء والمنشورات</small></span><b>›</b></button>
+                    </div>
+                </section>
+
                 <!-- Charts -->
                 <div class="chart-container">
                     <h3>نمو المستخدمين (آخر 30 يوم)</h3>
@@ -233,6 +243,11 @@
 
             <!-- ===== REPORTS VIEW ===== -->
             <div id="reports-view" style="display:none;">
+                <div class="admin-queue-strip">
+                    <div><span class="queue-kicker">طابور السلامة</span><strong id="reports-queue-count">—</strong><small>بلاغات تحتاج مراجعة</small></div>
+                    <div><strong id="reports-resolved-count">—</strong><small>بلاغات معالجة</small></div>
+                    <div><strong id="reports-content-count">—</strong><small>بلاغات محتوى</small></div>
+                </div>
                 <div class="admin-header">
                     <h2>البلاغات</h2>
                 </div>
@@ -263,7 +278,14 @@
             <!-- ===== COMMUNITIES VIEW ===== -->
             <div id="communities-view" style="display:none;">
                 <div class="admin-header">
-                    <h2>المجتمعات</h2>
+                    <div><span class="eyebrow">مساحات النقاش</span><h2>إدارة المجتمعات</h2></div>
+                    <div class="admin-header-actions"><button class="action-btn outline small" onclick="renderCommunitiesList()"><i class="fas fa-refresh"></i> تحديث</button></div>
+                </div>
+                <div class="admin-search-bar"><input type="search" class="admin-search-input" id="communities-search" placeholder="بحث باسم المجتمع أو الوصف..." oninput="filterCommunities()"></div>
+                <div class="admin-filter-chips">
+                    <button class="filter-chip active" data-filter="all" onclick="setCommunitiesFilter('all', this)">الكل</button>
+                    <button class="filter-chip" data-filter="active" onclick="setCommunitiesFilter('active', this)">نشطة</button>
+                    <button class="filter-chip" data-filter="suspended" onclick="setCommunitiesFilter('suspended', this)">موقوفة</button>
                 </div>
                 <div id="communities-list">
                     <div class="admin-spinner"></div>
@@ -457,6 +479,6 @@
     <!-- Toast -->
     <div class="admin-toast" id="admin-toast"></div>
 
-    <script type="module" src="js/admin.js?v=1"></script>
+    <script type="module" src="js/admin.js?v=2"></script>
 </body>
 </html>

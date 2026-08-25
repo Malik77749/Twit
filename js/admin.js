@@ -27,10 +27,12 @@ let allPosts = [];
 let allReports = [];
 let allAuditLogs = [];
 let allVerificationThreads = [];
+let allCommunities = [];
 let currentUsersFilter = 'all';
 let currentPostsFilter = 'all';
 let currentReportsFilter = 'pending';
 let currentAuditFilter = 'all';
+let currentCommunitiesFilter = 'all';
 let usersPage = 1;
 let postsPage = 1;
 const PAGE_SIZE = 20;
@@ -251,6 +253,12 @@ async function loadAllData() {
         const unreadVerification = allVerificationThreads.filter(t => t.unreadForAdmin).length;
         if (verificationBadge) { verificationBadge.textContent = unreadVerification; verificationBadge.style.display = unreadVerification ? 'flex' : 'none'; }
 
+        // Load communities
+        const communitiesSnap = await get(ref(database, 'communities'));
+        allCommunities = [];
+        if (communitiesSnap.exists()) communitiesSnap.forEach(child => allCommunities.push({ id: child.key, ...child.val() }));
+        allCommunities.sort((a, b) => Number(b.memberCount || 0) - Number(a.memberCount || 0));
+
         // Load audit logs
         const auditSnap = await get(ref(database, 'auditLog'));
         allAuditLogs = [];
@@ -268,6 +276,7 @@ async function loadAllData() {
 
         // Update quick stats
         updateQuickStats();
+        updateReportQueueSummary();
         renderRecentUsers();
 
     } catch (e) {
@@ -911,6 +920,7 @@ function renderReportsList() {
 
     filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+    updateReportQueueSummary();
     const container = document.getElementById('reports-list');
     if (filtered.length === 0) {
         container.innerHTML = '<div class="admin-empty"><i class="fas fa-flag"></i><h3>لا توجد بلاغات</h3><p>لا توجد بلاغات مطابقة</p></div>';
@@ -949,6 +959,16 @@ function renderReportsList() {
             </div>
         </div>`;
     }).join('');
+}
+
+function updateReportQueueSummary() {
+    const pending = allReports.filter(r => r.status === 'pending').length;
+    const resolved = allReports.filter(r => ['resolved','dismissed','warned'].includes(r.status)).length;
+    const content = allReports.filter(r => r.type === 'content').length;
+    const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    setText('reports-queue-count', pending);
+    setText('reports-resolved-count', resolved);
+    setText('reports-content-count', content);
 }
 
 window.setReportsFilter = (filter, btn) => {
@@ -1031,44 +1051,69 @@ window.banReportedUser = async (reportId, uid) => {
 // ===== Communities =====
 async function renderCommunitiesList() {
     const container = document.getElementById('communities-list');
+    if (!container) return;
     try {
-        const snap = await get(ref(database, 'communities'));
-        if (!snap.exists()) {
-            container.innerHTML = '<div class="admin-empty"><i class="fas fa-people-group"></i><h3>لا توجد مجتمعات</h3></div>';
+        if (!allCommunities.length) {
+            const snap = await get(ref(database, 'communities'));
+            allCommunities = [];
+            if (snap.exists()) snap.forEach(child => allCommunities.push({ id: child.key, ...child.val() }));
+        }
+        const search = document.getElementById('communities-search')?.value?.trim().toLowerCase() || '';
+        let communities = allCommunities.filter(c => {
+            const active = c.status !== 'suspended';
+            if (currentCommunitiesFilter === 'active' && !active) return false;
+            if (currentCommunitiesFilter === 'suspended' && active) return false;
+            return !search || `${c.name || ''} ${c.description || ''}`.toLowerCase().includes(search);
+        });
+        communities.sort((a, b) => Number(b.memberCount || 0) - Number(a.memberCount || 0));
+        if (!communities.length) {
+            container.innerHTML = '<div class="admin-empty"><i class="fas fa-people-group"></i><h3>لا توجد مجتمعات مطابقة</h3><p>جرّب تغيير البحث أو الفلتر.</p></div>';
             return;
         }
-        const communities = [];
-        snap.forEach(child => communities.push({ id: child.key, ...child.val() }));
-
-        container.innerHTML = communities.map(c => `
-            <div class="report-item" style="cursor:pointer;">
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <div class="community-icon" style="width:48px;height:48px;border-radius:12px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:24px;">
-                        ${c.icon || '<i class="fas fa-people-group"></i>'}
-                    </div>
-                    <div style="flex:1;">
-                        <div style="font-weight:700;font-size:15px;">${escapeHtml(c.name)}</div>
-                        <div style="color:var(--text-secondary);font-size:13px;">${c.memberCount || 0} عضو</div>
-                    </div>
-                    <button class="action-btn danger small" onclick="deleteCommunity('${c.id}')"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>
-        `).join('');
+        container.innerHTML = communities.map(c => {
+            const suspended = c.status === 'suspended';
+            const type = c.isPrivate ? 'خاص' : 'عام';
+            return `<article class="admin-community-card ${suspended ? 'is-suspended' : ''}">
+                <div class="admin-community-icon">${c.icon || '<i class="fas fa-people-group"></i>'}</div>
+                <div class="admin-community-body"><div class="admin-community-title"><strong>${escapeHtml(c.name || 'مجتمع بلا اسم')}</strong><span class="status-badge ${suspended ? 'suspended' : 'active'}"><span class="dot"></span>${suspended ? 'موقوف' : 'نشط'}</span></div>
+                <p>${escapeHtml(c.description || 'لا يوجد وصف')}</p><div class="admin-community-meta"><span>${Number(c.memberCount || 0)} عضو</span><span>${Number(c.postCount || 0)} منشور</span><span>${type}</span></div></div>
+                <div class="admin-community-actions"><button class="action-btn outline small" onclick="toggleCommunityStatus('${c.id}')">${suspended ? 'إعادة التفعيل' : 'إيقاف'}</button><button class="action-btn danger small" onclick="deleteCommunity('${c.id}')">حذف</button></div>
+            </article>`;
+        }).join('');
     } catch (e) {
-        container.innerHTML = '<div class="admin-empty"><p>خطأ في تحميل المجتمعات</p></div>';
+        console.error('Communities admin error:', e);
+        container.innerHTML = '<div class="admin-empty"><p>تعذر تحميل المجتمعات. حاول تحديث الصفحة.</p></div>';
     }
 }
-
+window.filterCommunities = () => renderCommunitiesList();
+window.setCommunitiesFilter = (filter, btn) => {
+    currentCommunitiesFilter = filter;
+    document.querySelectorAll('#communities-view .filter-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    renderCommunitiesList();
+};
+window.toggleCommunityStatus = async (commId) => {
+    const community = allCommunities.find(c => c.id === commId);
+    if (!community) return;
+    const nextStatus = community.status === 'suspended' ? 'active' : 'suspended';
+    try {
+        await update(ref(database, `communities/${commId}`), { status: nextStatus, moderatedAt: new Date().toISOString(), moderatedBy: currentAdmin.uid });
+        community.status = nextStatus;
+        await logAudit(nextStatus === 'suspended' ? 'suspend_community' : 'restore_community', commId, community.name, nextStatus === 'suspended' ? 'إيقاف المجتمع' : 'إعادة تفعيل المجتمع');
+        showToast(nextStatus === 'suspended' ? 'تم إيقاف المجتمع' : 'تمت إعادة تفعيل المجتمع', 'success');
+        renderCommunitiesList();
+    } catch (e) { showToast('تعذر تحديث حالة المجتمع: ' + e.message, 'error'); }
+};
 window.deleteCommunity = async (commId) => {
-    showConfirm('حذف المجتمع', 'هل تريد حذف هذا المجتمع؟', async () => {
+    const community = allCommunities.find(c => c.id === commId);
+    showConfirm('حذف المجتمع', `هل تريد حذف مجتمع «${getUserName({name: community?.name || ''})}» وجميع عضوياته؟`, async () => {
         try {
-            await remove(ref(database, `communities/${commId}`));
-            await logAudit('delete_community', commId, '', 'حذف المجتمع');
+            await update(ref(database), { [`communities/${commId}`]: null, [`communityMembers/${commId}`]: null, [`communityPosts/${commId}`]: null });
+            allCommunities = allCommunities.filter(c => c.id !== commId);
+            await logAudit('delete_community', commId, community?.name || '', 'حذف المجتمع وعضوياته ومنشوراته المفهرسة');
             showToast('تم حذف المجتمع', 'success');
             renderCommunitiesList();
-        } catch (e) {
-            showToast('خطأ: ' + e.message, 'error');
-        }
+        } catch (e) { showToast('خطأ: ' + e.message, 'error'); }
     });
 };
 
