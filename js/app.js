@@ -30,6 +30,7 @@ import * as googleAuth from './google-auth.js?v=9';
 import * as communities from './communities.js?v=9';
 import * as twoFactor from './two-factor.js?v=4';
 import * as verification from './verification.js?v=1';
+import * as cloudinary from './cloudinary.js?v=10';
 import { getUserData, clearUserCache } from './firebase-helpers.js?v=9';
 import './improvements.js?v=1';
 
@@ -643,6 +644,40 @@ window.focusComposer = focusComposer;
 
 // ===== DM Functions =====
 
+let selectedDMFile = null;
+window.toggleDMEmoji = function() {
+    const picker = document.getElementById('dm-emoji-picker');
+    if (!picker) return;
+    picker.hidden = !picker.hidden;
+};
+window.insertDMEmoji = function(emoji) {
+    const input = document.getElementById('dm-input');
+    if (!input) return;
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? start;
+    input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+    input.focus();
+    input.setSelectionRange(start + emoji.length, start + emoji.length);
+    document.getElementById('dm-emoji-picker')?.setAttribute('hidden', '');
+};
+function resetDMComposer() {
+    selectedDMFile = null;
+    const input = document.getElementById('dm-media-input');
+    const preview = document.getElementById('dm-media-preview');
+    if (input) input.value = '';
+    if (preview) { preview.innerHTML = ''; preview.hidden = true; }
+    document.getElementById('dm-emoji-picker')?.setAttribute('hidden', '');
+}
+function renderDMFilePreview(file) {
+    const preview = document.getElementById('dm-media-preview');
+    if (!preview || !file) return;
+    const url = URL.createObjectURL(file);
+    preview.innerHTML = file.type.startsWith('video/')
+        ? `<video src="${url}" muted playsinline></video>`
+        : `<img src="${url}" alt="معاينة المرفق">`;
+    preview.hidden = false;
+}
+
 function loadConversationsList() {
     const container = document.getElementById('dm-conversations-list');
     if (!container) return;
@@ -682,6 +717,8 @@ window.openDMConversation = async function(targetId, isGroup) {
     const requestBanner = document.getElementById('dm-request-banner');
     const sendButton = document.getElementById('dm-send-btn');
     const messageInput = document.getElementById('dm-input');
+    const mediaInput = document.getElementById('dm-media-input');
+    const emojiButton = document.getElementById('dm-emoji-btn');
     if (requestBanner) {
         if (conversation.status === 'pending' && conversation.requestedBy !== currentUserId) {
             requestBanner.style.display = 'block';
@@ -696,6 +733,9 @@ window.openDMConversation = async function(targetId, isGroup) {
     }
     if (sendButton) sendButton.disabled = conversation.status === 'rejected' || (conversation.status === 'pending' && conversation.requestedBy !== currentUserId);
     if (messageInput) messageInput.disabled = sendButton?.disabled || false;
+    if (mediaInput) mediaInput.disabled = sendButton?.disabled || false;
+    if (emojiButton) emojiButton.disabled = sendButton?.disabled || false;
+    resetDMComposer();
 
     window.activeDMConversationId = conversationId;
     // Load messages
@@ -707,12 +747,35 @@ window.openDMConversation = async function(targetId, isGroup) {
     // Setup send button
     const sendBtn = document.getElementById('dm-send-btn');
     const input = document.getElementById('dm-input');
+    const attachInput = document.getElementById('dm-media-input');
+
+    attachInput.onchange = () => {
+        const file = attachInput.files?.[0];
+        if (!file) return;
+        try {
+            cloudinary.validateMediaFile(file);
+            selectedDMFile = file;
+            renderDMFilePreview(file);
+        } catch (error) {
+            selectedDMFile = null;
+            attachInput.value = '';
+            document.getElementById('dm-media-preview')?.setAttribute('hidden', '');
+            showToast(error.message === 'MEDIA_TOO_LARGE' ? 'حجم المرفق يتجاوز 50MB' : 'نوع المرفق غير مدعوم');
+        }
+    };
 
     sendBtn.onclick = async () => {
         const text = input.value.trim();
-        if (!text) return;
-        input.value = '';
-        await dm.sendMessage(conversationId, text);
+        if (!text && !selectedDMFile) return;
+        const mediaFile = selectedDMFile;
+        sendBtn.disabled = true;
+        try {
+            await dm.sendMessage(conversationId, text, null, mediaFile);
+            input.value = '';
+            resetDMComposer();
+        } finally {
+            sendBtn.disabled = false;
+        }
     };
 
     input.onkeydown = (e) => {

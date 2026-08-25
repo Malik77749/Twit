@@ -832,6 +832,24 @@ body { min-width: 0; }
   .help-center-footer { align-items:stretch; flex-direction:column; padding-inline:16px; }
   .help-center-footer .follow-btn { width:100%; }
 }
+/* Direct-message media and emoji tools */
+.dm-input-bar { display:flex; align-items:center; gap:7px; padding:10px 12px; border-top:1px solid var(--border-color); background:var(--surface); }
+.dm-input-bar input[type="text"] { flex:1; min-width:0; height:42px; padding:0 12px; border:1px solid var(--border-color); border-radius:999px; background:var(--bg-input); color:var(--text-primary); }
+.dm-attach-btn, .dm-tool-btn { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; flex:0 0 40px; border:1px solid transparent; border-radius:50%; color:var(--accent); cursor:pointer; }
+.dm-attach-btn:hover, .dm-tool-btn:hover { background:var(--accent-soft); border-color:rgba(56,189,248,.25); }
+.dm-tool-btn:disabled, .dm-attach-btn:has(input:disabled) { opacity:.45; cursor:not-allowed; }
+.dm-media-preview { display:flex; align-items:center; gap:8px; padding:8px 12px 0; background:var(--surface); }
+.dm-media-preview img, .dm-media-preview video { width:64px; height:64px; object-fit:cover; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-input); }
+.dm-emoji-picker { display:flex; flex-wrap:wrap; gap:3px; padding:8px 12px; background:var(--surface); border-top:1px solid var(--border-color); }
+.dm-emoji-picker[hidden], .dm-media-preview[hidden] { display:none; }
+.dm-emoji-picker button { width:34px; height:34px; min-height:34px; padding:0; border:0; border-radius:9px; background:transparent; font-size:20px; }
+.dm-emoji-picker button:hover { background:var(--accent-soft); }
+.dm-media { display:block; width:min(260px, 100%); max-height:300px; object-fit:cover; border-radius:12px; margin-bottom:6px; background:var(--bg-input); }
+@media (max-width:380px) {
+  .dm-input-bar { gap:4px; padding-inline:8px; }
+  .dm-attach-btn, .dm-tool-btn { width:36px; height:36px; flex-basis:36px; }
+  .dm-input-bar input[type="text"] { height:38px; padding-inline:10px; }
+}
 /* Final mobile guardrails: five balanced destinations, no legacy composer gap */
 @media (max-width: 760px) {
   #mobile-nav.mobile-nav { display:flex !important; align-items:stretch; justify-content:space-evenly; gap:0; height:calc(58px + env(safe-area-inset-bottom)); min-height:58px; padding:4px 6px env(safe-area-inset-bottom); }

@@ -95,7 +95,7 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=7">
+    <link rel="stylesheet" href="css/professional.css?v=8">
 
     <!-- PWA Service Worker -->
     <script>
@@ -715,9 +715,18 @@
                     </div>
                     <div id="dm-request-banner" style="display:none;"></div>
                     <div id="dm-messages-list" class="dm-messages-list"></div>
+                    <div class="dm-media-preview" id="dm-media-preview" hidden></div>
+                    <div class="dm-emoji-picker" id="dm-emoji-picker" hidden aria-label="اختيار إيموجي">
+                        <button type="button" onclick="insertDMEmoji('🙂')">🙂</button><button type="button" onclick="insertDMEmoji('😂')">😂</button><button type="button" onclick="insertDMEmoji('😍')">😍</button><button type="button" onclick="insertDMEmoji('👍')">👍</button><button type="button" onclick="insertDMEmoji('❤️')">❤️</button><button type="button" onclick="insertDMEmoji('🎉')">🎉</button><button type="button" onclick="insertDMEmoji('🔥')">🔥</button><button type="button" onclick="insertDMEmoji('🙏')">🙏</button>
+                    </div>
                     <div class="dm-input-bar">
+                        <label class="dm-attach-btn" title="إرفاق صورة أو فيديو أو GIF" aria-label="إرفاق صورة أو فيديو أو GIF">
+                            <i class="fas fa-paperclip"></i>
+                            <input type="file" id="dm-media-input" accept="image/*,video/mp4,video/quicktime,video/webm" hidden>
+                        </label>
+                        <button type="button" id="dm-emoji-btn" class="dm-tool-btn" title="إضافة إيموجي" aria-label="إضافة إيموجي" onclick="toggleDMEmoji()"><i class="far fa-face-smile"></i></button>
                         <input type="text" id="dm-input" placeholder="اكتب رسالة..." autocomplete="off">
-                        <button id="dm-send-btn" class="dm-send-btn"><i class="fas fa-paper-plane"></i></button>
+                        <button id="dm-send-btn" class="dm-send-btn" type="button"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>
@@ -1072,6 +1081,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=19"></script>
+    <script type="module" src="js/app.js?v=20"></script>
 </body>
 </html>

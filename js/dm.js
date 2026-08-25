@@ -3,6 +3,7 @@ import { ref, push, set, get, update, runTransaction, onValue, query, orderByChi
 import { escapeHtml } from './utils.js?v=9';
 import { getUserData, addNotification } from './firebase-helpers.js?v=9';
 import * as rateLimiter from './rate-limiter.js?v=9';
+import * as cloudinary from './cloudinary.js?v=10';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -91,8 +92,9 @@ async function getOrCreateConversation(otherUserId) {
 /**
  * Send a message
  */
-async function sendMessage(conversationId, text, replyToId) {
-    if (!text.trim()) return;
+async function sendMessage(conversationId, text = '', replyToId, mediaFile = null) {
+    text = String(text || '').trim();
+    if (!text && !mediaFile) return;
 
     const userId = auth.currentUser?.uid;
     if (!userId) return;
@@ -139,6 +141,10 @@ async function sendMessage(conversationId, text, replyToId) {
     try {
         const userData = await getUserData(database, userId);
 
+        let uploadedMedia = null;
+        if (mediaFile) {
+            uploadedMedia = await cloudinary.uploadMedia(mediaFile, { folder: `mimer/messages/${conversationId}` });
+        }
         const messageRef = push(ref(database, `messages/${conversationId}`));
         const messageData = {
             senderId: userId,
@@ -148,6 +154,13 @@ async function sendMessage(conversationId, text, replyToId) {
             timestamp: new Date().toISOString(),
             read: false
         };
+        if (uploadedMedia) {
+            messageData.media = {
+                type: uploadedMedia.type,
+                url: uploadedMedia.secureUrl || uploadedMedia.url,
+                format: uploadedMedia.format || ''
+            };
+        }
 
         if (replyToId) {
             messageData.replyTo = replyToId;
@@ -157,7 +170,7 @@ async function sendMessage(conversationId, text, replyToId) {
 
         // Update conversation metadata
         await update(ref(database, `conversations/${conversationId}`), {
-            lastMessage: escapeHtml(text).substring(0, 100),
+            lastMessage: text ? escapeHtml(text).substring(0, 100) : (uploadedMedia?.type === 'video' ? 'أرسل فيديو' : 'أرسل صورة'),
             lastMessageTime: new Date().toISOString(),
             lastSenderId: userId
         });
@@ -556,11 +569,15 @@ function renderMessages(messages, currentUserId, container) {
                 </div>
             `;
         } else {
+            const media = msg.media?.url ? (msg.media.type === 'video'
+                ? `<video class="dm-media" controls preload="metadata" playsinline><source src="${escapeHtml(msg.media.url)}"></video>`
+                : `<img class="dm-media" src="${escapeHtml(msg.media.url)}" alt="مرفق في الرسالة" loading="lazy">`) : '';
             html += `
                 <div class="dm-message ${isOwn ? 'dm-own' : 'dm-other'}">
                     ${!isOwn ? `<img class="dm-msg-avatar" src="${msg.senderAvatar || DEFAULT_AVATAR}" alt="">` : ''}
                     <div class="dm-bubble">
-                        <div class="dm-text">${escapeHtml(msg.text)}</div>
+                        ${media}
+                        ${msg.text ? `<div class="dm-text">${escapeHtml(msg.text)}</div>` : ''}
                         <div class="dm-msg-time">
                             ${formatMessageTime(msg.timestamp)}
                             ${isOwn ? `<span class="dm-read-status">${msg.read ? '✓✓' : '✓'}</span>` : ''}
