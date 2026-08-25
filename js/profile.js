@@ -31,6 +31,11 @@ function init(authInstance, databaseInstance, storageInstance) {
     storage = storageInstance;
 }
 
+function renderProfileError(container, message = 'تعذر تحميل البيانات') {
+    if (!container) return;
+    container.innerHTML = `<div class="empty-state profile-error-state"><h3>${escapeHtml(message)}</h3><p>تحقق من الاتصال ثم حاول مرة أخرى.</p><button class="follow-btn" type="button" onclick="showProfile(window.currentProfileUserId || '')">إعادة المحاولة</button></div>`;
+}
+
 async function showProfile(userId) {
     showLoading();
     userId = userId || auth.currentUser?.uid;
@@ -40,6 +45,7 @@ async function showProfile(userId) {
 
     try {
         const userData = await getUserData(database, userId);
+        if (!userData || !Object.keys(userData).length) throw new Error('PROFILE_NOT_FOUND');
         const isOwnProfile = userId === auth.currentUser?.uid;
 
         const protectedIcon = userData.isProtected ? ' <i class="fas fa-lock" style="font-size:14px;color:var(--text-secondary);"></i>' : '';
@@ -107,6 +113,7 @@ async function showProfile(userId) {
 
         // Profile actions
         const actionsDiv = document.getElementById('profile-actions');
+        if (!actionsDiv) throw new Error('PROFILE_ACTIONS_NOT_FOUND');
         if (isOwnProfile) {
             actionsDiv.innerHTML = `
                 <button class="profile-edit-btn" onclick="editProfile()">تعديل الملف الشخصي</button>
@@ -162,7 +169,8 @@ async function showProfile(userId) {
         showView('profile');
         loadProfilePosts(userId);
     } catch (error) {
-        alert('خطأ: ' + error.message);
+        console.error('Profile load error:', error);
+        renderProfileError(document.getElementById('profile-posts'), error.message === 'PROFILE_NOT_FOUND' ? 'الحساب غير موجود' : 'تعذر تحميل الملف الشخصي');
         hideLoading();
     }
 }
@@ -661,6 +669,9 @@ async function updateProfilePicture() {
  */
 async function showFollowersList(userId) {
     const container = document.getElementById('profile-posts');
+    if (!container) return;
+    userId = userId || window.currentProfileUserId || auth.currentUser?.uid;
+    if (!userId) { renderProfileError(container, 'لم يتم تحديد الحساب'); return; }
     container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
     try {
@@ -676,7 +687,7 @@ async function showFollowersList(userId) {
 
         for (const fid of followerIds.slice(0, 30)) {
             const userData = await getUserData(database, fid);
-            if (!userData.name) continue;
+            if (!userData || !userData.name) continue;
 
             const isFollowing = (await get(ref(database, `followers/${fid}/${auth.currentUser?.uid}`))).exists();
             const el = document.createElement('div');
@@ -686,18 +697,19 @@ async function showFollowersList(userId) {
                 <img src="${escapeHtml(safeImageUrl(userData.profilePicture))}" style="width:40px;height:40px;border-radius:50%;" alt="">
                 <div style="flex:1;">
                     <div style="font-weight:700;font-size:15px;">${escapeHtml(userData.name)}</div>
-                    <div style="color:var(--text-secondary);font-size:13px;">@${escapeHtml(userData.name).replace(/\s/g, '').toLowerCase()}</div>
+                    <div style="color:var(--text-secondary);font-size:13px;">@${escapeHtml(userData.handle || userData.name).replace(/\s/g, '').toLowerCase()}</div>
                 </div>
                 ${fid !== auth.currentUser?.uid ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" onclick="event.stopPropagation(); followUser('${fid}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
             `;
             container.appendChild(el);
         }
 
-        if (!followerIds.length) {
+        if (!container.children.length) {
             container.innerHTML = '<div class="empty-state"><p>لا يوجد متابعون</p></div>';
         }
     } catch (error) {
-        container.innerHTML = '<div class="empty-state"><p>خطأ</p></div>';
+        console.error('Followers list error:', error);
+        renderProfileError(container, 'تعذر تحميل المتابعين');
     }
 }
 
@@ -706,6 +718,9 @@ async function showFollowersList(userId) {
  */
 async function showFollowingList(userId) {
     const container = document.getElementById('profile-posts');
+    if (!container) return;
+    userId = userId || window.currentProfileUserId || auth.currentUser?.uid;
+    if (!userId) { renderProfileError(container, 'لم يتم تحديد الحساب'); return; }
     container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
     try {
@@ -727,7 +742,7 @@ async function showFollowingList(userId) {
 
         for (const fid of followingIds.slice(0, 30)) {
             const userData = await getUserData(database, fid);
-            if (!userData.name) continue;
+            if (!userData || !userData.name) continue;
 
             const isFollowing = (await get(ref(database, `followers/${fid}/${auth.currentUser?.uid}`))).exists();
             const el = document.createElement('div');
@@ -737,18 +752,19 @@ async function showFollowingList(userId) {
                 <img src="${escapeHtml(safeImageUrl(userData.profilePicture))}" style="width:40px;height:40px;border-radius:50%;" alt="">
                 <div style="flex:1;">
                     <div style="font-weight:700;font-size:15px;">${escapeHtml(userData.name)}</div>
-                    <div style="color:var(--text-secondary);font-size:13px;">@${escapeHtml(userData.name).replace(/\s/g, '').toLowerCase()}</div>
+                    <div style="color:var(--text-secondary);font-size:13px;">@${escapeHtml(userData.handle || userData.name).replace(/\s/g, '').toLowerCase()}</div>
                 </div>
                 ${fid !== auth.currentUser?.uid ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" onclick="event.stopPropagation(); followUser('${fid}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
             `;
             container.appendChild(el);
         }
 
-        if (!followingIds.length) {
+        if (!container.children.length) {
             container.innerHTML = '<div class="empty-state"><p>لا يتابع أحداً</p></div>';
         }
     } catch (error) {
-        container.innerHTML = '<div class="empty-state"><p>خطأ</p></div>';
+        console.error('Following list error:', error);
+        renderProfileError(container, 'تعذر تحميل الحسابات التي يتابعها');
     }
 }
 
