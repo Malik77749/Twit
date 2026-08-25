@@ -13,5 +13,23 @@
         "supportEmail": "malik5sent@gmail.com"
       }
     }
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firebase-debug.log",
+      "database.rules.json",
+      "storage.rules",
+      "scripts/**",
+      "tests/**",
+      "package.json",
+      "package-lock.json",
+      "README.md",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false
   }
 }
