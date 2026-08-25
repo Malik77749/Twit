@@ -248,9 +248,7 @@ if (!document.querySelector('style[data-ptr-styles]')) {
             const appSection = document.getElementById('app-section');
             if (appSection) appSection.style.display = 'flex';
 
-            // Reset auth forms
-            resetAuthForms();
-
+            // Do not clear auth fields during a session transition; Firebase may still be rehydrating.
             // Navigate to home
             if (window.navigateTo) {
                 window.navigateTo('home');
@@ -286,8 +284,7 @@ if (!document.querySelector('style[data-ptr-styles]')) {
             const appSection = document.getElementById('app-section');
             if (appSection) appSection.style.display = 'none';
 
-            // Reset forms
-            resetAuthForms();
+            if (window.mimerAuthStateResolved) resetAuthForms();
         } finally {
             setTimeout(() => {
                 isAuthTransitioning = false;

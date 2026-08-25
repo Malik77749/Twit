@@ -40,6 +40,8 @@ function uiIcon(name, className = 'ui-icon') {
 
 let auth, database;
 let selectedFiles = []; // Support multiple files
+let publishInFlight = false;
+let publishRequestId = null;
 
 function init(authInstance, databaseInstance) {
     auth = authInstance;
@@ -175,6 +177,10 @@ function getContentLength(content) {
 // ===== Post Actions =====
 
 async function postTweet() {
+    if (publishInFlight) {
+        showToast('جاري نشر المنشور، انتظر لحظة');
+        return;
+    }
     const content = document.getElementById('postContent').value.trim();
     const imageUrl = document.getElementById('postImageUrl').value.trim();
     const videoUrl = document.getElementById('postVideo').value.trim();
@@ -205,13 +211,26 @@ async function postTweet() {
     }
 
     const postBtn = document.querySelector('.composer-submit');
-    if (postBtn) { postBtn.disabled = true; postBtn.textContent = 'جاري النشر...'; }
+    if (postBtn?.disabled || postBtn?.dataset.publishBusy === 'true') return;
+    publishInFlight = true;
+    publishRequestId = `${userId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+    if (postBtn) { postBtn.disabled = true; postBtn.dataset.publishBusy = 'true'; postBtn.setAttribute('aria-busy', 'true'); postBtn.textContent = 'جاري النشر...'; }
+    const filesToPublish = [...selectedFiles];
 
     const postRef = push(ref(database, 'posts'));
 
     // Denormalize: store user data with post for faster loading
-    const currentUser = auth.currentUser;
-    const userData = await getUserData(database, userId);
+    let userData;
+    try {
+        userData = await getUserData(database, userId);
+    } catch (error) {
+        console.error('Post author lookup failed:', error);
+        if (postBtn) { postBtn.disabled = false; postBtn.removeAttribute('aria-busy'); delete postBtn.dataset.publishBusy; postBtn.textContent = 'نشر'; }
+        publishInFlight = false;
+        publishRequestId = null;
+        showToast('تعذر تجهيز المنشور، حاول مرة أخرى');
+        return;
+    }
 
     const postData = {
         userId: userId,
@@ -231,8 +250,8 @@ async function postTweet() {
     try {
         // Handle multiple media files
         const mediaUrls = [];
-        if (selectedFiles.length > 0) {
-            const uploadedMedia = await Promise.all(selectedFiles.map(async file => {
+        if (filesToPublish.length > 0) {
+            const uploadedMedia = await Promise.all(filesToPublish.map(async file => {
                 try {
                     const uploadFile = file.type.startsWith('image/') && file.type !== 'image/gif'
                         ? await imageCdn.compressImageFile(file, 1600, 0.82)
@@ -373,7 +392,9 @@ async function postTweet() {
         }
         container.innerHTML = `<article class="tweet new-post-pending"><div class="tweet-body"><div class="tweet-header"><strong>${escapeHtml(postData.userName)}</strong><span class="tweet-handle">@${escapeHtml(postData.userHandle || '')}</span></div><div class="tweet-content">${postData.content || ''}</div><small style="color:var(--text-secondary);">يتم تجهيز العرض…</small></div></article>`;
         showToast('تم النشر بنجاح');
-        if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
+        if (postBtn) { postBtn.disabled = false; postBtn.removeAttribute('aria-busy'); delete postBtn.dataset.publishBusy; postBtn.textContent = 'نشر'; }
+        publishInFlight = false;
+        publishRequestId = null;
         void renderPost({ id: postRef.key, ...postData }, container).catch(error => {
             console.error('Post render error:', error);
             container.classList.remove('new-post-pending');
@@ -384,7 +405,9 @@ async function postTweet() {
         // });
     } catch (error) {
         showToast('خطأ: ' + error.message);
-        if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
+        if (postBtn) { postBtn.disabled = false; postBtn.removeAttribute('aria-busy'); delete postBtn.dataset.publishBusy; postBtn.textContent = 'نشر'; }
+        publishInFlight = false;
+        publishRequestId = null;
     }
 }
 

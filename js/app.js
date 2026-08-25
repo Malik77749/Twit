@@ -5,8 +5,8 @@ import { getDatabase, ref, get, update, runTransaction, query, orderByChild, lim
 import { firebaseConfig } from './config.js?v=9';
 import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=10';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
-import * as auth from './auth.js?v=9';
-import * as posts from './posts.js?v=13';
+import * as auth from './auth.js?v=10';
+import * as posts from './posts.js?v=14';
 import * as comments from './comments.js?v=15';
 import * as notifications from './notifications.js?v=18';
 import * as profile from './profile.js?v=17';
@@ -33,7 +33,7 @@ import * as twoFactor from './two-factor.js?v=4';
 import * as verification from './verification.js?v=1';
 import * as cloudinary from './cloudinary.js?v=11';
 import { getUserData, clearUserCache } from './firebase-helpers.js?v=9';
-import './improvements.js?v=1';
+import './improvements.js?v=2';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -111,10 +111,15 @@ window.setTimeout(() => {
     const overlay = document.getElementById('loading-overlay');
     const appSection = document.getElementById('app-section');
     if (overlay?.style.display === 'flex' && appSection?.style.display !== 'flex') {
-        hideLoading();
-        showAuth();
-        const errorEl = document.getElementById('error');
-        if (errorEl && !errorEl.textContent) errorEl.textContent = 'تعذر إكمال الاتصال. يمكنك المحاولة مرة أخرى.';
+        if (window.mimerAuthStateResolved) {
+            hideLoading();
+            showAuth();
+            const errorEl = document.getElementById('error');
+            if (errorEl && !errorEl.textContent) errorEl.textContent = 'تعذر إكمال الاتصال. يمكنك المحاولة مرة أخرى.';
+        } else {
+            const loadingText = overlay.querySelector('.loading-text, p');
+            if (loadingText) loadingText.textContent = 'جاري استعادة جلسة ميمر…';
+        }
     }
 }, 6000);
 
@@ -2175,7 +2180,14 @@ async function checkUserRole(user) {
             window.showSuggestedAccountsOnboarding?.();
         }
     } catch (error) {
-        showAuth();
+        console.error('User bootstrap error (session retained):', error);
+        hideLoading();
+        if (authInstance.currentUser) {
+            showApp();
+            showToast('تعذر تحميل بعض البيانات، حاول تحديث الصفحة لاحقًا');
+        } else if (window.mimerAuthStateResolved) {
+            showAuth();
+        }
     }
 }
 
@@ -2346,10 +2358,12 @@ document.addEventListener('DOMContentLoaded', setupComposerTextarea);
 })();
 
 try {
-    showAuth();
-    console.log('showAuth() called OK');
+    // The auth state listener is the single source of truth. Do not show the login
+    // screen before Firebase has finished restoring browserLocalPersistence.
+    if (window.mimerAuthStateResolved) showAuth();
+    console.log('Auth boot waiting for resolved state');
 } catch (error) {
-    console.error('showAuth() failed:', error);
+    console.error('Auth boot fallback failed:', error);
     document.getElementById('auth-section').style.display = 'flex';
 }
 

@@ -9,13 +9,18 @@ const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="h
 let auth, database;
 let loginMethod = 'email'; // 'phone' or 'email'
 let currentCaptcha = '';
+let persistenceReady = Promise.resolve();
 
 function init(authInstance, databaseInstance) {
     auth = authInstance;
     database = databaseInstance;
     
     // Set persistence to LOCAL for staying logged in
-    setPersistence(auth, browserLocalPersistence).catch(err => console.error('Persistence error:', err));
+    window.mimerAuthStateResolved = false;
+    persistenceReady = setPersistence(auth, browserLocalPersistence).catch(err => {
+        console.error('Persistence error:', err);
+        return false;
+    });
     
     setupHandleValidation();
     setupAuthListeners();
@@ -581,8 +586,10 @@ async function logout() {
     }
 }
 
-function setupAuthStateListener(callback) {
+async function setupAuthStateListener(callback) {
+    await persistenceReady;
     onAuthStateChanged(auth, async user => {
+        window.mimerAuthStateResolved = true;
         if (user) {
             try {
                 const snapshot = await get(ref(database, 'bans/' + user.uid));
@@ -606,9 +613,10 @@ function setupAuthStateListener(callback) {
                     await callback(user);
                 }
             } catch (error) {
-                console.error('Auth state check error:', error);
-                showAuth();
+                console.error('Auth state check error (session retained):', error);
                 hideLoading();
+                if (auth.currentUser) showApp();
+                else if (window.mimerAuthStateResolved) showAuth();
             }
         } else {
             showAuth();
