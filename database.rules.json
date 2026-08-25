@@ -93,7 +93,7 @@
         "edited": { ".validate": "newData.isBoolean()" },
         "editedAt": { ".validate": "newData.isString()" },
         "commentCount": {
-          ".write": "auth != null && newData.isNumber() && newData.val() === data.val() + 1",
+          ".write": "auth != null && newData.isNumber() && (newData.val() === data.val() + 1 || newData.val() === data.val() - 1)",
           ".validate": "newData.isNumber()"
         },
         "quotedPostId": { ".validate": "newData.isString() && newData.val().length <= 100" },
@@ -117,7 +117,7 @@
         ".indexOn": ["timestamp"],
         "$commentId": {
           ".read": true,
-          ".write": "auth != null && (root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && newData.child('userId').val() === auth.uid) || (data.exists() && data.child('userId').val() === auth.uid))",
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('isAdmin').val() === true || root.child('posts').child($postId).child('userId').val() === auth.uid || (!data.exists() && newData.child('userId').val() === auth.uid) || (data.exists() && data.child('userId').val() === auth.uid))",
           "content": {
             ".validate": "newData.isString() && newData.val().length <= 500"
           },
