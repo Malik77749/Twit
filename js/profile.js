@@ -883,11 +883,19 @@ window.openProfileOptions = async function(userId, rawHandle, event) {
     if (!currentUserId || !userId || userId === currentUserId) return;
     closeProfileOptions();
     const handle = String(rawHandle || 'الحساب').replace(/^@/, '').trim();
+    const anchorRect = event?.currentTarget?.getBoundingClientRect();
     const backdrop = document.createElement('div');
     backdrop.id = 'profile-options-backdrop';
     backdrop.className = 'profile-options-backdrop';
     backdrop.innerHTML = `<section class="profile-options-sheet" role="dialog" aria-modal="true" aria-label="خيارات الحساب"><div class="profile-options-header"><span class="post-menu-grabber" aria-hidden="true"></span><strong>خيارات الحساب</strong><button type="button" class="post-menu-close" aria-label="إغلاق">×</button></div><div class="profile-options-body"><div class="spinner"></div></div></section>`;
     document.body.appendChild(backdrop);
+    if (anchorRect) {
+        const estimatedHeight = 390;
+        const top = Math.max(12, Math.min(anchorRect.bottom + 8, window.innerHeight - estimatedHeight - 12));
+        const start = Math.max(12, Math.min(anchorRect.left, window.innerWidth - 360 - 12));
+        backdrop.style.setProperty('--profile-options-top', `${top}px`);
+        backdrop.style.setProperty('--profile-options-start', `${start}px`);
+    }
     document.body.classList.add('modal-open');
     backdrop.querySelector('.post-menu-close')?.addEventListener('click', closeProfileOptions);
     backdrop.addEventListener('click', e => { if (e.target === backdrop) closeProfileOptions(); });
