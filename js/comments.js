@@ -190,8 +190,10 @@ function formatCommentTime(timestamp) {
 function showCommentReplyInput(postId, commentId, event) {
     event?.preventDefault();
     event?.stopPropagation();
-    document.querySelectorAll(`#comments-${postId} .comment-reply-input`).forEach(input => { input.hidden = true; });
-    const replyBox = document.getElementById(`comment-reply-${postId}-${commentId}`);
+    const section = getVisibleCommentSection(postId);
+    if (!section) return;
+    section.querySelectorAll('.comment-reply-input').forEach(input => { input.hidden = true; });
+    const replyBox = section.querySelector(`[id="comment-reply-${postId}-${commentId}"]`);
     if (replyBox) {
         replyBox.hidden = false;
         replyBox.querySelector('input')?.focus();
