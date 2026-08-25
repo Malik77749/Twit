@@ -1784,8 +1784,8 @@ window.openPostDetail = async function(postId) {
 
         const views = post.views || 0;
         const likes = post.likes || 0;
-        const retweets = post.retweets || 0;
-
+                const retweets = post.retweets || 0;
+        const commentCount = Number(post.commentCount || 0);
         let mediaHtml = '';
         if (post.imageUrl) {
             mediaHtml = `<div class="post-detail-media" onclick="openLightbox('${post.imageUrl}')"><img src="${post.imageUrl}" alt=""></div>`;
