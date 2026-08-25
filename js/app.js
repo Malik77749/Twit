@@ -819,6 +819,7 @@ window.saveUsernameOnboarding = async function() {
         const country = document.getElementById('onboarding-country')?.value || 'OTHER';
         await update(ref(database, `users/${uid}`), { handle, country, needsUsername: false, needsSuggestions: true, usernameUpdatedAt: new Date().toISOString() });
         document.getElementById('username-onboarding').hidden = true;
+        document.body.classList.remove('mimer-onboarding-required');
         showToast('تم حجز اسم المستخدم بنجاح');
         window.showSuggestedAccountsOnboarding?.();
     } catch (err) {
@@ -1813,19 +1814,31 @@ async function checkUserRole(user) {
         // Notifications are optional and must never block the first screen.
         void pushNotif.requestPermission(user.uid).catch(error => console.warn('Background notification setup skipped:', error));
 
+        const requiresUsername = !userData?.handle || userData.needsUsername === true;
+        const requiresSuggestions = !requiresUsername && userData.needsSuggestions === true;
+
         hideLoading();
         showApp();
-        updateSidebar(userData);
+        updateSidebar(userData || {});
+
+        // Required onboarding is a hard gate: do not render the home feed before
+        // the new Google account chooses and reserves its unique @handle.
+        if (requiresUsername) {
+            hideAllViews();
+            document.body.classList.add('mimer-onboarding-required');
+            window.showUsernameOnboarding?.();
+            return;
+        }
+
+        document.body.classList.remove('mimer-onboarding-required');
         showView('home');
         posts.loadPosts();
         notifications.loadNotifications();
         loadWhoToFollow();
         updateDMBadge();
         updateTrending();
-        if (!userData.handle || userData.needsUsername) {
-            setTimeout(() => window.showUsernameOnboarding?.(), 250);
-        } else if (userData.needsSuggestions) {
-            setTimeout(() => window.showSuggestedAccountsOnboarding?.(), 250);
+        if (requiresSuggestions) {
+            window.showSuggestedAccountsOnboarding?.();
         }
     } catch (error) {
         showAuth();
