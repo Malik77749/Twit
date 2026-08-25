@@ -95,7 +95,7 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=13">
+    <link rel="stylesheet" href="css/professional.css?v=14">
 
     <!-- PWA Service Worker -->
     <script>
@@ -902,6 +902,7 @@
                         <i class="fas fa-camera" aria-hidden="true"></i>
                     </button>
                 </div>
+                <button type="button" id="profile-public-share" class="profile-public-share" aria-label="مشاركة الملف" hidden><i class="fas fa-share-nodes" aria-hidden="true"></i></button>
 
                 <!-- Avatar Row -->
                 <div class="profile-avatar-row">
@@ -911,7 +912,6 @@
                             <i class="fas fa-camera" aria-hidden="true"></i>
                         </button>
                     </div>
-                    <div id="profile-actions" class="profile-actions"></div>
                 </div>
 
                 <!-- Profile Info -->
@@ -930,13 +930,14 @@
                         <span class="profile-stat" onclick="showFollowersList(currentProfileUserId || '')" style="cursor:pointer;"><strong id="profile-followers">0</strong> متابع</span>
                     </div>
                 </div>
+                <div id="profile-actions" class="profile-actions"></div>
 
                 <!-- Profile Tabs (like X) -->
                 <div class="profile-tabs tabs-with-indicator">
-                    <button class="profile-tab active" data-tab="posts">منشورات</button>
-                    <button class="profile-tab" data-tab="replies">الردود</button>
-                    <button class="profile-tab" data-tab="media">الوسائط</button>
-                    <button class="profile-tab" data-tab="likes">الإعجابات</button>
+                    <button class="profile-tab active" data-tab="posts"><i class="fas fa-table-list" aria-hidden="true"></i><span>منشورات</span></button>
+                    <button class="profile-tab" data-tab="replies"><i class="fas fa-comment" aria-hidden="true"></i><span>الردود</span></button>
+                    <button class="profile-tab" data-tab="media"><i class="fas fa-photo-film" aria-hidden="true"></i><span>الوسائط</span></button>
+                    <button class="profile-tab" data-tab="likes"><i class="fas fa-heart" aria-hidden="true"></i><span>الإعجابات</span></button>
                     <div class="tab-indicator"></div>
                 </div>
 
@@ -1101,6 +1102,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=40"></script>
+    <script type="module" src="js/app.js?v=41"></script>
 </body>
 </html>

@@ -1051,3 +1051,49 @@ body { min-width: 0; }
   .post-list-picker-backdrop { place-items:end center; padding:0; }
   .post-list-picker { width:100%; max-height:82dvh; border-radius:22px 22px 0 0; border-inline:0; border-bottom:0; }
 }
+
+/* Public account options: account actions are separate from post actions. */
+.profile-public-share { position:absolute; inset-inline-start:16px; top:220px; z-index:6; width:44px; height:44px; display:grid; place-items:center; border:1px solid var(--border-color); border-radius:50%; color:var(--text-primary); background:rgba(3,7,18,.72); cursor:pointer; }
+.profile-public-share:hover { color:var(--accent); background:var(--accent-soft); }
+.profile-public-share[hidden] { display:none; }
+.profile-public-actions { display:flex; align-items:center; gap:10px; width:100%; }
+.profile-public-actions .profile-message-btn,
+.profile-public-actions .profile-follow-btn { flex:1 1 0; min-height:44px; }
+.profile-message-btn { border:1px solid var(--border-color); border-radius:999px; color:var(--text-primary); background:transparent; font-weight:800; cursor:pointer; }
+.profile-message-btn:hover { background:var(--accent-soft); color:var(--accent); }
+.profile-more-btn { flex:0 0 44px; width:44px; height:44px; padding:0; border:1px solid var(--border-color); border-radius:50%; color:var(--text-primary); background:transparent; cursor:pointer; }
+.profile-more-btn:hover { background:var(--accent-soft); color:var(--accent); }
+.profile-options-backdrop { position:fixed; inset:0; z-index:360; display:grid; place-items:end center; background:rgba(0,0,0,.58); }
+.profile-options-sheet { width:min(100%,430px); max-height:min(82dvh,680px); overflow:auto; border:1px solid var(--border-color); border-bottom:0; border-radius:22px 22px 0 0; background:var(--surface); box-shadow:0 -20px 70px rgba(0,0,0,.46); animation:profileOptionsIn .22s cubic-bezier(.22,1,.36,1); }
+@keyframes profileOptionsIn { from { transform:translateY(100%); opacity:.65; } to { transform:translateY(0); opacity:1; } }
+.profile-options-header { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; min-height:54px; padding:7px 12px; border-bottom:1px solid var(--border-color); }
+.profile-options-header .post-menu-grabber { display:block; grid-column:1 / -1; justify-self:center; width:38px; height:4px; margin-bottom:-4px; border-radius:99px; background:rgba(148,163,184,.55); }
+.profile-options-header strong { grid-column:2; white-space:nowrap; font-size:14px; }
+.profile-options-header .post-menu-close { grid-column:3; justify-self:end; }
+.profile-options-body { padding:8px 10px calc(10px + env(safe-area-inset-bottom)); }
+.profile-option-row { display:flex; align-items:center; gap:15px; width:100%; min-height:56px; padding:12px 14px; border:0; border-radius:12px; color:var(--text-primary); background:transparent; font-size:15px; text-align:right; cursor:pointer; }
+.profile-option-row:hover { background:var(--accent-soft); }
+.profile-option-row i { flex:0 0 25px; width:25px; color:var(--text-secondary); text-align:center; font-size:18px; }
+.profile-option-row.danger { color:var(--danger); }
+.profile-option-row.danger i { color:var(--danger); }
+.profile-listed-title { padding:8px 12px 10px; color:var(--text-secondary); font-size:13px; font-weight:800; }
+.profile-listed-row { display:flex; align-items:center; gap:12px; min-height:50px; padding:10px 12px; border-bottom:1px solid var(--border-color); }
+.profile-listed-row i { color:var(--accent); width:22px; text-align:center; }
+.profile-listed-row span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.profile-listed-row small { color:var(--text-secondary); }
+.profile-listed-back { width:100%; min-height:44px; margin-top:12px; border:1px solid var(--border-color); border-radius:12px; color:var(--text-primary); background:transparent; cursor:pointer; }
+
+@media (max-width:760px) {
+  #profile-view .profile-public-share { top:calc(54px + 150px + 12px); inset-inline-start:14px; }
+  #profile-view .profile-actions { margin:12px 14px 0; width:auto; }
+  #profile-view .profile-public-actions { gap:8px; }
+  #profile-view .profile-public-actions .profile-message-btn,
+  #profile-view .profile-public-actions .profile-follow-btn { min-height:46px; font-size:15px; }
+  #profile-view .profile-more-btn { width:42px; height:42px; flex-basis:42px; }
+  #profile-view.profile-view-public .profile-tabs { display:flex; min-height:50px; margin-top:14px; overflow:hidden; }
+  #profile-view.profile-view-public .profile-tab { min-width:0; flex:1 1 0; gap:5px; padding:12px 4px; font-size:12px; }
+  #profile-view.profile-view-public .profile-tab i { font-size:15px; }
+  #profile-view.profile-view-public .profile-tab span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #profile-view.profile-view-own .profile-tabs { display:none; }
+  .profile-options-sheet { width:100%; max-height:84dvh; border-inline:0; }
+}

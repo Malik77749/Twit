@@ -3,10 +3,12 @@ import { ref, get, update, runTransaction } from 'https://www.gstatic.com/fireba
 import { showLoading, hideLoading, showView } from './ui.js?v=10';
 import { getUserData } from './firebase-helpers.js?v=9';
 import { showToast } from './utils.js?v=9';
-import { renderPost, renderRetweet } from './posts.js?v=12';
+import { renderPost, renderRetweet, reportPost } from './posts.js?v=12';
 import { escapeHtml } from './utils.js?v=9';
 import * as cloudinary from './cloudinary.js?v=11';
 import * as imageCdn from './image-cdn.js?v=10';
+import * as lists from './lists.js?v=9';
+import * as blockMute from './block-mute.js?v=9';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -46,6 +48,14 @@ async function showProfile(userId) {
         const userData = await getUserData(database, userId);
         if (!userData || !Object.keys(userData).length) throw new Error('PROFILE_NOT_FOUND');
         const isOwnProfile = userId === auth.currentUser?.uid;
+        const profileView = document.getElementById('profile-view');
+        profileView?.classList.toggle('profile-view-public', !isOwnProfile);
+        profileView?.classList.toggle('profile-view-own', isOwnProfile);
+        const publicShareButton = document.getElementById('profile-public-share');
+        if (publicShareButton) {
+            publicShareButton.toggleAttribute('hidden', isOwnProfile);
+            publicShareButton.onclick = () => window.shareProfile?.(userId);
+        }
 
         const protectedIcon = userData.isProtected ? ' <i class="fas fa-lock" style="font-size:14px;color:var(--text-secondary);"></i>' : '';
         document.getElementById('profile-name').innerHTML = escapeHtml(userData.name || 'مستخدم') + protectedIcon;
@@ -141,9 +151,11 @@ async function showProfile(userId) {
             const isFollowing = followSnap.exists();
             const canMessage = typeof window.canMessageUser === 'function' ? await window.canMessageUser(userId) : true;
             actionsDiv.innerHTML = `
-                ${canMessage ? `<button class="follow-btn" onclick="openDMWithUser('${userId}')" style="margin-right:8px;"><i class="far fa-envelope"></i></button>` : ''}
-                <button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${userId}" onclick="followUser('${userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>
-                <button class="follow-btn" onclick="openPostMenu(null, '${userId}', false, event)" style="padding:6px 10px;"><i class="fas fa-ellipsis"></i></button>
+                <div class="profile-public-actions">
+                    ${canMessage ? `<button class="profile-message-btn" type="button" onclick="openDMWithUser('${userId}')"><i class="far fa-envelope" aria-hidden="true"></i><span>رسالة</span></button>` : ''}
+                    <button class="follow-btn profile-follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${userId}" onclick="followUser('${userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>
+                    <button class="profile-more-btn" type="button" aria-label="خيارات الحساب" onclick="openProfileOptions('${userId}', '${escapeHtml(userData.handle || userData.name || 'الحساب').replace(/'/g, '&#39;')}', event)"><i class="fas fa-ellipsis" aria-hidden="true"></i></button>
+                </div>
             `;
         }
 
@@ -859,7 +871,70 @@ async function showFollowingList(userId) {
     }
 }
 
-export { init, showProfile, updateProfilePicture, editProfile, saveProfile, showFollowersList, showFollowingList };
+function closeProfileOptions() {
+    document.getElementById('profile-options-backdrop')?.remove();
+    document.body.classList.remove('modal-open');
+}
+
+window.openProfileOptions = async function(userId, rawHandle, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const currentUserId = auth.currentUser?.uid;
+    if (!currentUserId || !userId || userId === currentUserId) return;
+    closeProfileOptions();
+    const handle = String(rawHandle || 'الحساب').replace(/^@/, '').trim();
+    const backdrop = document.createElement('div');
+    backdrop.id = 'profile-options-backdrop';
+    backdrop.className = 'profile-options-backdrop';
+    backdrop.innerHTML = `<section class="profile-options-sheet" role="dialog" aria-modal="true" aria-label="خيارات الحساب"><div class="profile-options-header"><span class="post-menu-grabber" aria-hidden="true"></span><strong>خيارات الحساب</strong><button type="button" class="post-menu-close" aria-label="إغلاق">×</button></div><div class="profile-options-body"><div class="spinner"></div></div></section>`;
+    document.body.appendChild(backdrop);
+    document.body.classList.add('modal-open');
+    backdrop.querySelector('.post-menu-close')?.addEventListener('click', closeProfileOptions);
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeProfileOptions(); });
+    const body = backdrop.querySelector('.profile-options-body');
+    const button = (id, icon, label, danger = false) => `<button type="button" class="profile-option-row ${danger ? 'danger' : ''}" id="${id}"><i class="fas ${icon}" aria-hidden="true"></i><span>${label}</span></button>`;
+    body.innerHTML = [
+        button('profile-option-lists', 'fa-list-check', 'إضافة/إزالة من القوائم'),
+        button('profile-option-view-lists', 'fa-list', 'عرض القوائم'),
+        button('profile-option-listed-in', 'fa-list-ul', 'القوائم المدرج بها'),
+        button('profile-option-mute', 'fa-volume-xmark', `كتم @${escapeHtml(handle)}`),
+        button('profile-option-block', 'fa-ban', `حظر @${escapeHtml(handle)}`, true),
+        button('profile-option-report', 'fa-flag', `الإبلاغ عن @${escapeHtml(handle)}`, true)
+    ].join('');
+    body.querySelector('#profile-option-lists')?.addEventListener('click', () => { closeProfileOptions(); window.openPostListsPicker?.('', userId); });
+    body.querySelector('#profile-option-view-lists')?.addEventListener('click', () => { closeProfileOptions(); window.showLists?.(); });
+    body.querySelector('#profile-option-listed-in')?.addEventListener('click', async () => {
+        const listsData = await lists.getUserLists(currentUserId);
+        const memberships = [];
+        for (const list of listsData) {
+            if ((await get(ref(database, `listMembers/${currentUserId}/${list.id}/${userId}`))).exists()) memberships.push(list);
+        }
+        if (!memberships.length) { showToast('هذا الحساب غير مدرج في قوائمك'); return; }
+        body.innerHTML = `<div class="profile-listed-title">مدرج في قوائمك</div>${memberships.map(list => `<div class="profile-listed-row"><i class="fas fa-list"></i><span>${escapeHtml(list.name || 'قائمة بلا اسم')}</span><small>${list.isPrivate ? 'خاصة' : 'عامة'}</small></div>`).join('')}<button type="button" class="profile-listed-back">رجوع</button>`;
+        body.querySelector('.profile-listed-back')?.addEventListener('click', () => window.openProfileOptions(userId, handle, event));
+    });
+    body.querySelector('#profile-option-mute')?.addEventListener('click', async () => { closeProfileOptions(); await blockMute.muteUser(userId); });
+    body.querySelector('#profile-option-block')?.addEventListener('click', async () => { if (!confirm(`حظر @${handle}؟`)) return; closeProfileOptions(); const ok = await blockMute.blockUser(userId); if (ok) window.showHome?.(); });
+    body.querySelector('#profile-option-report')?.addEventListener('click', () => { closeProfileOptions(); reportPost(null, userId); });
+};
+
+async function shareProfile(userId) {
+    const url = `${window.location.origin}${window.location.pathname}#profile/${encodeURIComponent(userId)}`;
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: 'ملف على ميمر', url });
+        } else if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(url);
+            showToast('تم نسخ رابط الملف');
+        } else {
+            window.prompt('انسخ رابط الملف', url);
+        }
+    } catch (error) {
+        if (error?.name !== 'AbortError') showToast('تعذرت مشاركة الملف');
+    }
+}
+
+export { init, showProfile, updateProfilePicture, editProfile, saveProfile, showFollowersList, showFollowingList, shareProfile };
 
 // Expose to window for HTML onclick handlers
 if (typeof window !== 'undefined') {
@@ -867,6 +942,7 @@ if (typeof window !== 'undefined') {
     window.updateProfilePicture = updateProfilePicture;
     window.showFollowersList = showFollowersList;
     window.showFollowingList = showFollowingList;
+    window.shareProfile = shareProfile;
 }
 
 // ===== MIMER_PROFILE_ENHANCEMENTS_V2 =====
