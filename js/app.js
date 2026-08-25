@@ -2265,23 +2265,28 @@ try {
     };
 
     async function renderWhoToFollow(limit = 3) {
-        const usersSnap = await get(ref(database, 'users'));
-        const currentUserId = authInstance.currentUser?.uid;
-        if (!usersSnap.exists()) return '';
-        const users = [];
-        usersSnap.forEach(child => {
-            if (child.key !== currentUserId) users.push({ id: child.key, ...child.val() });
-        });
-        return users.slice(0, limit).map(user => `
-            <div class="wtf-item" onclick="showProfile('${user.id}')">
-                <img class="wtf-avatar" src="${user.profilePicture || DEFAULT_AVATAR}" alt="">
-                <div class="wtf-info">
-                    <div class="wtf-name">${escapeHtml(user.name || 'مستخدم')}</div>
-                    <div class="wtf-handle">@${escapeHtml(user.handle || (user.name || 'user').replace(/\s/g, '').toLowerCase())}</div>
+        try {
+            const usersSnap = await get(ref(database, 'users'));
+            const currentUserId = authInstance.currentUser?.uid;
+            if (!usersSnap.exists()) return '';
+            const users = [];
+            usersSnap.forEach(child => {
+                if (child.key !== currentUserId) users.push({ id: child.key, ...child.val() });
+            });
+            return users.slice(0, limit).map(user => `
+                <div class="wtf-item" onclick="showProfile('${user.id}')">
+                    <img class="wtf-avatar" src="${user.profilePicture || DEFAULT_AVATAR}" alt="">
+                    <div class="wtf-info">
+                        <div class="wtf-name">${escapeHtml(user.name || 'مستخدم')}</div>
+                        <div class="wtf-handle">@${escapeHtml(user.handle || (user.name || 'user').replace(/\s/g, '').toLowerCase())}</div>
+                    </div>
+                    <button class="follow-btn" onclick="event.stopPropagation(); followUser('${user.id}', event)">متابعة</button>
                 </div>
-                <button class="follow-btn" onclick="event.stopPropagation(); followUser('${user.id}', event)">متابعة</button>
-            </div>
-        `).join('');
+            `).join('');
+        } catch (error) {
+            console.warn('Follow suggestions unavailable:', error?.message || error);
+            return '';
+        }
     }
 
     function buildNewsCards(trends) {
