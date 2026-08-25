@@ -127,7 +127,9 @@
           "timestamp": {
             ".validate": "newData.isString()"
           },
-                    "userName": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "edited": { ".validate": "newData.isBoolean()" },
+          "editedAt": { ".validate": "newData.isString()" },
+          "userName": { ".validate": "newData.isString() && newData.val().length <= 80" },
           "userAvatar": { ".validate": "newData.isString()" },
           "parentCommentId": { ".validate": "newData.isString() || newData.val() === null" },
           "$other": { ".validate": false }

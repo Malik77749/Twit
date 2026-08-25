@@ -56,6 +56,19 @@ async function decrementCommentCount(postId, amount = 1) {
     throw lastError || new Error('comment counter update failed');
 }
 
+function formatSmartCount(value) {
+    const count = Math.max(0, Number(value) || 0);
+    try { return new Intl.NumberFormat('ar-EG', { notation: 'compact', maximumFractionDigits: 1 }).format(count); }
+    catch { return String(count); }
+}
+
+function updateCommentCounters(postId, count) {
+    const formatted = formatSmartCount(count);
+    document.querySelectorAll(`[data-post-id="${postId}"] .tweet-action.reply > span:last-child, [data-comment-count-id="${postId}"] .comment-count`).forEach(el => {
+        el.textContent = formatted;
+    });
+}
+
 async function addComment(postId, parentCommentId, event) {
     event?.preventDefault();
     event?.stopPropagation();
@@ -102,7 +115,11 @@ async function addComment(postId, parentCommentId, event) {
             timestamp: new Date().toISOString(),
             parentCommentId: parentCommentId
         });
-        void incrementCommentCount(postId).catch(error => console.warn('Comment count update delayed:', error));
+        try {
+            await incrementCommentCount(postId);
+        } catch (counterError) {
+            console.warn('Comment count update delayed:', counterError);
+        }
 
         input.value = '';
 
@@ -110,6 +127,8 @@ async function addComment(postId, parentCommentId, event) {
         rateLimiter.recordAction(userId, 'comment');
 
         // Refresh comments immediately; notification creation must never block the interaction.
+        const latestPost = await get(ref(database, `posts/${postId}`)).catch(() => null);
+        updateCommentCounters(postId, latestPost?.exists() ? latestPost.val()?.commentCount : 0);
         loadComments(postId);
         void Promise.all([
             get(ref(database, `posts/${postId}`)),
@@ -127,6 +146,36 @@ async function addComment(postId, parentCommentId, event) {
         }).catch(() => {});
     } catch (error) {
         if (window.showToast) window.showToast('خطأ: ' + error.message);
+    }
+}
+
+async function editComment(postId, commentId, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const uid = auth?.currentUser?.uid;
+    if (!uid) { window.showToast?.('سجّل الدخول أولاً'); return false; }
+    try {
+        const commentSnap = await get(ref(database, `comments/${postId}/${commentId}`));
+        const comment = commentSnap.exists() ? commentSnap.val() : null;
+        if (!comment) { window.showToast?.('التعليق غير موجود'); return false; }
+        if (comment.userId !== uid) {
+            window.showToast?.('يمكنك تعديل تعليقاتك فقط');
+            return false;
+        }
+        const currentText = String(comment.content || '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+        const nextText = window.prompt('تعديل التعليق:', currentText);
+        if (nextText === null) return false;
+        const trimmed = nextText.trim();
+        if (!trimmed || trimmed === currentText.trim()) return false;
+        if (trimmed.length > 500) { window.showToast?.('الحد الأقصى 500 حرف'); return false; }
+        await update(ref(database, `comments/${postId}/${commentId}`), { content: escapeHtml(trimmed), edited: true, editedAt: new Date().toISOString() });
+        loadComments(postId);
+        window.showToast?.('تم تعديل التعليق');
+        return true;
+    } catch (error) {
+        console.error('Edit comment error:', error);
+        window.showToast?.('تعذر تعديل التعليق');
+        return false;
     }
 }
 
@@ -153,6 +202,9 @@ async function deleteComment(postId, commentId, event) {
         const idsToDelete = [commentId, ...Object.entries(allComments).filter(([, value]) => value?.parentCommentId === commentId).map(([id]) => id)];
         await Promise.all(idsToDelete.map(id => remove(ref(database, `comments/${postId}/${id}`))));
         await decrementCommentCount(postId, idsToDelete.length);
+        const latestPost = await get(ref(database, `posts/${postId}`)).catch(() => null);
+        updateCommentCounters(postId, latestPost?.exists() ? latestPost.val()?.commentCount : 0);
+        loadComments(postId);
         window.showToast?.('تم حذف التعليق');
         return true;
     } catch (error) {
@@ -172,6 +224,7 @@ function loadComments(postId) {
 
     const unsub = onValue(ref(database, 'comments/' + postId), async snapshot => {
         const commentCount = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+        updateCommentCounters(postId, commentCount);
         const viewerId = auth?.currentUser?.uid;
         const viewerData = viewerId ? (await getUserData(database, viewerId).catch(() => ({}))) : {};
         const postSnapshot = await get(ref(database, `posts/${postId}`)).catch(() => null);
@@ -180,10 +233,8 @@ function loadComments(postId) {
         const viewerAvatar = escapeHtml(String(viewerData?.profilePicture || DEFAULT_AVATAR));
         const composerHtml = `<div class="comment-input-row"><img src="${viewerAvatar}" alt=""><input type="text" id="comment-input-${postId}" placeholder="أضف ردًا إلى المحادثة..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)"><button type="button" onclick="addComment('${postId}',null,event)" aria-label="إرسال الرد">إرسال</button></div>`;
 
-        // Update comment count in tweet actions
-        document.querySelectorAll(`[data-post-id="${postId}"] .tweet-action.reply span:last-child, [data-comment-count-id="${postId}"] .comment-count`).forEach(el => {
-            el.textContent = commentCount;
-        });
+        // Keep the card and detail counters synchronized with the live comments snapshot.
+        updateCommentCounters(postId, commentCount);
 
         if (!snapshot.exists()) {
             commentSection.innerHTML = `<div class="comment-section-header"><strong>الردود</strong><span>لا توجد ردود بعد</span></div>${composerHtml}<div class="comments-empty">كن أول من يشارك في المحادثة.</div>`;
@@ -197,7 +248,7 @@ function loadComments(postId) {
 
         const topLevel = comments.filter(c => !c.parentCommentId).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        let commentsHtml = `<div class="comment-section-header"><strong>الردود</strong><span>${commentCount} ${commentCount === 1 ? 'رد' : 'ردود'}</span></div>${composerHtml}`;
+        let commentsHtml = `<div class="comment-section-header"><strong>الردود</strong><span>${formatSmartCount(commentCount)} ${commentCount === 1 ? 'رد' : 'ردود'}</span></div>${composerHtml}`;
 
         for (const comment of topLevel) {
             // Use denormalized data if available
@@ -211,8 +262,8 @@ function loadComments(postId) {
                     <img class="comment-avatar" src="${avatar}" alt="">
                     <div class="comment-body">
                         <div class="comment-meta"><span class="name">${escapeHtml(name)}</span><span class="time">${formatCommentTime(comment.timestamp)}</span></div>
-                        <div class="comment-text">${escapeHtml(comment.content)}</div>
-                        <div class="comment-actions"><button type="button" class="comment-reply-btn" onclick="showCommentReplyInput('${postId}','${safeCommentId}',event)">رد</button>${(canModerate || comment.userId === viewerId) ? `<button type="button" class="comment-delete-btn" onclick="deleteComment('${postId}','${safeCommentId}',event)">حذف</button>` : ''}${replies.length ? `<span class="comment-replies-count">${replies.length} ${replies.length === 1 ? 'رد' : 'ردود'}</span>` : ''}</div>
+                        <div class="comment-text">${escapeHtml(comment.content)}${comment.edited ? ' <span class="comment-edited">(معدّل)</span>' : ''}</div>
+                        <div class="comment-actions"><button type="button" class="comment-reply-btn" onclick="showCommentReplyInput('${postId}','${safeCommentId}',event)">رد</button>${comment.userId === viewerId ? `<button type="button" class="comment-edit-btn" onclick="editComment('${postId}','${safeCommentId}',event)">تعديل</button>` : ''}${(canModerate || comment.userId === viewerId) ? `<button type="button" class="comment-delete-btn" onclick="deleteComment('${postId}','${safeCommentId}',event)">حذف</button>` : ''}${replies.length ? `<span class="comment-replies-count">${formatSmartCount(replies.length)} ${replies.length === 1 ? 'رد' : 'ردود'}</span>` : ''}</div>
                         <div class="comment-reply-input" id="comment-reply-${postId}-${safeCommentId}" hidden>
                             <input type="text" id="comment-input-${postId}-${safeCommentId}" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')addComment('${postId}','${safeCommentId}',event)">
                             <button type="button" class="follow-btn" onclick="addComment('${postId}','${safeCommentId}',event)">إرسال</button>
@@ -229,8 +280,8 @@ function loadComments(postId) {
                         <img class="comment-avatar" src="${replyAvatar}" alt="">
                         <div class="comment-body">
                             <div class="comment-meta"><span class="name">${escapeHtml(replyName)}</span><span class="time">${formatCommentTime(reply.timestamp)}</span></div>
-                            <div class="comment-text">${escapeHtml(reply.content)}</div>
-                            ${(canModerate || reply.userId === viewerId) ? `<div class="comment-actions"><button type="button" class="comment-delete-btn" onclick="deleteComment('${postId}','${escapeHtml(String(reply.id))}',event)">حذف</button></div>` : ''}
+                            <div class="comment-text">${escapeHtml(reply.content)}${reply.edited ? ' <span class="comment-edited">(معدّل)</span>' : ''}</div>
+                            ${(reply.userId === viewerId || canModerate) ? `<div class="comment-actions">${reply.userId === viewerId ? `<button type="button" class="comment-edit-btn" onclick="editComment('${postId}','${escapeHtml(String(reply.id))}',event)">تعديل</button>` : ''}<button type="button" class="comment-delete-btn" onclick="deleteComment('${postId}','${escapeHtml(String(reply.id))}',event)">حذف</button></div>` : ''}
                         </div>
                     </article>
                 `;
@@ -275,4 +326,4 @@ function toggleComments(postId, event) {
     }
 }
 
-export { init, addComment, deleteComment, loadComments, toggleComments, showCommentReplyInput };
+export { init, addComment, editComment, deleteComment, loadComments, toggleComments, showCommentReplyInput };

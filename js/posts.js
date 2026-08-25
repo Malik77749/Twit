@@ -3,7 +3,7 @@ import { ref, push, set, get, update, remove, increment, runTransaction, query, 
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js?v=9';
 import { showLoading, hideLoading, showView } from './ui.js?v=10';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=9';
-import { loadComments } from './comments.js?v=15';
+import { loadComments } from './comments.js?v=16';
 import * as rateLimiter from './rate-limiter.js?v=9';
 import * as pagination from './pagination.js?v=10';
 import * as blockMute from './block-mute.js?v=9';
@@ -29,7 +29,7 @@ const UI_ICON_PATHS = {
     heartFilled: '<path d="M20.8 8.9c0 5.2-8.8 10.1-8.8 10.1S3.2 14.1 3.2 8.9A4.4 4.4 0 0 1 12 6.7a4.4 4.4 0 0 1 8.8 2.2z" fill="currentColor"></path>',
     bookmark: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z"></path>',
     bookmarkFilled: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z" fill="currentColor"></path>',
-    eye: '<path d="M2.5 12s3.2-5 9.5-5 9.5 5 9.5 5-3.2 5-9.5 5-9.5-5-9.5-5z"></path><circle cx="12" cy="12" r="2.2"></circle>',
+    stats: '<path d="M5 19V9"></path><path d="M12 19V5"></path><path d="M19 19v-7"></path><path d="M3 19h18"></path>',
     more: '<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>',
     pin: '<path d="m15 4 5 5-3 1-3 5-2 2-2-2 2-2 5-3zM9 15l-5 5"></path>',
     share: '<path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path>'
@@ -523,8 +523,8 @@ async function likePost(postId, event) {
             const isDetailAction = btn.classList.contains('post-detail-action');
             btn.classList.toggle('active', isLiked);
             btn.innerHTML = isDetailAction
-                ? `${uiIcon(isLiked ? 'heartFilled' : 'heart')}<span class="detail-count">${likes}</span>`
-                : `<span class="icon-wrap">${uiIcon(isLiked ? 'heartFilled' : 'heart')}</span><span>${likes}</span>`;
+                ? `${uiIcon(isLiked ? 'heartFilled' : 'heart')}<span class="detail-count">${formatEngagementCount(likes)}</span>`
+                : `<span class="icon-wrap">${uiIcon(isLiked ? 'heartFilled' : 'heart')}</span><span>${formatEngagementCount(likes)}</span>`;
             if (isLiked) {
                 const icon = btn.querySelector('.ui-icon');
                 if (icon) {
@@ -598,8 +598,8 @@ async function retweetPost(postId, event) {
         document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
             btn.classList.add('active');
             btn.innerHTML = btn.classList.contains('post-detail-action')
-                ? `${uiIcon('retweet')}<span class="detail-count">${retweets}</span>`
-                : `<span class="icon-wrap">${uiIcon('retweet')}</span><span>${retweets}</span>`;
+                ? `${uiIcon('retweet')}<span class="detail-count">${formatEngagementCount(retweets)}</span>`
+                : `<span class="icon-wrap">${uiIcon('retweet')}</span><span>${formatEngagementCount(retweets)}</span>`;
         });
         showToast('تم إعادة النشر');
     } catch (error) {
@@ -967,11 +967,16 @@ function formatTime(timestamp) {
     return date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
 }
 
+function formatEngagementCount(value) {
+    const count = Math.max(0, Number(value) || 0);
+    try {
+        return new Intl.NumberFormat('ar-EG', { notation: 'compact', maximumFractionDigits: 1 }).format(count);
+    } catch {
+        return String(count);
+    }
+}
 function formatViews(views) {
-    if (!views || views === 0) return '';
-    if (views < 1000) return views.toString();
-    if (views < 1000000) return (views / 1000).toFixed(1).replace('.0', '') + 'K';
-    return (views / 1000000).toFixed(1).replace('.0', '') + 'M';
+    return Number(views) > 0 ? formatEngagementCount(views) : '';
 }
 
 async function renderPost(post, container) {
@@ -1089,7 +1094,7 @@ async function renderPost(post, container) {
         }
     } catch (e) { /* no poll */ }
 
-    const viewsHtml = `<span class="tweet-action view-count" aria-label="المشاهدات">${uiIcon('eye')}<span>${views > 0 ? formatViews(views) : ''}</span></span>`;
+    const viewsHtml = `<span class="tweet-action view-count" aria-label="المشاهدات">${uiIcon('stats')}<span>${formatViews(views)}</span></span>`;
     const editedHtml = post.edited ? '<span style="color:var(--text-secondary);font-size:12px;"> (معدّل)</span>' : '';
     const pinnedHtml = post.isPinned ? `<div class="pinned-label">${uiIcon('pin')} منشور مثبت</div>` : '';
 
@@ -1117,15 +1122,15 @@ async function renderPost(post, container) {
                 <div class="tweet-actions" onclick="event.stopPropagation();">
                     <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
                         <span class="icon-wrap">${uiIcon('comment')}</span>
-                        <span>${commentCount}</span>
+                        <span>${formatEngagementCount(commentCount)}</span>
                     </button>
                     <button class="tweet-action retweet" data-retweet-id="${postId}" onclick="retweetPost('${postId}', event)">
                         <span class="icon-wrap">${uiIcon('retweet')}</span>
-                        <span>${post.retweets || 0}</span>
+                        <span>${formatEngagementCount(post.retweets || 0)}</span>
                     </button>
                     <button class="tweet-action like ${isLiked ? 'active' : ''}" data-like-id="${postId}" onclick="likePost('${postId}', event)">
                         <span class="icon-wrap">${uiIcon(isLiked ? 'heartFilled' : 'heart')}</span>
-                        <span>${post.likes || 0}</span>
+                        <span>${formatEngagementCount(post.likes || 0)}</span>
                     </button>
                     ${viewsHtml}
                     <button class="tweet-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
@@ -1184,7 +1189,7 @@ async function renderRetweet(retweet, originalPost, container) {
         return `<div class="tweet-media-item media-lightbox-trigger" data-media-url="${safeUrl}" role="button" tabindex="0" aria-label="فتح الصورة ${index + 1}">${imageCdn.createResponsiveImage(url, 'صورة المنشور')}</div>`;
     }).join('');
 
-    const viewsHtml = `<span class="tweet-action view-count" aria-label="المشاهدات">${uiIcon('eye')}<span>${views > 0 ? formatViews(views) : ''}</span></span>`;
+    const viewsHtml = `<span class="tweet-action view-count" aria-label="المشاهدات">${uiIcon('stats')}<span>${formatViews(views)}</span></span>`;
 
     container.innerHTML = `
         <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
@@ -1213,7 +1218,7 @@ async function renderRetweet(retweet, originalPost, container) {
                 <div class="tweet-actions" onclick="event.stopPropagation();">
                     <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
                         <span class="icon-wrap">${uiIcon('comment')}</span>
-                        <span>${commentCount}</span>
+                        <span>${formatEngagementCount(commentCount)}</span>
                     </button>
                     <button class="tweet-action retweet" data-retweet-id="${postId}" onclick="retweetPost('${postId}', event)">
                         <span class="icon-wrap">${uiIcon('retweet')}</span>

@@ -1244,11 +1244,20 @@ body { min-width: 0; }
   #post-detail-content .comment-section { padding-bottom:calc(90px + env(safe-area-inset-bottom)); }
 }
 
-.comment-delete-btn { min-height:28px; padding:3px 9px; border:0; border-radius:999px; color:#fb7185; background:transparent; font-size:12px; font-weight:700; }
+.comment-edit-btn, .comment-delete-btn { min-height:28px; padding:3px 9px; border:0; border-radius:999px; background:transparent; font-size:12px; font-weight:700; cursor:pointer; }
+.comment-edit-btn { color:#38bdf8; }
+.comment-edit-btn:hover { color:#fff; background:rgba(56,189,248,.16); }
+.comment-delete-btn { color:#fb7185; }
 .comment-delete-btn:hover { color:#fff; background:rgba(244,63,94,.16); }
+.comment-edited { color:var(--text-muted); font-size:11px; }
+.tweet-actions > .view-count { cursor:default; }
+.tweet-actions > .view-count:hover { color:var(--text-secondary); background:transparent; }
 @media (max-width:760px) {
   .comment-actions { flex-wrap:wrap; }
-  .comment-delete-btn, .comment-reply-btn { min-height:30px; }
+  .comment-edit-btn, .comment-delete-btn, .comment-reply-btn { min-height:30px; }
+  .tweet-action > span:not(.icon-wrap), .tweet-actions > .view-count > span:not(.ui-icon) { display:inline-block !important; font-size:10px; line-height:1; }
+  .tweet-action .icon-wrap, .tweet-actions > .view-count > .ui-icon { width:28px; height:28px; min-width:28px; }
+  .tweet-action .ui-icon, .tweet-actions > .view-count > .ui-icon { width:17px; height:17px; }
 }
 
 .realtime-notification-banner { position:fixed; inset-inline:16px; top:max(72px, env(safe-area-inset-top)); z-index:10000; display:flex; align-items:center; gap:12px; max-width:460px; margin-inline:auto; padding:12px 14px; border:1px solid rgba(56,189,248,.34); border-radius:16px; color:var(--text-primary,#f8fafc); background:rgba(13,24,45,.96); box-shadow:0 16px 40px rgba(0,0,0,.28); opacity:0; transform:translateY(-12px); pointer-events:none; transition:opacity .2s ease, transform .2s ease; direction:rtl; }

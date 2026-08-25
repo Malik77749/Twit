@@ -6,8 +6,8 @@ import { firebaseConfig } from './config.js?v=9';
 import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=10';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=10';
-import * as posts from './posts.js?v=15';
-import * as comments from './comments.js?v=15';
+import * as posts from './posts.js?v=16';
+import * as comments from './comments.js?v=16';
 import * as notifications from './notifications.js?v=18';
 import * as profile from './profile.js?v=18';
 import * as pagination from './pagination.js?v=10';
@@ -45,7 +45,7 @@ const DETAIL_ICON_PATHS = {
     bookmark: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z"></path>',
     bookmarkFilled: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z" fill="currentColor"></path>',
     share: '<path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path>',
-    view: '<path d="M2.5 12s3.4-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z"></path><circle cx="12" cy="12" r="2.5"></circle>'
+    view: '<path d="M5 19V9"></path><path d="M12 19V5"></path><path d="M19 19v-7"></path><path d="M3 19h18"></path>'
 };
 function detailIcon(name) {
     return `<svg class="ui-icon detail-ui-icon" viewBox="0 0 24 24" aria-hidden="true">${DETAIL_ICON_PATHS[name] || ''}</svg>`;
@@ -662,6 +662,7 @@ window.addComment = comments.addComment;
 window.toggleComments = comments.toggleComments;
 window.showCommentReplyInput = comments.showCommentReplyInput;
 window.deleteComment = comments.deleteComment;
+window.editComment = comments.editComment;
 
 window.showProfile = profile.showProfile;
 window.updateProfilePicture = profile.updateProfilePicture;
