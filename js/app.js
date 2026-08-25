@@ -1668,7 +1668,7 @@ window.clearQuoteTweet = function() {
     const preview = document.getElementById('quote-preview');
     if (preview) { preview.hidden = true; preview.innerHTML = ''; }
 };
-function startQuoteTweet(postId) {
+window.startQuoteTweet = function startQuoteTweet(postId) {
     window.currentQuotePostId = postId;
     showHome();
     const composer = document.getElementById('postContent');
@@ -2461,7 +2461,7 @@ try {
 
     // Share sheet: copy link / quote / DM
     window.quoteTweet = function(postId) {
-        startQuoteTweet(postId);
+        window.startQuoteTweet?.(postId);
     };
 
     window.sendPostByDM = async function(postId) {
