@@ -90,6 +90,12 @@ button, .nav-item, .tweet, .sidebar-profile { transition: background .2s ease, b
 .auth-container { background: radial-gradient(circle at 50% 10%, rgba(56,189,248,.13), transparent 26rem), var(--bg-primary); }
 .auth-box { width: min(430px, calc(100vw - 32px)); padding: 34px; border: 1px solid var(--border-color); border-radius: 24px; background: rgba(17,24,43,.86); box-shadow: 0 24px 80px rgba(0,0,0,.35); backdrop-filter: blur(18px); }
 .auth-box .logo { color: var(--accent); }
+.google-signup-only { display: grid; gap: 12px; text-align: center; padding: 8px 0 4px; }
+.google-signup-only h3 { margin: 0; font-size: 22px; color: var(--text-primary); }
+.google-signup-only p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+.google-signup-only .auth-btn-google { width: 100%; min-height: 50px; justify-content: center; }
+.google-signup-note { color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+
 .auth-box input, .auth-box select { min-height: 48px; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(15,23,42,.9); }
 .auth-box input:focus, .auth-box select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .auth-box button[type="submit"], #login-phone-btn, #login-email-btn, #signup-phone-btn, #signup-email-btn { min-height: 48px; border-radius: 12px; background: linear-gradient(135deg, #38bdf8, #2563eb); }

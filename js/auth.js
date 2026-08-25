@@ -56,8 +56,9 @@ function setupAuthListeners() {
     document.getElementById('show-signup-btn')?.addEventListener('click', () => {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('signup-section').style.display = 'block';
+        document.getElementById('signup-phone-form').style.setProperty('display', 'none', 'important');
+        document.getElementById('signup-email-form').style.setProperty('display', 'none', 'important');
         document.getElementById('error').innerText = '';
-        refreshCaptcha();
     });
     
     document.getElementById('show-login-btn')?.addEventListener('click', () => {
@@ -625,10 +626,10 @@ function showLogin() {
 function showSignup() {
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('signup-section').style.display = 'block';
-    document.getElementById('signup-phone-form').style.display = 'none';
-    document.getElementById('signup-email-form').style.display = 'block';
+    document.getElementById('signup-phone-form')?.style.setProperty('display', 'none', 'important');
+    document.getElementById('signup-email-form')?.style.setProperty('display', 'none', 'important');
     document.getElementById('tab-signup-phone')?.classList.remove('active');
-    document.getElementById('tab-signup-email')?.classList.add('active');
+    document.getElementById('tab-signup-email')?.classList.remove('active');
     document.getElementById('error').innerText = '';
 }
 
