@@ -240,7 +240,7 @@ window.showBookmarks = function() {
     hideAllViews();
     setActiveNav('bookmarks');
     document.getElementById('bookmarks-view').style.display = 'block';
-    loadBookmarks();
+    return loadBookmarks();
 };
 
 window.openSearch = function() {
@@ -501,7 +501,8 @@ async function loadBookmarks() {
             `;
         }
     } catch (error) {
-        container.innerHTML = '<div class="empty-state"><p>خطأ</p></div>';
+        console.error('Bookmarks load error:', error);
+        container.innerHTML = '<div class="empty-state"><h3>المحفوظات</h3><p>تعذر تحميل المحفوظات الآن. تحقق من الاتصال ثم حاول مرة أخرى.</p><button class="follow-btn" type="button" onclick="showBookmarks()">إعادة المحاولة</button></div>';
     }
 }
 
@@ -2408,26 +2409,30 @@ try {
     // Intercept navigation functions to update mobile nav
     const originalShowHome = window.showHome;
     window.showHome = function() {
-        originalShowHome();
+        const result = originalShowHome();
         setActiveMobileNav('home');
+        return result;
     };
 
     const originalShowNotifications = window.showNotifications;
     window.showNotifications = function() {
-        originalShowNotifications();
+        const result = originalShowNotifications();
         setActiveMobileNav('notifications');
+        return result;
     };
 
     const originalShowMessages = window.showMessages;
     window.showMessages = function() {
-        originalShowMessages();
+        const result = originalShowMessages();
         setActiveMobileNav('messages');
+        return result;
     };
 
     const originalShowProfile = window.showProfile;
     window.showProfile = function(...args) {
-        originalShowProfile(...args);
+        const result = originalShowProfile(...args);
         setActiveMobileNav('profile');
+        return result;
     };
 
     const originalOpenSearch = window.openSearch;
