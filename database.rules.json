@@ -90,7 +90,11 @@
         },
         "edited": { ".validate": "newData.isBoolean()" },
         "editedAt": { ".validate": "newData.isString()" },
-        "commentCount": { ".validate": "newData.isNumber()" },
+        "commentCount": {
+          ".write": "auth != null && newData.isNumber() && newData.val() === data.val() + 1",
+          ".validate": "newData.isNumber()"
+        },
+        "quotedPostId": { ".validate": "newData.isString() && newData.val().length <= 100" },
         "userName": { ".validate": "newData.isString() && newData.val().length <= 80" },
         "userAvatar": { ".validate": "newData.isString()" },
         "userHandle": { ".validate": "newData.isString() && newData.val().length <= 24" },

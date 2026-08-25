@@ -1,5 +1,5 @@
 // Comments Module — Upgraded with Rate Limiting + Denormalization
-import { ref, push, set, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, push, set, get, update, runTransaction, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { escapeHtml } from './utils.js?v=9';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=9';
 import * as rateLimiter from './rate-limiter.js?v=9';
@@ -72,6 +72,7 @@ async function addComment(postId, parentCommentId, event) {
             timestamp: new Date().toISOString(),
             parentCommentId: parentCommentId
         });
+        void runTransaction(ref(database, `posts/${postId}/commentCount`), current => Number(current || 0) + 1).catch(() => {});
 
         input.value = '';
 
@@ -80,11 +81,18 @@ async function addComment(postId, parentCommentId, event) {
 
         // Refresh comments immediately; notification creation must never block the interaction.
         loadComments(postId);
-        void get(ref(database, `posts/${postId}`)).then(async postSnap => {
-            if (postSnap.exists() && postSnap.val().userId !== userId) {
+        void Promise.all([
+            get(ref(database, `posts/${postId}`)),
+            parentCommentId ? get(ref(database, `comments/${postId}/${parentCommentId}`)) : Promise.resolve(null)
+        ]).then(async ([postSnap, parentSnap]) => {
+            const postOwnerId = postSnap?.exists() ? postSnap.val().userId : null;
+            const parentOwnerId = parentSnap?.exists() ? parentSnap.val().userId : null;
+            const targetUserId = parentOwnerId && parentOwnerId !== userId ? parentOwnerId : postOwnerId;
+            if (targetUserId && targetUserId !== userId) {
                 const actorData = userData || await getUserData(database, userId);
                 const name = actorData.name || await getUserName(database, userId);
-                void addNotification(database, postSnap.val().userId, `رد ${name} على منشورك`, postId, { actorId: userId, actorName: name, actorAvatar: actorData.profilePicture || DEFAULT_AVATAR, type: 'mentions' });
+                const text = parentOwnerId ? `رد ${name} على تعليقك` : `رد ${name} على منشورك`;
+                void addNotification(database, targetUserId, text, postId, { actorId: userId, actorName: name, actorAvatar: actorData.profilePicture || DEFAULT_AVATAR, type: 'mentions' });
             }
         }).catch(() => {});
     } catch (error) {
