@@ -78,6 +78,18 @@ try {
     console.error('Module initialization error:', error);
 }
 
+// Never let a network-dependent boot step leave the user on a permanent loader.
+window.setTimeout(() => {
+    const overlay = document.getElementById('loading-overlay');
+    const appSection = document.getElementById('app-section');
+    if (overlay?.style.display === 'flex' && appSection?.style.display !== 'flex') {
+        hideLoading();
+        showAuth();
+        const errorEl = document.getElementById('error');
+        if (errorEl && !errorEl.textContent) errorEl.textContent = 'تعذر إكمال الاتصال. يمكنك المحاولة مرة أخرى.';
+    }
+}, 6000);
+
 // ===== Global Navigation =====
 
 const allViews = [
@@ -1794,7 +1806,8 @@ async function checkUserRole(user) {
             notifications.loadNotifications();
             updateDMBadge();
         });
-        pushNotif.requestPermission(user.uid);
+        // Notifications are optional and must never block the first screen.
+        void pushNotif.requestPermission(user.uid).catch(error => console.warn('Background notification setup skipped:', error));
 
         hideLoading();
         showApp();
