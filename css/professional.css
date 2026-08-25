@@ -192,6 +192,13 @@ button, .nav-item, .tweet, .sidebar-profile { transition: background .2s ease, b
 /* Authentication screens must not reserve or show app navigation. */
 body:not(.mimer-authenticated) .mobile-nav { display: none !important; }
 .mobile-nav-icon { width: 22px; height: 22px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mobile-header { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
+.mobile-header-center { position:static; transform:none; display:flex; align-items:center; justify-content:center; }
+.mobile-header-logo { width:36px; height:36px; object-fit:contain; display:block; }
+.mobile-header-settings { justify-self:end; }
+.mobile-feed-tabs { display:flex; width:100%; min-height:54px; }
+.mobile-feed-tab { flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; text-align:center; }
+
 
 .mobile-nav-item.active .mobile-nav-icon { fill: var(--accent-soft); stroke: var(--accent); }
 

@@ -485,7 +485,7 @@
                 <div class="mobile-header">
                     <img class="mobile-header-avatar" id="mobile-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect fill='%23333' width='40' height='40' rx='20'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%23555'/%3E%3Cpath d='M8 36c0-7 5-12 12-12s12 5 12 12' fill='%23555'/%3E%3C/svg%3E" alt="" onclick="openDrawer()">
                     <div class="mobile-header-center">
-                        <svg class="mobile-header-logo" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                        <img class="mobile-header-logo" src="assets/mimer-icon-original.png" alt="ميمر Mimer">
                     </div>
                     <button class="mobile-header-settings" onclick="openDrawer()">
                         <i class="fas fa-gear"></i>
@@ -493,7 +493,7 @@
                 </div>
 
                 <!-- Mobile Feed Tabs (like X — For You / Following) -->
-                <div class="mobile-feed-tabs tabs-with-indicator">
+                <div class="mobile-feed-tabs tabs-with-indicator" role="tablist" aria-label="خلاصة ميمر">
                     <button class="mobile-feed-tab active" onclick="switchFeedTab(this, 'foryou')">لك</button>
                     <button class="mobile-feed-tab" onclick="switchFeedTab(this, 'following')">متابَعون</button>
                     <div class="tab-indicator"></div>

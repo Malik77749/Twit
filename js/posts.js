@@ -639,8 +639,10 @@ async function incrementViewCount(postId) {
 }
 
 // ===== Feed Loading with Pagination =====
+let feedLoadToken = 0;
 
 async function loadPosts() {
+    const loadToken = ++feedLoadToken;
     const postsDiv = document.getElementById('posts');
 
     // Show skeleton loading
@@ -661,7 +663,9 @@ async function loadPosts() {
         posts = await blockMute.filterPosts(posts);
 
         if (!posts.length) {
-            postsDiv.innerHTML = '<div class="empty-state"><h3>لا توجد منشورات</h3><p>كن أول من ينشر!</p></div>';
+            if (loadToken === feedLoadToken) {
+                postsDiv.innerHTML = '<div class="empty-state"><h3>لا توجد منشورات بعد</h3><p>ابدأ أول منشور في ميمر وسيظهر هنا.</p></div>';
+            }
             return;
         }
 
@@ -693,6 +697,7 @@ async function loadPosts() {
             fragment.appendChild(container);
             containers.push({ item, container });
         }
+        if (loadToken !== feedLoadToken) return;
         postsDiv.innerHTML = '';
         postsDiv.appendChild(fragment);
 
@@ -712,7 +717,12 @@ async function loadPosts() {
 
     } catch (error) {
         console.error('Load posts error:', error);
-        postsDiv.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';
+        if (loadToken !== feedLoadToken) return;
+        // Keep any already-rendered content; otherwise show a helpful, non-alarming state.
+        const hasRenderedContent = postsDiv.querySelector('[data-post-id], .tweet, .post-card');
+        if (!hasRenderedContent) {
+            postsDiv.innerHTML = '<div class="empty-state"><h3>لا توجد منشورات بعد</h3><p>ابدأ أول منشور في ميمر، أو تحقق من الاتصال ثم حاول مرة أخرى.</p></div>';
+        }
     }
 }
 
