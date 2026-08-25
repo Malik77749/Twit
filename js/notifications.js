@@ -187,7 +187,7 @@ function loadNotifications() {
 
     if (realtimePollTimer) clearInterval(realtimePollTimer);
     realtimePollTimer = setInterval(async () => {
-        if (document.hidden || realtimePollInFlight || auth.currentUser?.uid !== userId) return;
+        if (realtimePollInFlight || auth.currentUser?.uid !== userId) return;
         realtimePollInFlight = true;
         try {
             const snapshot = await get(ref(database, `notifications/${userId}`));
@@ -197,7 +197,7 @@ function loadNotifications() {
             updateBadges(notifications.filter(n => !n.read).length);
         } catch (_) { /* realtime listener remains the primary path */ }
         finally { realtimePollInFlight = false; }
-    }, 5000);
+    }, 3000);
 
     notificationsUnsub = onValue(ref(database, `notifications/${userId}`), async snapshot => {
         if (!snapshot.exists()) {
