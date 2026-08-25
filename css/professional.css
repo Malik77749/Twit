@@ -432,8 +432,8 @@ body { min-width: 0; }
 .profile-edit-form { width:100%; max-width:560px; padding:16px; border:1px solid rgba(148,163,184,.16); border-radius:16px; background:rgba(15,23,42,.55); }
 
 
-/* Final onboarding presentation */
-.mimer-splash { background:#030711; }
+/* Final onboarding presentation: the login surface must never be blocked by a splash layer. */
+.mimer-splash { display: none !important; background:#030711; }
 .mimer-splash-glow { display:none; }
 .mimer-splash-content { width:100%; max-width:none; padding:0; }
 .mimer-splash-logo { width:clamp(180px, 64vw, 300px); height:auto; max-width:calc(100vw - 48px); max-height:none; object-fit:contain; filter:drop-shadow(0 14px 34px rgba(15,105,255,.18)); }
