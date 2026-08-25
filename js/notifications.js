@@ -167,7 +167,6 @@ function loadNotifications() {
     if (list) list.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
     notificationsUnsub = onValue(ref(database, `notifications/${userId}`), async snapshot => {
-        if (!list) return;
         const userChanged = observedUserId !== userId;
         if (userChanged) {
             observedUserId = userId;
@@ -175,7 +174,7 @@ function loadNotifications() {
             realtimeSnapshotReady = false;
         }
         if (!snapshot.exists()) {
-            list.innerHTML = '<div class="empty-state"><h3>الإشعارات</h3><p>لا توجد إشعارات</p></div>';
+            if (list) list.innerHTML = '<div class="empty-state"><h3>الإشعارات</h3><p>لا توجد إشعارات</p></div>';
             updateBadges(0);
             realtimeSnapshotReady = true;
             return;
@@ -192,6 +191,7 @@ function loadNotifications() {
 
         const unread = notifications.filter(n => !n.read).length;
         updateBadges(unread);
+        if (!list) return;
 
         const grouped = groupNotifications(notifications);
         const filtered = filterNotifications(grouped);
