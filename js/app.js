@@ -663,6 +663,10 @@ window.toggleComments = comments.toggleComments;
 window.showCommentReplyInput = comments.showCommentReplyInput;
 window.deleteComment = comments.deleteComment;
 window.editComment = comments.editComment;
+window.toggleCommentLike = comments.toggleCommentLike;
+window.openCommentOptions = comments.openCommentOptions;
+window.copyCommentLink = comments.copyCommentLink;
+window.reportComment = comments.reportComment;
 
 window.showProfile = profile.showProfile;
 window.updateProfilePicture = profile.updateProfilePicture;
