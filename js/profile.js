@@ -3,7 +3,7 @@ import { ref, get, set, update, runTransaction } from 'https://www.gstatic.com/f
 import { showLoading, hideLoading, showView } from './ui.js?v=10';
 import { getUserData } from './firebase-helpers.js?v=9';
 import { showToast } from './utils.js?v=9';
-import { renderPost, renderRetweet, reportPost } from './posts.js?v=13';
+import { renderPost, renderRetweet, reportPost } from './posts.js?v=15';
 import { escapeHtml } from './utils.js?v=9';
 import * as cloudinary from './cloudinary.js?v=11';
 import * as imageCdn from './image-cdn.js?v=10';
@@ -210,7 +210,7 @@ async function showProfile(userId) {
         setProfileEditMode(false);
 
         showView('profile');
-        loadProfilePosts(userId);
+        await loadProfilePosts(userId);
     } catch (error) {
         console.error('Profile load error:', error);
         showView('profile');

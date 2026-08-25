@@ -380,25 +380,32 @@ async function postTweet() {
         if (gifRow) gifRow.style.display = 'none';
         if (locationRow) locationRow.style.display = 'none';
 
-        // Prepend new post to feed with animation
+        // Prepend new post to feed with animation. A realtime listener may have
+        // rendered this same ID already between set() and this continuation;
+        // reuse that container instead of creating a duplicate visual item.
         const postsDiv = document.getElementById('posts');
-        const container = document.createElement('div');
-        container.setAttribute('data-post-id', postRef.key);
-        container.classList.add('new-post');
-        if (postsDiv.firstChild) {
-            postsDiv.insertBefore(container, postsDiv.firstChild);
-        } else {
-            postsDiv.appendChild(container);
+        let container = Array.from(postsDiv.querySelectorAll('[data-post-id]')).find(el => el.dataset.postId === postRef.key);
+        if (!container) {
+            container = document.createElement('div');
+            container.setAttribute('data-post-id', postRef.key);
+            container.classList.add('new-post');
+            if (postsDiv.firstChild) postsDiv.insertBefore(container, postsDiv.firstChild);
+            else postsDiv.appendChild(container);
         }
-        container.innerHTML = `<article class="tweet new-post-pending"><div class="tweet-body"><div class="tweet-header"><strong>${escapeHtml(postData.userName)}</strong><span class="tweet-handle">@${escapeHtml(postData.userHandle || '')}</span></div><div class="tweet-content">${postData.content || ''}</div><small style="color:var(--text-secondary);">يتم تجهيز العرض…</small></div></article>`;
+        if (!container.dataset.rendering && !container.querySelector('.tweet')) {
+            container.dataset.rendering = 'true';
+            container.innerHTML = `<article class="tweet new-post-pending"><div class="tweet-body"><div class="tweet-header"><strong>${escapeHtml(postData.userName)}</strong><span class="tweet-handle">@${escapeHtml(postData.userHandle || '')}</span></div><div class="tweet-content">${postData.content || ''}</div><small style="color:var(--text-secondary);">يتم تجهيز العرض…</small></div></article>`;
+            void renderPost({ id: postRef.key, ...postData }, container).catch(error => {
+                console.error('Post render error:', error);
+                container.classList.remove('new-post-pending');
+            }).finally(() => {
+                delete container.dataset.rendering;
+            });
+        }
         showToast('تم النشر بنجاح');
         if (postBtn) { postBtn.disabled = false; postBtn.removeAttribute('aria-busy'); delete postBtn.dataset.publishBusy; postBtn.textContent = 'نشر'; }
         publishInFlight = false;
         publishRequestId = null;
-        void renderPost({ id: postRef.key, ...postData }, container).catch(error => {
-            console.error('Post render error:', error);
-            container.classList.remove('new-post-pending');
-        });
         // Remove undo timer - post is instant
         // undoTweetModule.startUndo(postRef.key, (deletedId) => {
         //     showToast('تم إلغاء المنشور');
@@ -750,6 +757,11 @@ let feedLoadToken = 0;
 async function loadPosts() {
     const loadToken = ++feedLoadToken;
     const postsDiv = document.getElementById('posts');
+    // Cancel any previous realtime subscription before rebuilding the feed.
+    // Without this, concurrent boot/navigation loads can prepend the same post
+    // while the new first page is also rendering it.
+    unsubscribeFeed();
+    lastKnownPostId = null;
 
     // Show skeleton loading
     postsDiv.innerHTML = `
@@ -866,18 +878,30 @@ function subscribeToFeed() {
         // If this is a new post we haven't seen
         if (lastKnownPostId && newestPost.id !== lastKnownPostId) {
             const postsDiv = document.getElementById('posts');
+            // A load/navigation race may already have rendered this post.
+            // Compare data attributes instead of relying on a single global token.
+            const alreadyRendered = postsDiv && Array.from(postsDiv.querySelectorAll('[data-post-id]')).some(el => el.dataset.postId === newestPost.id);
             // Only prepend if we're on the home view and near the top
             const homeView = document.getElementById('home-view');
+            if (alreadyRendered) {
+                lastKnownPostId = newestPost.id;
+                return;
+            }
             if (homeView && homeView.style.display !== 'none' && postsDiv) {
                 const container = document.createElement('div');
                 container.setAttribute('data-post-id', newestPost.id);
+                container.dataset.rendering = 'true';
                 container.classList.add('new-post-realtime');
                 postsDiv.insertBefore(container, postsDiv.firstChild);
 
                 // Check if blocked/muted
                 const filtered = await blockMute.filterPosts([newestPost]);
                 if (filtered.length > 0) {
-                    await renderFeedItem({ ...newestPost, type: 'post' }, container);
+                    try {
+                        await renderFeedItem({ ...newestPost, type: 'post' }, container);
+                    } finally {
+                        delete container.dataset.rendering;
+                    }
                 } else {
                     container.remove();
                 }
@@ -907,6 +931,8 @@ async function loadMorePostsCallback(newPosts) {
     const postsDiv = document.getElementById('posts');
 
     for (const post of newPosts) {
+        const alreadyRendered = Array.from(postsDiv.querySelectorAll('[data-post-id]')).some(el => el.dataset.postId === post.id);
+        if (alreadyRendered) continue;
         const container = document.createElement('div');
         container.setAttribute('data-post-id', post.id);
         postsDiv.appendChild(container);
