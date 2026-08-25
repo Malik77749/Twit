@@ -10,7 +10,7 @@ import * as posts from './posts.js?v=13';
 import * as comments from './comments.js?v=9';
 import * as notifications from './notifications.js?v=9';
 import * as profile from './profile.js?v=17';
-import * as pagination from './pagination.js?v=9';
+import * as pagination from './pagination.js?v=10';
 import * as rateLimiter from './rate-limiter.js?v=9';
 import * as pushNotif from './push-notifications.js?v=9';
 import * as dm from './dm.js?v=9';
@@ -28,6 +28,7 @@ import * as verified from './verified.js?v=9';
 import * as trending from './trending.js?v=9';
 import * as googleAuth from './google-auth.js?v=9';
 import * as communities from './communities.js?v=9';
+import * as feedRanking from './feed-ranking.js?v=1';
 import * as twoFactor from './two-factor.js?v=4';
 import * as verification from './verification.js?v=1';
 import * as cloudinary from './cloudinary.js?v=11';
@@ -229,6 +230,8 @@ async function refreshComposerCommunities() {
 window.refreshComposerCommunities = refreshComposerCommunities;
 
 window.showHome = function() {
+    window.currentFeedMode = 'foryou';
+    document.querySelectorAll('.mobile-feed-tab').forEach((tab, index) => tab.classList.toggle('active', index === 0));
     hideAllViews();
     setActiveNav('home');
     showView('home');
@@ -296,7 +299,9 @@ window.handleSearch = function(query) {
     }
 
     searchTimeout = setTimeout(async () => {
-        await performSearch(query.trim());
+        const normalizedQuery = query.trim();
+        if (normalizedQuery.length >= 3) feedRanking.rememberSearchTerm(normalizedQuery);
+        await performSearch(normalizedQuery);
     }, 300);
 };
 
@@ -535,6 +540,7 @@ async function loadBookmarks() {
 // ===== Feed Tab Switch =====
 
 window.switchFeedTab = function(btn, tabType) {
+    window.currentFeedMode = tabType === 'following' ? 'following' : 'foryou';
     document.querySelectorAll('.mobile-feed-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
 
@@ -547,6 +553,7 @@ window.switchFeedTab = function(btn, tabType) {
 };
 
 async function loadFollowingFeed() {
+    window.currentFeedMode = 'following';
     const postsDiv = document.getElementById('posts');
     postsDiv.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
 
@@ -2403,6 +2410,8 @@ try {
 
     window.showHome = function() {
         originalShowHome();
+        document.querySelector('.main-feed')?.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         setDesktopActive('home');
         animateVisibleView();
         initTabIndicators();

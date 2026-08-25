@@ -70,7 +70,7 @@ function resetPagination() {
 /**
  * Load first page of posts (used by loadPosts)
  */
-async function loadFirstPage(database, renderCallback) {
+async function loadFirstPage(database, ranker) {
     resetPagination();
 
     const postsDiv = document.getElementById('posts');
@@ -89,11 +89,12 @@ async function loadFirstPage(database, renderCallback) {
             });
         }
 
-        // Sort newest first
+        // Keep chronological order for Following and use an injected ranker for For You.
         posts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        const orderedPosts = typeof ranker === 'function' ? await ranker(posts) : posts;
 
         // Take first page only
-        const page = posts.slice(0, PAGE_SIZE);
+        const page = orderedPosts.slice(0, PAGE_SIZE);
 
         if (page.length > 0) {
             oldestTimestamp = page[page.length - 1].timestamp;

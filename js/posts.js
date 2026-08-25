@@ -5,7 +5,7 @@ import { showLoading, hideLoading, showView } from './ui.js?v=10';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=9';
 import { loadComments } from './comments.js?v=9';
 import * as rateLimiter from './rate-limiter.js?v=9';
-import * as pagination from './pagination.js?v=9';
+import * as pagination from './pagination.js?v=10';
 import * as blockMute from './block-mute.js?v=9';
 import * as pollsModule from './polls.js?v=9';
 import * as communitiesModule from './communities.js?v=9';
@@ -13,6 +13,7 @@ import * as imageCompress from './image-compress.js?v=9';
 import * as undoTweetModule from './undo-tweet.js?v=9';
 import * as imageCdn from './image-cdn.js?v=10';
 import * as cloudinary from './cloudinary.js?v=11';
+import * as feedRanking from './feed-ranking.js?v=1';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -739,8 +740,13 @@ async function loadPosts() {
         // Reset pagination state
         pagination.resetPagination();
 
-        // Load first page only
-        let posts = await pagination.loadFirstPage(database);
+        // For You ranks all available candidates before taking the first page.
+        const usePersonalizedFeed = window.currentFeedMode !== 'following';
+        const ranker = usePersonalizedFeed
+            ? async candidates => feedRanking.rankPostsForYou(candidates, await feedRanking.loadRankingSignals(database, auth.currentUser?.uid))
+            : null;
+        let posts = await pagination.loadFirstPage(database, ranker);
+        window.lastMimerFeedRanking = usePersonalizedFeed ? posts.map(post => ({ id: post.id, score: post.rankingScore, reasons: post.rankingReasons })) : [];
 
         // Filter blocked/muted users
         posts = await blockMute.filterPosts(posts);
