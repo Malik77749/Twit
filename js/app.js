@@ -2721,5 +2721,10 @@ window.postTweet = (...args) => posts.postTweet(...args);
     }
 
     window.addEventListener('resize', updateLayout);
+    if (typeof MutationObserver !== 'undefined') {
+        const layoutObserver = new MutationObserver(updateLayout);
+        layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
+    window.updateMimerLayout = updateLayout;
     updateLayout();
 })();
