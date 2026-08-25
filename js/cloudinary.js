@@ -26,9 +26,11 @@ async function uploadMedia(file, { folder = 'mimer/media' } = {}) {
     formData.append('file', file, file.name || `mimer-${Date.now()}`);
     formData.append('upload_preset', cloudinaryConfig.uploadPreset);
     formData.append('folder', folder);
+    const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+    const uploadEndpoint = cloudinaryConfig.uploadEndpoint.replace('/auto/upload', `/${resourceType}/upload`);
 
     try {
-        const response = await fetch(cloudinaryConfig.uploadEndpoint, {
+        const response = await fetch(uploadEndpoint, {
             method: 'POST',
             body: formData,
             signal: controller.signal

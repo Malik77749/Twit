@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mimer-v9';
+const CACHE_NAME = 'mimer-v10';
 const APP_ROOT = new URL('./', self.location).pathname;
 const STATIC_ASSETS = [
     './',
