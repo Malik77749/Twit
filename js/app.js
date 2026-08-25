@@ -6,10 +6,10 @@ import { firebaseConfig } from './config.js?v=9';
 import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=10';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=9';
-import * as posts from './posts.js?v=11';
+import * as posts from './posts.js?v=12';
 import * as comments from './comments.js?v=9';
 import * as notifications from './notifications.js?v=9';
-import * as profile from './profile.js?v=13';
+import * as profile from './profile.js?v=14';
 import * as pagination from './pagination.js?v=9';
 import * as rateLimiter from './rate-limiter.js?v=9';
 import * as pushNotif from './push-notifications.js?v=9';
@@ -30,7 +30,7 @@ import * as googleAuth from './google-auth.js?v=9';
 import * as communities from './communities.js?v=9';
 import * as twoFactor from './two-factor.js?v=4';
 import * as verification from './verification.js?v=1';
-import * as cloudinary from './cloudinary.js?v=10';
+import * as cloudinary from './cloudinary.js?v=11';
 import { getUserData, clearUserCache } from './firebase-helpers.js?v=9';
 import './improvements.js?v=1';
 
@@ -1761,7 +1761,9 @@ function renderDetailMedia(post) {
         if (!url) return '';
         const safeUrl = escapeHtml(url);
         if (media.type === 'video') {
-            return `<div class="post-detail-media"><video class="post-detail-video" controls playsinline preload="metadata"><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video></div>`;
+            const poster = cloudinary.getVideoPosterUrl(url, { width: 720 });
+            const safePoster = poster ? ` poster="${escapeHtml(poster)}"` : '';
+            return `<div class="post-detail-media"><video class="post-detail-video" controls playsinline preload="metadata"${safePoster}><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video></div>`;
         }
         if (media.type === 'embed') {
             return `<div class="post-detail-media"><iframe src="${safeUrl}" title="فيديو المنشور" allowfullscreen loading="lazy"></iframe></div>`;

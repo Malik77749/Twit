@@ -11,8 +11,8 @@ import * as pollsModule from './polls.js?v=9';
 import * as communitiesModule from './communities.js?v=9';
 import * as imageCompress from './image-compress.js?v=9';
 import * as undoTweetModule from './undo-tweet.js?v=9';
-import * as imageCdn from './image-cdn.js?v=9';
-import * as cloudinary from './cloudinary.js?v=10';
+import * as imageCdn from './image-cdn.js?v=10';
+import * as cloudinary from './cloudinary.js?v=11';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -1006,7 +1006,9 @@ async function renderPost(post, container) {
             return `<div class="tweet-media-item"><iframe src="${safeUrl}" title="فيديو المنشور" allowfullscreen loading="lazy"></iframe></div>`;
         }
         if (media.type === 'video') {
-            return `<div class="tweet-media-item"><video class="tweet-video" controls preload="metadata" playsinline><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video></div>`;
+            const poster = cloudinary.getVideoPosterUrl(url, { width: 720 });
+            const safePoster = poster ? ` poster="${escapeHtml(poster)}"` : '';
+            return `<div class="tweet-media-item"><video class="tweet-video" controls preload="none" playsinline${safePoster}><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video></div>`;
         }
         return `<div class="tweet-media-item media-lightbox-trigger" data-media-url="${safeUrl}" role="button" tabindex="0" aria-label="فتح الصورة ${index + 1}">${imageCdn.createResponsiveImage(url, 'صورة المنشور')}</div>`;
     }).join('');
@@ -1119,7 +1121,11 @@ async function renderRetweet(retweet, originalPost, container) {
         if (!url) return '';
         const safeUrl = escapeHtml(url);
         if (media.type === 'embed') return `<div class="tweet-media-item"><iframe src="${safeUrl}" title="فيديو المنشور" allowfullscreen loading="lazy"></iframe></div>`;
-        if (media.type === 'video') return `<div class="tweet-media-item"><video class="tweet-video" controls preload="metadata" playsinline><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video></div>`;
+        if (media.type === 'video') {
+            const poster = cloudinary.getVideoPosterUrl(url, { width: 720 });
+            const safePoster = poster ? ` poster="${escapeHtml(poster)}"` : '';
+            return `<div class="tweet-media-item"><video class="tweet-video" controls preload="none" playsinline${safePoster}><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video></div>`;
+        }
         return `<div class="tweet-media-item media-lightbox-trigger" data-media-url="${safeUrl}" role="button" tabindex="0" aria-label="فتح الصورة ${index + 1}">${imageCdn.createResponsiveImage(url, 'صورة المنشور')}</div>`;
     }).join('');
 

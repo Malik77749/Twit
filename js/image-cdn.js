@@ -45,16 +45,30 @@ function getOptimizedImageUrl(url, width = 600, quality = 80) {
 function createResponsiveImage(src, alt = '', maxWidth = 600) {
     if (!src) return '';
 
-    const optimizedSrc = escapeHtmlAttribute(getOptimizedImageUrl(src, maxWidth));
+    const boundedMax = Math.max(320, Math.min(1600, Number(maxWidth) || 600));
+    const candidateWidths = [320, 480, 640, 960, 1280, boundedMax]
+        .filter(width => width <= boundedMax || width === boundedMax)
+        .filter((width, index, values) => values.indexOf(width) === index)
+        .sort((a, b) => a - b);
+    const optimizedSrc = escapeHtmlAttribute(getOptimizedImageUrl(src, Math.min(640, boundedMax), 80));
+    const srcset = candidateWidths.length > 1
+        ? candidateWidths.map(width => `${escapeHtmlAttribute(getOptimizedImageUrl(src, width, 80))} ${width}w`).join(',')
+        : '';
     const safeAlt = escapeHtmlAttribute(alt);
+    const safeSizes = boundedMax <= 480
+        ? '100vw'
+        : '(max-width: 760px) calc(100vw - 32px), 600px';
+    const errorImage = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect fill=%22%23222%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%22200%22 y=%22150%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2216%22%3Eصورة غير متاحة%3C/text%3E%3C/svg%3E';
 
     return `<img
         src="${optimizedSrc}"
+        ${srcset ? `srcset="${srcset}" sizes="${safeSizes}"` : ''}
         alt="${safeAlt}"
         loading="lazy"
         decoding="async"
+        fetchpriority="low"
         onload="this.classList.add('loaded'); this.style.opacity='1';"
-        onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect fill=%22%23222%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%22200%22 y=%22150%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2216%22%3Eصورة غير متاحة%3C/text%3E%3C/svg%3E'; this.onerror=null;"
+        onerror="this.src='${errorImage}'; this.removeAttribute('srcset'); this.onerror=null;"
         style="max-width:100%;border-radius:16px;border:1px solid var(--border-color);opacity:0;transition:opacity 0.3s;"
     >`;
 }

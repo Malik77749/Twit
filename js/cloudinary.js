@@ -57,9 +57,20 @@ async function uploadMedia(file, { folder = 'mimer/media' } = {}) {
     }
 }
 
-function getDeliveryUrl(url, { width = 1200, quality = 'auto' } = {}) {
+function getDeliveryUrl(url, { width = 1200, quality = 'auto:good' } = {}) {
     if (!url || !url.includes('res.cloudinary.com') || !url.includes('/upload/')) return url || '';
-    return url.replace('/upload/', `/upload/f_auto,q_${quality},w_${Math.max(80, Number(width) || 1200)}/`);
+    return url.replace('/upload/', `/upload/f_auto,q_${quality},w_${Math.max(80, Number(width) || 1200)},c_limit/`);
 }
 
-export { MAX_MEDIA_BYTES, ALLOWED_MEDIA_TYPES, isCloudinaryReady, validateMediaFile, uploadMedia, getDeliveryUrl };
+/**
+ * Generate a lightweight first-frame poster for Cloudinary videos.
+ * The poster is fetched independently; the video itself remains preload=none.
+ */
+function getVideoPosterUrl(url, { width = 720, quality = 'auto:eco' } = {}) {
+    if (!url || !url.includes('res.cloudinary.com') || !url.includes('/video/upload/')) return '';
+    const boundedWidth = Math.max(160, Math.min(1280, Number(width) || 720));
+    const transformed = url.replace('/video/upload/', `/video/upload/so_0,f_jpg,q_${quality},w_${boundedWidth},c_limit/`);
+    return transformed.replace(/\.(mp4|webm|mov)(\?.*)?$/i, '.jpg$2');
+}
+
+export { MAX_MEDIA_BYTES, ALLOWED_MEDIA_TYPES, isCloudinaryReady, validateMediaFile, uploadMedia, getDeliveryUrl, getVideoPosterUrl };
