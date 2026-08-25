@@ -14,10 +14,10 @@
 
 ## الموقع العام
 
-- الصفحة الرئيسية: https://malik77749.github.io/Twit/
-- خريطة الموقع: https://malik77749.github.io/Twit/sitemap.xml
-- الشعار الشفاف: https://malik77749.github.io/Twit/assets/mimer-icon-original.png
-- شعار شاشة البداية: https://malik77749.github.io/Twit/assets/mimer-launch-original.jpg
+- الصفحة الرئيسية: https://mimer-23cf6.web.app/
+- خريطة الموقع: https://mimer-23cf6.web.app/sitemap.xml
+- الشعار الشفاف: https://mimer-23cf6.web.app/assets/mimer-icon-original.png
+- شعار شاشة البداية: https://mimer-23cf6.web.app/assets/mimer-launch-original.jpg
 
 ## وصف المنتج
 

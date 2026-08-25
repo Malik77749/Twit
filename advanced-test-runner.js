@@ -4,7 +4,7 @@
  */
 
 class AdvancedTestRunner {
-    constructor(baseUrl = 'https://lawbook-beta.vercel.app') {
+    constructor(baseUrl = 'https://mimer-23cf6.web.app') {
         this.baseUrl = baseUrl;
         this.accounts = [];
         this.stats = {

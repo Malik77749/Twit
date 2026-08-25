@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Public identity and discovery resources
-Sitemap: https://malik77749.github.io/Twit/sitemap.xml
+Sitemap: https://mimer-23cf6.web.app/sitemap.xml
 
 # Keep private/admin and test surfaces out of search results
 Disallow: /admin.html

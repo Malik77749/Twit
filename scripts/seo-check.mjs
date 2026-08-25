@@ -8,7 +8,7 @@ for (const file of ['robots.txt', 'sitemap.xml', 'assets/mimer-icon-original.png
   if (!fs.existsSync(file)) throw new Error(`Missing SEO asset: ${file}`);
 }
 const robots = fs.readFileSync('robots.txt', 'utf8');
-if (!robots.includes('Sitemap: https://malik77749.github.io/Twit/sitemap.xml')) throw new Error('Sitemap directive missing');
+if (!robots.includes('Sitemap: https://mimer-23cf6.web.app/sitemap.xml')) throw new Error('Sitemap directive missing');
 const sitemap = fs.readFileSync('sitemap.xml', 'utf8');
-if (!sitemap.includes('<loc>https://malik77749.github.io/Twit/</loc>')) throw new Error('Homepage missing from sitemap');
+if (!sitemap.includes('<loc>https://mimer-23cf6.web.app/</loc>')) throw new Error('Homepage missing from sitemap');
 console.log('SEO validation passed: JSON-LD, robots.txt, sitemap.xml, and supplied brand assets are present.');

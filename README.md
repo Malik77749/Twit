@@ -22,8 +22,8 @@
 ## 🛠️ التقنيات
 
 - **Frontend:** Vanilla HTML/CSS/JavaScript (ES Modules)
-- **Backend:** Firebase (Auth, Realtime Database, Storage)
-- **Deployment:** GitHub Pages
+- **Backend:** Firebase (Auth, Realtime Database؛ Storage اختياري عند تفعيل الخطة المناسبة)
+- **Deployment:** Firebase Hosting (`https://mimer-23cf6.web.app/`) مع GitHub Pages كنسخة بديلة
 - **أيقونات:** Font Awesome 6.5
 - **التصميم:** CSS Variables + Flexbox + Grid
 
@@ -68,7 +68,7 @@ cd Mimer
    - أنشئ مشروع Firebase على [console.firebase.google.com](https://console.firebase.google.com)
    - فعّل Authentication (Email/Password)
    - فعّل Realtime Database
-   - فعّل Storage
+   - فعّل Storage فقط إذا كانت خطة المشروع تسمح به وتحتاج رفع الوسائط
    - حدّث `js/config.js` بإعدادات مشروعك
    - ارفع `database.rules.json` كقواعد الأمان
 
@@ -84,14 +84,14 @@ npm run check
 
 ## 🌐 النشر
 
-المشروع يُنشر تلقائياً إلى GitHub Pages عند الدفع على branch `main` أو `master`. ويُنفّذ النشر إلى Vercel فقط عند توفر أسرار Vercel الثلاثة في إعدادات المستودع، بينما لا تؤدي طلبات Pull Request إلى نشر نسخة عامة.
+الموقع الإنتاجي منشور على Firebase Hosting عبر `https://mimer-23cf6.web.app/`، مع نسخة GitHub Pages بديلة. يتم فحص المشروع تلقائياً عبر GitHub Actions عند الدفع إلى branch `main` أو `master`. لا يُستخدم Vercel في إنتاج ميمر.
 
 ## 🔒 الأمان
 
 - Firebase Security Rules مُعرّفة في `database.rules.json`
 - Rate Limiting على المنشورات والتعليقات والإعجابات
 - حماية ضد XSS عبر `escapeHtml()`
-- تحقق من حجم الملفات قبل الرفع (حد أقصى 5MB)
+- تحقق من حجم الملفات قبل الرفع (حد أقصى 5MB)؛ ويظل رفع الوسائط اختياريًا إذا لم تكن Firebase Storage مفعّلة
 - قواعد Firebase تمنع المستخدم من تعديل منشورات أو تعليقات أو محادثات لا يملكها
 - أرشفة المنشورات المحذوفة للمراجعة
 

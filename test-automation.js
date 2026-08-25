@@ -16,7 +16,7 @@ class MimerAutomationTester {
             posts: 0,
             errors: []
         };
-        this.baseUrl = 'https://lawbook-beta.vercel.app';
+        this.baseUrl = 'https://mimer-23cf6.web.app';
         this.testData = {
             posts: [
                 'مرحبا بالجميع! هذا أول منشور لي على منصة ميمر 🎉',
