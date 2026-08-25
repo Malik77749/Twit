@@ -170,6 +170,7 @@ async function showProfile(userId) {
         loadProfilePosts(userId);
     } catch (error) {
         console.error('Profile load error:', error);
+        showView('profile');
         renderProfileError(document.getElementById('profile-posts'), error.message === 'PROFILE_NOT_FOUND' ? 'الحساب غير موجود' : 'تعذر تحميل الملف الشخصي');
         hideLoading();
     }

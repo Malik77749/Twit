@@ -11,7 +11,7 @@ import * as auth from './auth.js?v=9';
 import * as posts from './posts.js?v=9';
 import * as comments from './comments.js?v=9';
 import * as notifications from './notifications.js?v=9';
-import * as profile from './profile.js?v=11';
+import * as profile from './profile.js?v=12';
 import * as pagination from './pagination.js?v=9';
 import * as rateLimiter from './rate-limiter.js?v=9';
 import * as pushNotif from './push-notifications.js?v=9';
@@ -457,6 +457,12 @@ function formatSearchTime(timestamp) {
 
 // ===== Bookmarks =====
 
+function renderBookmarkFallback(post, container) {
+    const name = post.userName || 'مستخدم';
+    const handle = post.userHandle || name.replace(/\s/g, '').toLowerCase();
+    container.innerHTML = `<article class="tweet bookmark-post-fallback" data-post-id="${escapeHtml(post.id || '')}"><div class="tweet-body"><div class="tweet-header"><strong>${escapeHtml(name)}</strong><span class="tweet-handle">@${escapeHtml(handle)}</span></div>${post.content ? `<div class="tweet-content">${escapeHtml(post.content)}</div>` : ''}<div class="profile-fallback-note">منشور محفوظ</div></div></article>`;
+}
+
 async function loadBookmarks() {
     const container = document.getElementById('bookmarks-list');
     const userId = authInstance.currentUser?.uid;
@@ -488,7 +494,12 @@ async function loadBookmarks() {
                 const el = document.createElement('div');
                 el.setAttribute('data-post-id', postId);
                 container.appendChild(el);
-                await posts.renderPost({ id: postId, ...postSnap.val() }, el);
+                try {
+                    await posts.renderPost({ id: postId, ...postSnap.val() }, el);
+                } catch (renderError) {
+                    console.error('Bookmark post render error:', renderError);
+                    renderBookmarkFallback({ id: postId, ...postSnap.val() }, el);
+                }
             }
         }
 
