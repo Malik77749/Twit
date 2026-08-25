@@ -1793,7 +1793,7 @@ window.openPostDetail = async function(postId) {
         comments.loadComments(postId);
 
         if (!isOwnPost) {
-            await update(ref(database, `posts/${postId}`), { views: (views || 0) + 1 });
+            void update(ref(database, `posts/${postId}`), { views: (views || 0) + 1 }).catch(() => {});
         }
     } catch (error) {
         container.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';

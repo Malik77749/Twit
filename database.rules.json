@@ -79,6 +79,7 @@
           ".validate": "newData.isNumber()"
         },
         "views": {
+          ".write": "auth != null && newData.isNumber() && newData.val() === data.val() + 1",
           ".validate": "newData.isNumber()"
         },
         "imageUrl": {
