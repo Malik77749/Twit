@@ -712,7 +712,10 @@ async function toggleBookmark(postId, event) {
 async function incrementViewCount(postId) {
     try {
         const postRef = ref(database, `posts/${postId}/views`);
-        await runTransaction(postRef, current => Math.max(0, Number(current) || 0) + 1);
+        await runTransaction(postRef, current => {
+            if (typeof current !== 'number' || !Number.isFinite(current)) return;
+            return current + 1;
+        });
     } catch (error) {
         // View counters are best-effort and must never block rendering.
     }

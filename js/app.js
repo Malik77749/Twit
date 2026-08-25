@@ -2017,7 +2017,10 @@ window.openPostDetail = async function(postId) {
         comments.loadComments(postId);
 
         if (!isOwnPost) {
-            void runTransaction(ref(database, `posts/${postId}/views`), current => Math.max(0, Number(current) || 0) + 1).catch(() => {});
+            void runTransaction(ref(database, `posts/${postId}/views`), current => {
+                if (typeof current !== 'number' || !Number.isFinite(current)) return;
+                return current + 1;
+            }).catch(() => {});
         }
     } catch (error) {
         container.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';
