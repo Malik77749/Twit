@@ -1108,3 +1108,32 @@ body { min-width: 0; }
   .profile-option-row i { order:0; flex-basis:28px; width:28px; font-size:18px; }
   @keyframes profileOptionsPop { from { opacity:0; transform:scale(.96) translateY(-6px); } to { opacity:1; transform:scale(1) translateY(0); } }
 }
+
+/* Account notification settings on public profiles. */
+.profile-public-quick-actions { position:absolute; inset-inline-start:16px; top:220px; z-index:6; display:flex; gap:10px; }
+.profile-public-quick-actions .profile-public-share,
+.profile-public-quick-actions .profile-notification-button { position:static; }
+.profile-notification-button { width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid var(--border-color); border-radius:50%; color:var(--text-primary); background:rgba(3,7,18,.72); cursor:pointer; }
+.profile-notification-button:hover, .profile-notification-button.is-active { color:var(--accent); background:var(--accent-soft); }
+.profile-notification-button[hidden] { display:none; }
+.account-notification-backdrop { position:fixed; inset:0; z-index:370; display:grid; place-items:end center; background:rgba(0,0,0,.62); }
+.account-notification-sheet { width:min(100%,540px); max-height:min(86dvh,720px); overflow:auto; padding:10px 16px calc(18px + env(safe-area-inset-bottom)); border:1px solid var(--border-color); border-bottom:0; border-radius:24px 24px 0 0; background:var(--surface); box-shadow:0 -20px 70px rgba(0,0,0,.52); animation:accountNotificationIn .22s cubic-bezier(.22,1,.36,1); }
+@keyframes accountNotificationIn { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.account-notification-grabber { width:40px; height:4px; margin:2px auto 10px; border-radius:999px; background:rgba(148,163,184,.6); }
+.account-notification-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:2px 0 18px; }
+.account-notification-header h2 { margin:0; font-size:21px; }
+.account-notification-header p { margin:6px 0 0; color:var(--text-secondary); direction:ltr; text-align:right; }
+.account-notification-options { display:grid; gap:2px; }
+.account-notification-option { display:flex; align-items:center; gap:14px; width:100%; min-height:78px; padding:12px 4px; border:0; color:var(--text-primary); background:transparent; text-align:right; cursor:pointer; }
+.account-notification-option:hover { background:var(--accent-soft); }
+.account-notification-option > span:last-child { display:grid; gap:5px; flex:1; min-width:0; }
+.account-notification-option strong { font-size:15px; }
+.account-notification-option small { color:var(--text-secondary); font-size:13px; line-height:1.5; }
+.account-notification-radio { flex:0 0 24px; width:24px; height:24px; border:2px solid var(--text-secondary); border-radius:50%; }
+.account-notification-option.active .account-notification-radio { border:7px solid var(--accent); }
+.account-notification-option.active strong { color:var(--accent); }
+@media (max-width:760px) {
+  #profile-view .profile-public-quick-actions { top:calc(54px + 150px + 12px); inset-inline-start:14px; }
+  .account-notification-sheet { width:100%; border-inline:0; }
+  .account-notification-option { min-height:82px; }
+}

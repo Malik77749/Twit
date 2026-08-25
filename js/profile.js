@@ -1,9 +1,9 @@
 // Profile Module
-import { ref, get, update, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, get, set, update, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { showLoading, hideLoading, showView } from './ui.js?v=10';
 import { getUserData } from './firebase-helpers.js?v=9';
 import { showToast } from './utils.js?v=9';
-import { renderPost, renderRetweet, reportPost } from './posts.js?v=12';
+import { renderPost, renderRetweet, reportPost } from './posts.js?v=13';
 import { escapeHtml } from './utils.js?v=9';
 import * as cloudinary from './cloudinary.js?v=11';
 import * as imageCdn from './image-cdn.js?v=10';
@@ -52,9 +52,14 @@ async function showProfile(userId) {
         profileView?.classList.toggle('profile-view-public', !isOwnProfile);
         profileView?.classList.toggle('profile-view-own', isOwnProfile);
         const publicShareButton = document.getElementById('profile-public-share');
+        const notificationButton = document.getElementById('profile-notification-button');
         if (publicShareButton) {
             publicShareButton.toggleAttribute('hidden', isOwnProfile);
             publicShareButton.onclick = () => window.shareProfile?.(userId);
+        }
+        if (notificationButton) {
+            notificationButton.toggleAttribute('hidden', isOwnProfile);
+            notificationButton.onclick = () => window.openAccountNotificationSettings?.(userId, userData.handle || userData.name || 'الحساب');
         }
 
         const protectedIcon = userData.isProtected ? ' <i class="fas fa-lock" style="font-size:14px;color:var(--text-secondary);"></i>' : '';
@@ -149,6 +154,11 @@ async function showProfile(userId) {
         } else {
             const followSnap = await get(ref(database, `followers/${userId}/${auth.currentUser.uid}`));
             const isFollowing = followSnap.exists();
+            if (notificationButton) {
+                notificationButton.toggleAttribute('hidden', !isFollowing);
+                notificationButton.onclick = () => window.openAccountNotificationSettings?.(userId, userData.handle || userData.name || 'الحساب');
+                if (isFollowing) await updateNotificationButton(notificationButton, userId);
+            }
             const canMessage = typeof window.canMessageUser === 'function' ? await window.canMessageUser(userId) : true;
             actionsDiv.innerHTML = `
                 <div class="profile-public-actions">
@@ -871,6 +881,74 @@ async function showFollowingList(userId) {
     }
 }
 
+const ACCOUNT_NOTIFICATION_MODES = {
+    all: { title: 'جميع المنشورات', description: 'احصل على تنبيهات لجميع منشورات هذا الحساب.' },
+    posts_replies: { title: 'جميع المنشورات والردود', description: 'احصل على تنبيهات المنشورات والردود الخاصة بهذا الحساب.' },
+    live: { title: 'فيديو البث المباشر فقط', description: 'احصل على تنبيهات البث المباشر فقط.' },
+    none: { title: 'إيقاف', description: 'أوقف التنبيهات الخاصة بمنشورات هذا الحساب.' }
+};
+
+async function getAccountNotificationMode(userId) {
+    const currentUserId = auth.currentUser?.uid;
+    if (!currentUserId || !userId) return 'none';
+    try {
+        const snap = await get(ref(database, `notificationPreferences/${currentUserId}/${userId}`));
+        const mode = snap.val()?.mode;
+        return ACCOUNT_NOTIFICATION_MODES[mode] ? mode : 'none';
+    } catch (error) { return 'none'; }
+}
+
+async function updateNotificationButton(button, userId) {
+    if (!button) return;
+    const mode = await getAccountNotificationMode(userId);
+    button.classList.toggle('is-active', mode !== 'none');
+    button.setAttribute('aria-label', mode === 'none' ? 'تفعيل إشعارات الحساب' : `إشعارات الحساب: ${ACCOUNT_NOTIFICATION_MODES[mode].title}`);
+    const icon = button.querySelector('i');
+    if (icon) icon.className = `fas ${mode === 'none' ? 'fa-bell-plus' : 'fa-bell'}`;
+}
+
+window.syncProfileNotificationButton = async function(userId, isFollowing) {
+    const button = document.getElementById('profile-notification-button');
+    if (!button || window.currentProfileUserId !== userId) return;
+    button.toggleAttribute('hidden', !isFollowing);
+    if (isFollowing) await updateNotificationButton(button, userId);
+};
+
+function closeAccountNotificationSettings() {
+    document.getElementById('account-notification-backdrop')?.remove();
+    document.body.classList.remove('modal-open');
+}
+
+window.openAccountNotificationSettings = async function(userId, rawHandle) {
+    const currentUserId = auth.currentUser?.uid;
+    if (!currentUserId || !userId || userId === currentUserId) return;
+    closeAccountNotificationSettings();
+    const handle = String(rawHandle || 'الحساب').replace(/^@/, '').trim();
+    const backdrop = document.createElement('div');
+    backdrop.id = 'account-notification-backdrop';
+    backdrop.className = 'account-notification-backdrop';
+    backdrop.innerHTML = `<section class="account-notification-sheet" role="dialog" aria-modal="true" aria-labelledby="account-notification-title"><div class="account-notification-grabber" aria-hidden="true"></div><div class="account-notification-header"><div><h2 id="account-notification-title">لا تفوت أي شيء</h2><p>@${escapeHtml(handle)}</p></div><button type="button" class="post-menu-close" aria-label="إغلاق">×</button></div><div class="account-notification-options"></div></section>`;
+    document.body.appendChild(backdrop);
+    document.body.classList.add('modal-open');
+    backdrop.querySelector('.post-menu-close')?.addEventListener('click', closeAccountNotificationSettings);
+    backdrop.addEventListener('click', event => { if (event.target === backdrop) closeAccountNotificationSettings(); });
+    const currentMode = await getAccountNotificationMode(userId);
+    const options = backdrop.querySelector('.account-notification-options');
+    options.innerHTML = Object.entries(ACCOUNT_NOTIFICATION_MODES).map(([mode, data]) => `<button type="button" class="account-notification-option ${mode === currentMode ? 'active' : ''}" data-mode="${mode}" aria-pressed="${mode === currentMode}"><span class="account-notification-radio" aria-hidden="true"></span><span><strong>${data.title}</strong><small>${data.description}</small></span></button>`).join('');
+    options.querySelectorAll('.account-notification-option').forEach(option => option.addEventListener('click', async () => {
+        const mode = option.dataset.mode;
+        options.querySelectorAll('.account-notification-option').forEach(item => { item.classList.remove('active'); item.setAttribute('aria-pressed', 'false'); });
+        option.classList.add('active'); option.setAttribute('aria-pressed', 'true');
+        try {
+            await set(ref(database, `notificationPreferences/${currentUserId}/${userId}`), { mode, updatedAt: new Date().toISOString() });
+            const button = document.getElementById('profile-notification-button');
+            await updateNotificationButton(button, userId);
+            showToast(mode === 'none' ? 'تم إيقاف إشعارات الحساب' : 'تم تحديث إشعارات الحساب');
+            closeAccountNotificationSettings();
+        } catch (error) { showToast('تعذر حفظ إعدادات الإشعارات'); }
+    }));
+};
+
 function closeProfileOptions() {
     document.getElementById('profile-options-backdrop')?.remove();
     document.body.classList.remove('modal-open');
@@ -951,6 +1029,7 @@ if (typeof window !== 'undefined') {
     window.showFollowersList = showFollowersList;
     window.showFollowingList = showFollowingList;
     window.shareProfile = shareProfile;
+    window.syncProfileNotificationButton = window.syncProfileNotificationButton;
 }
 
 // ===== MIMER_PROFILE_ENHANCEMENTS_V2 =====

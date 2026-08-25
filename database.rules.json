@@ -193,6 +193,17 @@
       }
     },
 
+    "notificationPreferences": {
+      "$ownerUid": {
+        ".read": "auth.uid === $ownerUid",
+        "$targetUid": {
+          ".read": "auth.uid === $ownerUid",
+          ".write": "auth.uid === $ownerUid && root.child('users').child($targetUid).exists()",
+          ".validate": "newData.hasChildren(['mode','updatedAt']) && newData.child('mode').isString() && (newData.child('mode').val() === 'all' || newData.child('mode').val() === 'posts_replies' || newData.child('mode').val() === 'live' || newData.child('mode').val() === 'none') && newData.child('updatedAt').isString()"
+        }
+      }
+    },
+
     "lists": {
       "$ownerUid": {
         ".read": "auth.uid === $ownerUid",

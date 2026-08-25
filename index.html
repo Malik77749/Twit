@@ -95,7 +95,7 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=16">
+    <link rel="stylesheet" href="css/professional.css?v=17">
 
     <!-- PWA Service Worker -->
     <script>
@@ -902,7 +902,10 @@
                         <i class="fas fa-camera" aria-hidden="true"></i>
                     </button>
                 </div>
-                <button type="button" id="profile-public-share" class="profile-public-share" aria-label="مشاركة الملف" hidden><i class="fas fa-share-nodes" aria-hidden="true"></i></button>
+                <div class="profile-public-quick-actions">
+                    <button type="button" id="profile-public-share" class="profile-public-share" aria-label="مشاركة الملف" hidden><i class="fas fa-share-nodes" aria-hidden="true"></i></button>
+                    <button type="button" id="profile-notification-button" class="profile-notification-button" aria-label="إعدادات إشعارات الحساب" hidden><i class="fas fa-bell-plus" aria-hidden="true"></i></button>
+                </div>
 
                 <!-- Avatar Row -->
                 <div class="profile-avatar-row">
@@ -1102,6 +1105,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=43"></script>
+    <script type="module" src="js/app.js?v=44"></script>
 </body>
 </html>

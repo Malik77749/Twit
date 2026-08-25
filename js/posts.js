@@ -619,6 +619,7 @@ async function followUser(userId, event) {
                 btn.textContent = 'متابَع';
             }
         });
+        void window.syncProfileNotificationButton?.(userId, isFollowing);
         const liveTargetFollowers = await get(ref(database, `followers/${userId}`));
         const liveAllFollowers = await get(ref(database, 'followers'));
         const liveFollowing = liveAllFollowers.exists() ? Object.values(liveAllFollowers.val() || {}).filter(record => record && Object.prototype.hasOwnProperty.call(record, currentUserId)).length : 0;
