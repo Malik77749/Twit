@@ -9,6 +9,18 @@ const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="h
 let auth, database;
 const commentListeners = new Map();
 
+function getVisibleCommentSection(postId) {
+    const sections = [...document.querySelectorAll(`[id="comments-${postId}"]`)];
+    return sections.find(section => {
+        let node = section;
+        while (node) {
+            if (getComputedStyle(node).display === 'none' || getComputedStyle(node).visibility === 'hidden') return false;
+            node = node.parentElement;
+        }
+        return true;
+    }) || sections[0] || null;
+}
+
 function init(authInstance, databaseInstance) {
     auth = authInstance;
     database = databaseInstance;
@@ -77,7 +89,7 @@ async function addComment(postId, parentCommentId, event) {
 }
 
 function loadComments(postId) {
-    const commentSection = document.getElementById(`comments-${postId}`);
+    const commentSection = getVisibleCommentSection(postId);
     if (!commentSection) return;
 
     // Cleanup old listener
@@ -189,7 +201,7 @@ function showCommentReplyInput(postId, commentId, event) {
 function toggleComments(postId, event) {
     event?.preventDefault();
     event?.stopPropagation();
-    const section = document.getElementById(`comments-${postId}`);
+    const section = getVisibleCommentSection(postId);
     if (section) {
         const isHidden = section.style.display === 'none';
         section.style.display = isHidden ? 'block' : 'none';
