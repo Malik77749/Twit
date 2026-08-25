@@ -149,6 +149,7 @@ function showRealtimeNotification(notif) {
 }
 
 function processRealtimeNotifications(userId, notifications) {
+    console.info('[Mimer RTDBG] process', userId, notifications.length, notifications.map(n => n.id));
     const userChanged = observedUserId !== userId;
     if (userChanged) {
         observedUserId = userId;
@@ -193,6 +194,7 @@ function loadNotifications() {
             const snapshot = await get(ref(database, `notifications/${userId}`));
             const notifications = [];
             if (snapshot.exists()) snapshot.forEach(child => notifications.push({ id: child.key, ...child.val() }));
+            console.info('[Mimer RTDBG] poll', userId, notifications.length);
             processRealtimeNotifications(userId, notifications);
             updateBadges(notifications.filter(n => !n.read).length);
         } catch (_) { /* realtime listener remains the primary path */ }
@@ -200,6 +202,7 @@ function loadNotifications() {
     }, 3000);
 
     notificationsUnsub = onValue(ref(database, `notifications/${userId}`), async snapshot => {
+        console.info('[Mimer RTDBG] onValue', userId, snapshot.exists(), snapshot.size || 0);
         if (!snapshot.exists()) {
             processRealtimeNotifications(userId, []);
             if (list) list.innerHTML = '<div class="empty-state"><h3>الإشعارات</h3><p>لا توجد إشعارات</p></div>';
