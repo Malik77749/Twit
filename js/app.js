@@ -7,12 +7,12 @@ import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } 
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=9';
 import * as posts from './posts.js?v=13';
-import * as comments from './comments.js?v=13';
-import * as notifications from './notifications.js?v=11';
+import * as comments from './comments.js?v=14';
+import * as notifications from './notifications.js?v=12';
 import * as profile from './profile.js?v=17';
 import * as pagination from './pagination.js?v=10';
 import * as rateLimiter from './rate-limiter.js?v=9';
-import * as pushNotif from './push-notifications.js?v=11';
+import * as pushNotif from './push-notifications.js?v=12';
 import * as dm from './dm.js?v=9';
 import * as blockMute from './block-mute.js?v=9';
 import * as polls from './polls.js?v=9';
