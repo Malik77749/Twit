@@ -247,8 +247,10 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 .loading-overlay { background: rgba(7,12,25,.72); backdrop-filter: blur(8px); }
 .spinner { border-color: rgba(56,189,248,.2); border-top-color: var(--accent); }
 
-@media (max-width: 760px) {
-  .main-feed { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+@media (max-width: 700px) {
+    body.mimer-authenticated .mobile-nav { display: flex !important; }
+    body.mimer-authenticated .mobile-fab { display: flex !important; }
+    .main-feed { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
   .mobile-header { min-height: 56px; padding-inline: 14px; }
   .mobile-nav-item { min-height: 48px; border-radius: 12px; }
   .tweet-actions { gap: 2px; }
