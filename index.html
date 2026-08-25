@@ -95,7 +95,7 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=12">
+    <link rel="stylesheet" href="css/professional.css?v=13">
 
     <!-- PWA Service Worker -->
     <script>
@@ -1035,10 +1035,16 @@
         </div>
     </div>
 
-    <!-- Post Dropdown Menu (hidden, shown on demand) -->
-    <div class="dropdown-menu" id="post-dropdown" style="display:none;position:fixed;z-index:300;">
+    <!-- Post options surface: dropdown on desktop, bottom sheet on phones -->
+    <div class="post-menu-backdrop" id="post-menu-backdrop" hidden></div>
+    <div class="dropdown-menu post-options-surface" id="post-dropdown" role="dialog" aria-modal="true" aria-label="خيارات المنشور" aria-hidden="true" style="display:none;position:fixed;z-index:300;">
+        <div class="post-menu-sheet-header">
+            <span class="post-menu-grabber" aria-hidden="true"></span>
+            <strong>خيارات المنشور</strong>
+            <button type="button" class="post-menu-close" id="post-menu-close" aria-label="إغلاق القائمة">×</button>
+        </div>
         <button class="dropdown-item" id="dropdown-delete" style="display:none;">
-            <i class="fas fa-trash"></i><span>حذف</span>
+            <i class="fas fa-trash"></i><span>حذف المنشور</span>
         </button>
         <button class="dropdown-item" id="dropdown-pin" style="display:none;">
             <i class="fas fa-thumbtack"></i><span>تثبيت</span>
@@ -1053,7 +1059,10 @@
             <i class="fas fa-flag"></i><span>إبلاغ</span>
         </button>
         <button class="dropdown-item" id="dropdown-follow">
-            <i class="fas fa-user-plus"></i><span>متابعة</span>
+            <i class="fas fa-user-plus"></i><span>متابعة الحساب</span>
+        </button>
+        <button class="dropdown-item" id="dropdown-lists">
+            <i class="fas fa-list-check"></i><span>إضافة/إزالة من القوائم</span>
         </button>
         <div style="height:1px;background:var(--border-color);margin:4px 0;"></div>
         <button class="dropdown-item" id="dropdown-mute">
@@ -1092,6 +1101,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=39"></script>
+    <script type="module" src="js/app.js?v=40"></script>
 </body>
 </html>

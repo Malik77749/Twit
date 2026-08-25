@@ -1010,3 +1010,44 @@ body { min-width: 0; }
   #home-view .composer-submit { min-width:58px; padding-inline:9px; }
   #home-view .tweet { padding-inline:10px; }
 }
+
+/* Post options: desktop popover, mobile bottom sheet. */
+.post-menu-backdrop { position:fixed; inset:0; z-index:299; background:rgba(0,0,0,.58); opacity:0; pointer-events:none; transition:opacity .2s ease; }
+.post-menu-backdrop.open { opacity:1; pointer-events:auto; }
+.post-options-surface { min-width:240px; max-width:min(360px,calc(100vw - 24px)); padding:8px; overflow:hidden; }
+.post-menu-sheet-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:3px 8px 8px; color:var(--text-primary); }
+.post-menu-sheet-header strong { font-size:13px; }
+.post-menu-grabber { display:none; }
+.post-menu-close { width:34px; height:34px; padding:0; border:0; border-radius:50%; color:var(--text-secondary); background:transparent; font-size:24px; line-height:1; cursor:pointer; }
+.post-menu-close:hover { color:var(--text-primary); background:var(--accent-soft); }
+.post-options-surface .dropdown-item { position:relative; }
+.post-options-surface .dropdown-item[style*="color"] { color:var(--danger) !important; }
+.post-list-picker-backdrop { position:fixed; inset:0; z-index:350; display:grid; place-items:center; padding:16px; background:rgba(0,0,0,.62); }
+.post-list-picker { width:min(100%,420px); max-height:min(78dvh,600px); overflow:auto; border:1px solid var(--border-color); border-radius:20px; background:var(--surface); box-shadow:0 24px 80px rgba(0,0,0,.45); }
+.post-list-picker-header { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border-color); background:var(--surface); }
+.post-list-picker-body { padding:8px; }
+.post-list-row { width:100%; display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:58px; padding:10px 12px; border:0; border-radius:12px; color:var(--text-primary); background:transparent; text-align:right; cursor:pointer; }
+.post-list-row:hover, .post-list-row.active { background:var(--accent-soft); }
+.post-list-row:disabled { opacity:.6; cursor:wait; }
+.post-list-row span { min-width:0; display:grid; gap:3px; }
+.post-list-row strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.post-list-row small, .post-list-picker-empty { color:var(--text-secondary); font-size:12px; }
+.post-list-row > i { width:28px; color:var(--accent); text-align:center; }
+.post-list-picker-empty { padding:24px 16px 12px; line-height:1.7; text-align:center; }
+.post-list-picker-body > .follow-btn { display:block; margin:0 auto 16px; }
+
+@media (max-width:760px) {
+  body.post-menu-open { overflow:hidden; }
+  .post-menu-backdrop { z-index:299; }
+  .post-options-surface { inset-inline:0 !important; top:auto !important; right:0 !important; bottom:0 !important; width:100% !important; min-width:0; max-width:none; max-height:min(82dvh,680px); padding:8px 10px calc(10px + env(safe-area-inset-bottom)); border:0; border-top:1px solid rgba(148,163,184,.26); border-radius:22px 22px 0 0; transform:translateY(105%); transition:transform .24s cubic-bezier(.22,1,.36,1); box-shadow:0 -18px 60px rgba(0,0,0,.46); }
+  .post-options-surface.open { transform:translateY(0); }
+  .post-menu-sheet-header { display:grid; grid-template-columns:1fr auto 1fr; min-height:38px; padding:2px 4px 8px; }
+  .post-menu-sheet-header strong { grid-column:2; align-self:center; font-size:14px; white-space:nowrap; }
+  .post-menu-sheet-header .post-menu-close { grid-column:3; justify-self:end; }
+  .post-menu-grabber { display:block; grid-column:1 / -1; justify-self:center; width:38px; height:4px; margin-bottom:7px; border-radius:999px; background:rgba(148,163,184,.55); }
+  .post-options-surface .dropdown-item { min-height:54px; padding:12px 14px; border-radius:12px; gap:14px; font-size:15px; }
+  .post-options-surface .dropdown-item i { width:24px; font-size:18px; text-align:center; }
+  .post-options-surface > div[style*="height:1px"] { margin:5px 8px !important; background:rgba(148,163,184,.18) !important; }
+  .post-list-picker-backdrop { place-items:end center; padding:0; }
+  .post-list-picker { width:100%; max-height:82dvh; border-radius:22px 22px 0 0; border-inline:0; border-bottom:0; }
+}

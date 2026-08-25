@@ -1631,6 +1631,77 @@ window.quoteTweet = activateQuoteComposer;
 let currentDropdownPostId = null;
 let currentDropdownUserId = null;
 
+function setPostMenuVisible(visible) {
+    const dropdown = document.getElementById('post-dropdown');
+    const backdrop = document.getElementById('post-menu-backdrop');
+    if (!dropdown) return;
+    dropdown.style.display = visible ? 'block' : 'none';
+    dropdown.classList.toggle('open', visible);
+    dropdown.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    if (backdrop) {
+        if (visible) backdrop.removeAttribute('hidden');
+        else backdrop.setAttribute('hidden', '');
+        backdrop.classList.toggle('open', visible);
+    }
+    document.body.classList.toggle('post-menu-open', visible);
+    if (!visible) {
+        currentDropdownPostId = null;
+        currentDropdownUserId = null;
+    }
+}
+
+window.closePostMenu = function() { setPostMenuVisible(false); };
+
+window.closePostListsPicker = function() {
+    document.getElementById('post-list-picker')?.remove();
+    document.body.classList.remove('modal-open');
+};
+
+window.openPostListsPicker = async function(postId, userId) {
+    const currentUserId = authInstance.currentUser?.uid;
+    if (!currentUserId || !userId || userId === currentUserId) return;
+    window.closePostListsPicker();
+    const overlay = document.createElement('div');
+    overlay.id = 'post-list-picker';
+    overlay.className = 'post-list-picker-backdrop';
+    overlay.innerHTML = `<section class="post-list-picker" role="dialog" aria-modal="true" aria-label="إدارة القوائم"><div class="post-list-picker-header"><strong>إضافة إلى القوائم</strong><button type="button" class="post-menu-close" aria-label="إغلاق">×</button></div><div class="post-list-picker-body"><div class="spinner"></div></div></section>`;
+    document.body.appendChild(overlay);
+    document.body.classList.add('modal-open');
+    const closeButton = overlay.querySelector('.post-menu-close');
+    closeButton?.addEventListener('click', window.closePostListsPicker);
+    overlay.addEventListener('click', event => { if (event.target === overlay) window.closePostListsPicker(); });
+    try {
+        const userLists = await lists.getUserLists(currentUserId);
+        const body = overlay.querySelector('.post-list-picker-body');
+        if (!body) return;
+        if (!userLists.length) {
+            body.innerHTML = `<p class="post-list-picker-empty">أنشئ قائمة لتنظيم الحسابات التي تتابعها.</p><button type="button" class="follow-btn">فتح القوائم</button>`;
+            body.querySelector('button')?.addEventListener('click', () => { window.closePostListsPicker(); window.showLists?.(); });
+            return;
+        }
+        const states = await Promise.all(userLists.map(async list => ({
+            list,
+            active: (await get(ref(database, `listMembers/${currentUserId}/${list.id}/${userId}`))).exists()
+        })));
+        body.innerHTML = states.map(({list, active}) => `<button type="button" class="post-list-row ${active ? 'active' : ''}" data-list-id="${escapeHtml(list.id)}" aria-pressed="${active}"><span><strong>${escapeHtml(list.name || 'قائمة بلا اسم')}</strong><small>${list.isPrivate ? 'خاصة' : 'عامة'} · ${Number(list.memberCount || 0)} عضو</small></span><i class="fas ${active ? 'fa-check' : 'fa-plus'}" aria-hidden="true"></i></button>`).join('');
+        body.querySelectorAll('.post-list-row').forEach(row => row.addEventListener('click', async () => {
+            const list = userLists.find(item => item.id === row.dataset.listId);
+            if (!list || row.disabled) return;
+            const active = row.getAttribute('aria-pressed') === 'true';
+            row.disabled = true;
+            const ok = active ? await lists.removeMember(currentUserId, list.id, userId) : await lists.addMember(currentUserId, list.id, userId);
+            row.disabled = false;
+            if (!ok) { showToast('تعذر تحديث القائمة'); return; }
+            row.setAttribute('aria-pressed', String(!active));
+            row.classList.toggle('active', !active);
+            const icon = row.querySelector('i'); if (icon) icon.className = `fas ${!active ? 'fa-check' : 'fa-plus'}`;
+            showToast(!active ? 'تمت الإضافة إلى القائمة' : 'تمت الإزالة من القائمة');
+        }));
+    } catch (error) {
+        overlay.querySelector('.post-list-picker-body').innerHTML = '<p class="post-list-picker-empty">تعذر تحميل القوائم.</p>';
+    }
+};
+
 window.openPostMenu = function(postId, userId, isOwnPost, event) {
     event?.preventDefault();
     event?.stopPropagation();
@@ -1647,36 +1718,57 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
     const followBtn = document.getElementById('dropdown-follow');
     const muteBtn = document.getElementById('dropdown-mute');
     const blockBtn = document.getElementById('dropdown-block');
+    const listsBtn = document.getElementById('dropdown-lists');
+    if (!dropdown || !deleteBtn || !pinBtn || !bookmarkBtn || !quoteBtn || !reportBtn || !followBtn || !muteBtn || !blockBtn || !listsBtn) return;
 
     deleteBtn.style.display = isOwnPost ? 'flex' : 'none';
     pinBtn.style.display = isOwnPost ? 'flex' : 'none';
     reportBtn.style.display = isOwnPost ? 'none' : 'flex';
     followBtn.style.display = isOwnPost ? 'none' : 'flex';
+    listsBtn.style.display = isOwnPost ? 'none' : 'flex';
     muteBtn.style.display = isOwnPost ? 'none' : 'flex';
     blockBtn.style.display = isOwnPost ? 'none' : 'flex';
+    followBtn.innerHTML = '<i class="fas fa-user-plus"></i><span>متابعة الحساب</span>';
 
-    // Position dropdown
-    const rect = event.currentTarget.getBoundingClientRect();
-    dropdown.style.display = 'block';
-    dropdown.style.top = `${rect.bottom + 4}px`;
-
-    const dropdownWidth = 240;
-    if (rect.left > dropdownWidth) {
-        dropdown.style.left = `${rect.left - dropdownWidth + rect.width}px`;
-    } else {
-        dropdown.style.left = `${rect.left}px`;
+    setPostMenuVisible(true);
+    const rect = event?.currentTarget?.getBoundingClientRect();
+    if (window.matchMedia('(max-width: 760px)').matches) {
+        dropdown.style.top = 'auto';
+        dropdown.style.left = '0';
+        dropdown.style.right = '0';
+        dropdown.style.bottom = '0';
+    } else if (rect) {
+        dropdown.style.bottom = 'auto';
+        dropdown.style.top = `${rect.bottom + 4}px`;
+        const dropdownWidth = 240;
+        dropdown.style.left = `${rect.left > dropdownWidth ? rect.left - dropdownWidth + rect.width : rect.left}px`;
+        dropdown.style.right = 'auto';
     }
-    dropdown.style.right = 'auto';
 
-    // Bind actions
-    deleteBtn.onclick = () => { dropdown.style.display = 'none'; posts.deletePost(postId); };
-    pinBtn.onclick = () => { dropdown.style.display = 'none'; posts.pinPost(postId); };
-    bookmarkBtn.onclick = () => { dropdown.style.display = 'none'; posts.toggleBookmark(postId); };
-    quoteBtn.onclick = () => { dropdown.style.display = 'none'; window.startQuoteTweet?.(postId); };
-    reportBtn.onclick = () => { dropdown.style.display = 'none'; posts.reportPost(postId, userId); };
-    followBtn.onclick = () => { dropdown.style.display = 'none'; posts.followUser(userId, { preventDefault:()=>{}, stopPropagation:()=>{} }); };
-    muteBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.muteUser(userId); };
-    blockBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.blockUser(userId).then(() => posts.loadPosts()); };
+    const close = action => () => { setPostMenuVisible(false); action?.(); };
+    deleteBtn.onclick = close(() => posts.deletePost(postId));
+    pinBtn.onclick = close(() => posts.pinPost(postId));
+    bookmarkBtn.onclick = close(() => posts.toggleBookmark(postId));
+    quoteBtn.onclick = close(() => window.startQuoteTweet?.(postId));
+    reportBtn.onclick = close(() => posts.reportPost(postId, userId));
+    followBtn.onclick = close(() => posts.followUser(userId, { preventDefault:()=>{}, stopPropagation:()=>{} }));
+    muteBtn.onclick = close(() => blockMute.muteUser(userId));
+    blockBtn.onclick = close(() => blockMute.blockUser(userId).then(() => posts.loadPosts()));
+    listsBtn.onclick = close(() => window.openPostListsPicker(postId, userId));
+    if (!isOwnPost) {
+        void (async () => {
+            try {
+                const [followSnap, userData] = await Promise.all([
+                    get(ref(database, `followers/${userId}/${authInstance.currentUser?.uid}`)),
+                    getUserData(database, userId)
+                ]);
+                const handle = String(userData?.handle || '').replace(/^@/, '').trim();
+                const label = handle ? `@${handle}` : 'الحساب';
+                followBtn.innerHTML = `<i class="fas fa-user-${followSnap.exists() ? 'minus' : 'plus'}"></i><span>${followSnap.exists() ? 'إلغاء متابعة' : 'متابعة'} ${escapeHtml(label)}</span>`;
+            } catch (error) { console.warn('Post menu follow state skipped:', error); }
+        })();
+    }
+};
 
 // Quote post: preserve the original post reference and show a compact preview.
 async function renderQuotePreview(postId) {
@@ -1709,13 +1801,14 @@ window.startQuoteTweet = function startQuoteTweet(postId) {
     composer.dispatchEvent(new Event('input'));
     void renderQuotePreview(postId);
 }
-};
 
-// Close dropdown on outside click
+// Close post options on outside click or Escape.
+document.getElementById('post-menu-backdrop')?.addEventListener('click', () => window.closePostMenu?.());
+document.getElementById('post-menu-close')?.addEventListener('click', () => window.closePostMenu?.());
 document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('post-dropdown');
-    if (dropdown && !dropdown.contains(e.target) && !e.target.closest('.tweet-more')) {
-        dropdown.style.display = 'none';
+    if (dropdown && dropdown.classList.contains('open') && !dropdown.contains(e.target) && !e.target.closest('.tweet-more') && !e.target.closest('#post-menu-backdrop')) {
+        window.closePostMenu?.();
     }
 });
 
@@ -1741,8 +1834,7 @@ window.closeLightbox = function() {
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeLightbox();
-        const dropdown = document.getElementById('post-dropdown');
-        if (dropdown) dropdown.style.display = 'none';
+        window.closePostMenu?.();
     }
 });
 
@@ -2567,15 +2659,18 @@ try {
         const dropdown = document.getElementById('post-dropdown');
         if (!dropdown) return;
         dropdown.innerHTML = `
-            <button class="dropdown-item" onclick="copyPostLink('${postId}')">${detailIcon('share')}<span>نسخ الرابط</span></button>
-            <button class="dropdown-item" onclick="sendPostByDM('${postId}')">${detailIcon('comment')}<span>إرسال برسالة خاصة</span></button>
-            <button class="dropdown-item" onclick="quoteTweet('${postId}')">${detailIcon('comment')}<span>اقتباس المنشور</span></button>
+            <div class="post-menu-sheet-header"><span class="post-menu-grabber" aria-hidden="true"></span><strong>مشاركة المنشور</strong><button type="button" class="post-menu-close" aria-label="إغلاق" onclick="closePostMenu()">×</button></div>
+            <button class="dropdown-item" onclick="closePostMenu(); copyPostLink('${postId}')">${detailIcon('share')}<span>نسخ الرابط</span></button>
+            <button class="dropdown-item" onclick="closePostMenu(); sendPostByDM('${postId}')">${detailIcon('comment')}<span>إرسال برسالة خاصة</span></button>
+            <button class="dropdown-item" onclick="closePostMenu(); quoteTweet('${postId}')">${detailIcon('comment')}<span>اقتباس المنشور</span></button>
         `;
-        const rect = event.currentTarget.getBoundingClientRect();
-        dropdown.style.display = 'block';
-        dropdown.style.top = `${rect.bottom + 4}px`;
-        dropdown.style.left = `${Math.max(16, rect.left - 180 + rect.width)}px`;
-        dropdown.style.right = 'auto';
+        setPostMenuVisible(true);
+        const rect = event?.currentTarget?.getBoundingClientRect();
+        if (window.matchMedia('(max-width: 760px)').matches) {
+            dropdown.style.top = 'auto'; dropdown.style.left = '0'; dropdown.style.right = '0'; dropdown.style.bottom = '0';
+        } else if (rect) {
+            dropdown.style.bottom = 'auto'; dropdown.style.top = `${rect.bottom + 4}px`; dropdown.style.left = `${Math.max(16, rect.left - 180 + rect.width)}px`; dropdown.style.right = 'auto';
+        }
     };
 
     document.addEventListener('DOMContentLoaded', () => {
