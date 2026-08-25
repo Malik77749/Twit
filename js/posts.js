@@ -1,7 +1,7 @@
 // Posts Module — Upgraded with Pagination, Rate Limiting, Denormalization
 import { ref, push, set, get, update, remove, increment, runTransaction, query, orderByChild, equalTo, limitToLast, onValue, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js?v=9';
-import { showLoading, hideLoading, showView } from './ui.js?v=10';
+import { showLoading, hideLoading, showView } from './ui.js?v=11';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=9';
 import { loadComments } from './comments.js?v=20';
 import * as rateLimiter from './rate-limiter.js?v=10';

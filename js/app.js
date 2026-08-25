@@ -3,7 +3,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref, get, update, runTransaction, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { firebaseConfig } from './config.js?v=9';
-import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=10';
+import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=11';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=10';
 import * as posts from './posts.js?v=20';
@@ -2326,39 +2326,10 @@ document.addEventListener('DOMContentLoaded', setupComposerTextarea);
 
     document.addEventListener('touchend', () => { isSwiping = false; }, { passive: true });
 
-    // Pull-to-refresh
-    let ptrStartY = 0, isPulling = false;
-    const mainFeed = document.querySelector('.main-feed');
-    if (!mainFeed) return;
+    // Pull-to-refresh is implemented once in improvements.js with threshold,
+    // spinner progress and refresh locking. Keeping this gesture block limited
+    // to the drawer avoids two competing touch listeners on the feed.
 
-    mainFeed.addEventListener('touchstart', (e) => {
-        if (mainFeed.scrollTop === 0) {
-            ptrStartY = e.touches[0].clientY;
-            isPulling = true;
-        }
-    }, { passive: true });
-
-    mainFeed.addEventListener('touchmove', (e) => {
-        if (!isPulling) return;
-        if (e.touches[0].clientY - ptrStartY > 60) {
-            const ptr = document.getElementById('pull-to-refresh');
-            if (ptr) { ptr.style.display = 'flex'; ptr.classList.add('active'); }
-        }
-    }, { passive: true });
-
-    mainFeed.addEventListener('touchend', () => {
-        if (!isPulling) return;
-        const ptr = document.getElementById('pull-to-refresh');
-        if (ptr?.classList.contains('active')) {
-            pagination.resetPagination();
-            posts.loadPosts();
-            setTimeout(() => {
-                ptr.classList.remove('active');
-                setTimeout(() => ptr.style.display = 'none', 300);
-            }, 1000);
-        }
-        isPulling = false;
-    }, { passive: true });
 })();
 
 try {

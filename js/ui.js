@@ -33,7 +33,10 @@ function showLoading() {
     // Never cover the public login/register surface with a blocking loader.
     const authVisible = authSection && getComputedStyle(authSection).display !== 'none';
     const appVisible = appSection && getComputedStyle(appSection).display !== 'none';
-    if (authVisible && !appVisible) return;
+    if (authVisible && !appVisible) {
+        overlay.style.display = 'none';
+        return;
+    }
     overlay.style.display = 'flex';
 }
 

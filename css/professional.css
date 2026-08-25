@@ -1331,3 +1331,9 @@ body.detail-reply-open #post-detail-view { padding-bottom:calc(88px + env(safe-a
   .detail-reply-input { font-size:13px; }
   body.detail-reply-open #post-detail-view { padding-bottom:calc(104px + env(safe-area-inset-bottom)); }
 }
+
+/* Refined mobile pull-to-refresh indicator */
+#pull-to-refresh { top:6px; left:50%; width:34px; height:34px; padding:0; border:1px solid rgba(255,255,255,.18); border-radius:50%; background:rgba(37,99,235,.96); box-shadow:0 7px 20px rgba(15,23,42,.28); transform:translate(-50%,0); transition:transform .18s cubic-bezier(.23,1,.32,1), opacity .18s ease; }
+#pull-to-refresh .ptr-spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:ptr-spin .72s linear infinite; }
+#pull-to-refresh.refreshing .ptr-spinner { animation-duration:.58s; }
+@media (max-width:760px) { #pull-to-refresh { top:4px; width:32px; height:32px; } #pull-to-refresh .ptr-spinner { width:17px; height:17px; } }

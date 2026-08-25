@@ -1,6 +1,6 @@
 // Profile Module
 import { ref, get, set, update, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { showLoading, hideLoading, showView } from './ui.js?v=10';
+import { showLoading, hideLoading, showView } from './ui.js?v=11';
 import { getUserData } from './firebase-helpers.js?v=9';
 import { showToast } from './utils.js?v=9';
 import { renderPost, renderRetweet, reportPost } from './posts.js?v=20';

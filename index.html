@@ -96,13 +96,13 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=27">
+    <link rel="stylesheet" href="css/professional.css?v=29">
 
     <!-- PWA Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                navigator.serviceWorker.register('./sw.js?v=13')
                     .then(reg => console.log('SW registered'))
                     .catch(err => console.log('SW registration failed'));
             });
@@ -110,10 +110,9 @@
     </script>
 
     <script>
-        // Keep the login surface ready behind the short brand splash.
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('auth-section').style.display = 'flex';
-        });
+        // Firebase Auth is the single source of truth; keep both surfaces hidden
+        // until its first state callback resolves after a refresh.
+
         // Fix broken images globally
         document.addEventListener('error', function(e) {
             if (e.target.tagName === 'IMG') {
@@ -179,12 +178,12 @@
     </section>
 
     <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+    <div id="loading-overlay" class="loading-overlay" style="display: flex;">
         <div class="spinner"></div>
     </div>
 
     <!-- ===== AUTH SECTION ===== -->
-    <div id="auth-section" class="auth-container">
+    <div id="auth-section" class="auth-container" style="display:none;">
         <div class="auth-box">
             <div class="logo" aria-label="ميمر Mimer">
                 <img src="assets/mimer-icon-original.png" alt="" class="mimer-inline-icon">
@@ -1106,6 +1105,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=66"></script>
+    <script type="module" src="js/app.js?v=69"></script>
 </body>
 </html>

@@ -51,7 +51,7 @@
 
             // Update PTR indicator
             ptr.style.display = 'flex';
-            ptr.style.transform = `translateY(${easeDistance}px)`;
+            ptr.style.transform = `translate(-50%, ${easeDistance}px)`;
             ptr.style.opacity = Math.min(1, pullDistance / PTR_THRESHOLD);
 
             // Update spinner rotation based on pull distance
@@ -127,7 +127,7 @@
     // ===== Helper Functions =====
     function resetPTR() {
         ptr.classList.remove('active', 'refreshing');
-        ptr.style.transform = 'translateY(0)';
+        ptr.style.transform = 'translate(-50%, 0)';
         ptr.style.opacity = 0;
         
         setTimeout(() => {
