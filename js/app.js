@@ -44,10 +44,16 @@ const DETAIL_ICON_PATHS = {
     heartFilled: '<path d="M20.8 8.9c0 5.2-8.8 10.1-8.8 10.1S3.2 14.1 3.2 8.9A4.4 4.4 0 0 1 12 6.7a4.4 4.4 0 0 1 8.8 2.2z" fill="currentColor"></path>',
     bookmark: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z"></path>',
     bookmarkFilled: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z" fill="currentColor"></path>',
-    share: '<path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path>'
+    share: '<path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path>',
+    view: '<path d="M2.5 12s3.4-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z"></path><circle cx="12" cy="12" r="2.5"></circle>'
 };
 function detailIcon(name) {
     return `<svg class="ui-icon detail-ui-icon" viewBox="0 0 24 24" aria-hidden="true">${DETAIL_ICON_PATHS[name] || ''}</svg>`;
+}
+function formatDetailCount(value) {
+    const count = Math.max(0, Number(value) || 0);
+    try { return new Intl.NumberFormat('ar-EG', { notation: 'compact', maximumFractionDigits: 1 }).format(count); }
+    catch { return String(count); }
 }
 
 // Initialize Firebase
@@ -1892,7 +1898,7 @@ window.openPostDetail = async function(postId) {
         const userData = await getUserData(database, post.userId);
         const userName = post.userName || userData.name || 'مستخدم';
         const avatar = post.userAvatar || userData.profilePicture || DEFAULT_AVATAR;
-        const userHandle = userData.handle || '';
+        const userHandle = userData.handle || post.userHandle || '';
         const isOwnPost = post.userId === userId;
 
         const likeSnap = await get(ref(database, `likes/${postId}/${userId}`));
@@ -1917,66 +1923,78 @@ window.openPostDetail = async function(postId) {
                 if (quotedSnap.exists()) {
                     const quoted = quotedSnap.val() || {};
                     const quotedText = quoted.content ? `<div class="quoted-post-text">${parseContent(quoted.content)}</div>` : '';
-                    const quotedMedia = Array.isArray(quoted.media) && quoted.media.length ? quoted.media[0] : (quoted.imageUrl ? { type: 'image', url: quoted.imageUrl } : null);
+                    const quotedAvatar = escapeHtml(String(quoted.userAvatar || DEFAULT_AVATAR));
+                    const quotedHandle = escapeHtml(String(quoted.userHandle || '').replace(/^@/, ''));
+                    const quotedMedia = Array.isArray(quoted.media) && quoted.media.length
+                        ? quoted.media[0]
+                        : quoted.imageUrl ? { type: 'image', url: quoted.imageUrl }
+                            : quoted.videoUrl ? { type: 'video', url: quoted.videoUrl } : null;
                     const quotedMediaHtml = quotedMedia?.url
-                        ? `<img src="${escapeHtml(String(quotedMedia.url))}" alt="وسائط المنشور المقتبس" loading="lazy">`
-                        : quoted.videoUrl ? '<div class="quoted-video-placeholder"><span>فيديو</span></div>' : '';
-                    quotedHtml = `<div class="quoted-post-card" onclick="event.stopPropagation(); openPostDetail('${escapeHtml(post.quotedPostId)}')"><div class="quoted-post-meta"><strong>${escapeHtml(quoted.userName || 'مستخدم')}</strong><span>@${escapeHtml(quoted.userHandle || '')}</span></div>${quotedText}${quotedMediaHtml ? `<div class="quoted-post-media">${quotedMediaHtml}</div>` : ''}</div>`;
+                        ? quotedMedia.type === 'video'
+                            ? `<video class="quoted-post-video" controls playsinline preload="metadata"><source src="${escapeHtml(String(quotedMedia.url))}">متصفحك لا يدعم تشغيل الفيديو.</video>`
+                            : `<img src="${escapeHtml(String(quotedMedia.url))}" alt="وسائط المنشور المقتبس" loading="lazy">`
+                        : '<div class="quoted-video-placeholder"><span>وسائط غير متاحة</span></div>';
+                    quotedHtml = `<div class="quoted-post-card" onclick="event.stopPropagation(); openPostDetail('${escapeHtml(post.quotedPostId)}')"><div class="quoted-post-meta"><img class="quoted-post-avatar" src="${quotedAvatar}" alt=""><div class="quoted-post-author"><strong>${escapeHtml(quoted.userName || 'مستخدم')}</strong><span>@${quotedHandle}</span></div><span class="quoted-post-time">${formatTime(quoted.timestamp)}</span></div>${quotedText}${quotedMediaHtml ? `<div class="quoted-post-media">${quotedMediaHtml}</div>` : ''}</div>`;
                 }
             } catch (quoteError) {
                 console.warn('Quoted post unavailable:', quoteError?.message || quoteError);
             }
         }
 
-        const editedHtml = post.edited ? '<span style="color:var(--text-secondary);font-size:12px;"> (معدّل)</span>' : '';
+        const editedHtml = post.edited ? '<span class="post-detail-edited">معدّل</span>' : '';
+        const safeAvatar = escapeHtml(String(avatar));
+        const safeUserId = escapeHtml(String(post.userId || ''));
+        const safePostId = escapeHtml(String(postId));
+        const safeHandle = escapeHtml(String(userHandle).replace(/^@/, ''));
 
         container.innerHTML = `
-            <div class="post-detail">
+            <article class="post-detail" data-post-detail-id="${safePostId}">
                 <div class="post-detail-header">
-                    <img class="post-detail-avatar" src="${avatar}" alt="" onclick="showProfile('${post.userId}')">
+                    <img class="post-detail-avatar" src="${safeAvatar}" alt="" onclick="showProfile('${safeUserId}')">
                     <div class="post-detail-info">
-                        <div class="post-detail-name" onclick="showProfile('${post.userId}')">${escapeHtml(userName)}</div>
-                        <div class="post-detail-handle">@${userHandle || escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</div>
+                        <div class="post-detail-name" onclick="showProfile('${safeUserId}')">${escapeHtml(userName)}</div>
+                        <div class="post-detail-handle">@${safeHandle || escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</div>
                     </div>
-                    ${!isOwnPost ? `<button class="follow-btn" data-follow-id="${post.userId}" onclick="followUser('${post.userId}', event)">متابعة</button>` : ''}
+                    ${!isOwnPost ? `<button class="follow-btn" data-follow-id="${safeUserId}" onclick="followUser('${safeUserId}', event)">متابعة</button>` : ''}
                 </div>
                 ${post.content ? `<div class="post-detail-content">${parseContent(post.content)}${editedHtml}</div>` : ''}
                 ${quotedHtml}
                 ${mediaHtml}
                 <div class="post-detail-timestamp">
-                    <span>${timeStr}</span>
-                    <span>·</span>
-                    <span>${dateStr}</span>
+                    <span>${timeStr}</span><span>·</span><span>${dateStr}</span>
+                    <span class="post-detail-view-label">${detailIcon('view')} ${formatDetailCount(views)} مشاهدة</span>
                 </div>
-                <div class="post-detail-stats">
-                    ${retweets > 0 ? `<span><strong>${retweets}</strong> إعادة نشر</span>` : ''}
-                    ${likes > 0 ? `<span><strong>${likes}</strong> إعجاب</span>` : ''}
-                    ${views > 0 ? `<span><strong>${views}</strong> مشاهدة</span>` : ''}
+                <div class="post-detail-stats" aria-label="إحصاءات المنشور">
+                    ${retweets > 0 ? `<span><strong>${formatDetailCount(retweets)}</strong> إعادة نشر</span>` : ''}
+                    ${likes > 0 ? `<span><strong>${formatDetailCount(likes)}</strong> إعجاب</span>` : ''}
                 </div>
-                <div class="post-detail-actions">
-                    <button class="post-detail-action" data-comment-count-id="${postId}" onclick="toggleComments('${postId}', event)">
-                        ${detailIcon('comment')}<span class="detail-count comment-count">${commentCount}</span>
+                <div class="post-detail-actions" aria-label="تفاعلات المنشور">
+                    <button class="post-detail-action" data-comment-count-id="${safePostId}" onclick="toggleComments('${safePostId}', event)" aria-label="التعليقات">
+                        ${detailIcon('comment')}<span class="detail-count comment-count">${formatDetailCount(commentCount)}</span>
                     </button>
-                    <button class="post-detail-action" data-retweet-id="${postId}" onclick="retweetPost('${postId}', event)">
-                        ${detailIcon('retweet')}<span class="detail-count">${retweets}</span>
+                    <button class="post-detail-action retweet" data-retweet-id="${safePostId}" onclick="retweetPost('${safePostId}', event)" aria-label="إعادة النشر">
+                        ${detailIcon('retweet')}<span class="detail-count">${formatDetailCount(retweets)}</span>
                     </button>
-                    <button class="post-detail-action like ${isLiked ? 'active' : ''}" data-like-id="${postId}" onclick="likePost('${postId}', event)">
-                        ${detailIcon(isLiked ? 'heartFilled' : 'heart')}<span class="detail-count">${likes}</span>
+                    <button class="post-detail-action like ${isLiked ? 'active' : ''}" data-like-id="${safePostId}" onclick="likePost('${safePostId}', event)" aria-label="الإعجاب">
+                        ${detailIcon(isLiked ? 'heartFilled' : 'heart')}<span class="detail-count">${formatDetailCount(likes)}</span>
                     </button>
-                    <button class="post-detail-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
+                    <span class="post-detail-action post-detail-view-action" aria-label="المشاهدات">
+                        ${detailIcon('view')}<span class="detail-count">${formatDetailCount(views)}</span>
+                    </span>
+                    <button class="post-detail-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${safePostId}" onclick="toggleBookmark('${safePostId}', event)" aria-label="الحفظ">
                         ${detailIcon(isBookmarked ? 'bookmarkFilled' : 'bookmark')}
                     </button>
-                    <button class="post-detail-action" onclick="copyPostLink('${postId}')">
+                    <button class="post-detail-action share" onclick="window.openShareSheet?.('${safePostId}', event)" aria-label="مشاركة المنشور">
                         ${detailIcon('share')}
                     </button>
                 </div>
                 <div class="post-detail-comment-input">
-                    <img src="${avatar}" alt="">
-                    <input type="text" id="detail-comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
-                    <button onclick="addComment('${postId}', null, event)">رد</button>
+                    <img src="${safeAvatar}" alt="">
+                    <input type="text" id="detail-comment-input-${safePostId}" placeholder="أضف ردًا إلى المحادثة..." onkeydown="if(event.key==='Enter')addComment('${safePostId}',null,event)">
+                    <button type="button" onclick="addComment('${safePostId}', null, event)">رد</button>
                 </div>
-            </div>
-            <div id="comments-${postId}" class="comment-section" style="display:block;"></div>
+            </article>
+            <div id="comments-${safePostId}" class="comment-section" style="display:block;"></div>
         `;
 
         container.querySelectorAll('.detail-image-trigger').forEach((mediaEl) => {

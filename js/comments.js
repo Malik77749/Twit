@@ -111,6 +111,10 @@ function loadComments(postId) {
 
     const unsub = onValue(ref(database, 'comments/' + postId), async snapshot => {
         const commentCount = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+        const viewerId = auth?.currentUser?.uid;
+        const viewerData = viewerId ? (await getUserData(database, viewerId).catch(() => ({}))) : {};
+        const viewerAvatar = escapeHtml(String(viewerData?.profilePicture || DEFAULT_AVATAR));
+        const composerHtml = `<div class="comment-input-row"><img src="${viewerAvatar}" alt=""><input type="text" id="comment-input-${postId}" placeholder="أضف ردًا إلى المحادثة..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)"><button type="button" onclick="addComment('${postId}',null,event)" aria-label="إرسال الرد">إرسال</button></div>`;
 
         // Update comment count in tweet actions
         document.querySelectorAll(`[data-post-id="${postId}"] .tweet-action.reply span:last-child, [data-comment-count-id="${postId}"] .comment-count`).forEach(el => {
@@ -118,12 +122,7 @@ function loadComments(postId) {
         });
 
         if (!snapshot.exists()) {
-            commentSection.innerHTML = `
-                <div class="comment-input-row">
-                    <img src="${DEFAULT_AVATAR}" alt="">
-                    <input type="text" id="comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
-                </div>
-            `;
+            commentSection.innerHTML = `<div class="comment-section-header"><strong>الردود</strong><span>لا توجد ردود بعد</span></div>${composerHtml}<div class="comments-empty">كن أول من يشارك في المحادثة.</div>`;
             return;
         }
 
@@ -134,53 +133,41 @@ function loadComments(postId) {
 
         const topLevel = comments.filter(c => !c.parentCommentId).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        let commentsHtml = `
-            <div class="comment-input-row">
-                <img src="${DEFAULT_AVATAR}" alt="">
-                <input type="text" id="comment-input-${postId}" placeholder="أضف تعليقاً..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)">
-            </div>
-        `;
+        let commentsHtml = `<div class="comment-section-header"><strong>الردود</strong><span>${commentCount} ${commentCount === 1 ? 'رد' : 'ردود'}</span></div>${composerHtml}`;
 
         for (const comment of topLevel) {
             // Use denormalized data if available
             const name = comment.userName || 'مستخدم';
-            const avatar = comment.userAvatar || DEFAULT_AVATAR;
+            const avatar = escapeHtml(String(comment.userAvatar || DEFAULT_AVATAR));
+            const safeCommentId = escapeHtml(String(comment.id));
+            const replies = comments.filter(c => c.parentCommentId === comment.id).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
             commentsHtml += `
-                <div class="comment" data-comment-id="${escapeHtml(comment.id)}">
-                    <img src="${avatar}" alt="">
+                <article class="comment" data-comment-id="${safeCommentId}">
+                    <img class="comment-avatar" src="${avatar}" alt="">
                     <div class="comment-body">
-                        <div class="comment-meta">
-                            <span class="name">${escapeHtml(name)}</span>
-                            <span class="time">${formatCommentTime(comment.timestamp)}</span>
-                        </div>
+                        <div class="comment-meta"><span class="name">${escapeHtml(name)}</span><span class="time">${formatCommentTime(comment.timestamp)}</span></div>
                         <div class="comment-text">${escapeHtml(comment.content)}</div>
-                        <div class="comment-actions"><button type="button" class="comment-reply-btn" onclick="showCommentReplyInput('${postId}','${comment.id}',event)">رد</button></div>
-                        <div class="comment-reply-input" id="comment-reply-${postId}-${comment.id}" hidden>
-                            <input type="text" id="comment-input-${postId}-${comment.id}" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')addComment('${postId}','${comment.id}',event)">
-                            <button type="button" class="follow-btn" onclick="addComment('${postId}','${comment.id}',event)">إرسال</button>
+                        <div class="comment-actions"><button type="button" class="comment-reply-btn" onclick="showCommentReplyInput('${postId}','${safeCommentId}',event)">رد</button>${replies.length ? `<span class="comment-replies-count">${replies.length} ${replies.length === 1 ? 'رد' : 'ردود'}</span>` : ''}</div>
+                        <div class="comment-reply-input" id="comment-reply-${postId}-${safeCommentId}" hidden>
+                            <input type="text" id="comment-input-${postId}-${safeCommentId}" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')addComment('${postId}','${safeCommentId}',event)">
+                            <button type="button" class="follow-btn" onclick="addComment('${postId}','${safeCommentId}',event)">إرسال</button>
                         </div>
                     </div>
-                </div>
+                </article>
             `;
 
-            // Replies
-            const replies = comments.filter(c => c.parentCommentId === comment.id).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             for (const reply of replies) {
                 const replyName = reply.userName || 'مستخدم';
-                const replyAvatar = reply.userAvatar || DEFAULT_AVATAR;
-
+                const replyAvatar = escapeHtml(String(reply.userAvatar || DEFAULT_AVATAR));
                 commentsHtml += `
-                    <div class="comment reply" data-comment-id="${escapeHtml(reply.id)}">
-                        <img src="${replyAvatar}" alt="">
+                    <article class="comment reply" data-comment-id="${escapeHtml(String(reply.id))}">
+                        <img class="comment-avatar" src="${replyAvatar}" alt="">
                         <div class="comment-body">
-                            <div class="comment-meta">
-                                <span class="name">${escapeHtml(replyName)}</span>
-                                <span class="time">${formatCommentTime(reply.timestamp)}</span>
-                            </div>
+                            <div class="comment-meta"><span class="name">${escapeHtml(replyName)}</span><span class="time">${formatCommentTime(reply.timestamp)}</span></div>
                             <div class="comment-text">${escapeHtml(reply.content)}</div>
                         </div>
-                    </div>
+                    </article>
                 `;
             }
         }
