@@ -1,6 +1,5 @@
 // Posts Module — Upgraded with Pagination, Rate Limiting, Denormalization
 import { ref, push, set, get, update, remove, increment, runTransaction, query, orderByChild, equalTo, limitToLast, onValue, off } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { escapeHtml, formatTimestamp, getYouTubeEmbedUrl, showToast, parseContent } from './utils.js?v=3';
 import { showLoading, hideLoading, showView } from './ui.js?v=3';
 import { getUserName, getUserData, addNotification } from './firebase-helpers.js?v=3';
@@ -12,6 +11,7 @@ import * as pollsModule from './polls.js?v=3';
 import * as imageCompress from './image-compress.js?v=3';
 import * as undoTweetModule from './undo-tweet.js?v=3';
 import * as imageCdn from './image-cdn.js?v=3';
+import * as cloudinary from './cloudinary.js?v=10';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -190,20 +190,24 @@ async function postTweet() {
         if (selectedFiles.length > 0) {
             const uploadedMedia = await Promise.all(selectedFiles.map(async file => {
                 try {
-                    if (file.type.startsWith('image/')) {
-                        const compressedFile = await imageCdn.compressImageFile(file, 1200, 0.8);
-                        const imgRef = storageRef(storage, `posts/${postRef.key}/${compressedFile.name}`);
-                        const snapshot = await uploadBytes(imgRef, compressedFile);
-                        return { type: 'image', url: await getDownloadURL(snapshot.ref) };
-                    }
-                    if (file.type.startsWith('video/')) {
-                        const vidRef = storageRef(storage, `posts/${postRef.key}/${file.name}`);
-                        const snapshot = await uploadBytes(vidRef, file);
-                        return { type: 'video', url: await getDownloadURL(snapshot.ref) };
-                    }
-                    return null;
+                    const uploadFile = file.type.startsWith('image/')
+                        ? await imageCdn.compressImageFile(file, 1600, 0.82)
+                        : file;
+                    const uploaded = await cloudinary.uploadMedia(uploadFile, { folder: `mimer/posts/${postRef.key}` });
+                    return {
+                        type: uploaded.type,
+                        url: uploaded.secureUrl,
+                        publicId: uploaded.publicId,
+                        width: uploaded.width,
+                        height: uploaded.height,
+                        duration: uploaded.duration,
+                        format: uploaded.format
+                    };
                 } catch (err) {
-                    showToast(`خطأ في رفع ${file.name}`);
+                    const message = String(err?.message || '');
+                    if (message.includes('MEDIA_TOO_LARGE')) showToast(`حجم الملف ${file.name} أكبر من 50MB`);
+                    else if (message.includes('MEDIA_TYPE_UNSUPPORTED')) showToast(`نوع الملف ${file.name} غير مدعوم`);
+                    else showToast(`تعذر رفع ${file.name} إلى Cloudinary`);
                     return null;
                 }
             }));
@@ -889,13 +893,26 @@ async function renderPost(post, container) {
         incrementViewCount(postId);
     }
 
-    // Media (optimized)
-    let mediaHtml = '';
-    if (post.imageUrl) {
-        mediaHtml = `<div class="tweet-media">${imageCdn.createResponsiveImage(post.imageUrl, 'صورة')}</div>`;
-    } else if (post.videoUrl) {
-        mediaHtml = `<div class="tweet-media"><iframe src="${post.videoUrl}" allowfullscreen loading="lazy"></iframe></div>`;
-    }
+    // Media: support Cloudinary image/video arrays and legacy single-media fields.
+    const mediaItems = Array.isArray(post.media) && post.media.length
+        ? post.media
+        : post.imageUrl
+            ? [{ type: 'image', url: post.imageUrl }]
+            : post.videoUrl
+                ? [{ type: 'embed', url: post.videoUrl }]
+                : [];
+    const mediaHtml = mediaItems.map((media, index) => {
+        const url = String(media?.url || '').trim();
+        if (!url) return '';
+        const safeUrl = escapeHtml(url);
+        if (media.type === 'embed') {
+            return `<div class="tweet-media-item"><iframe src="${safeUrl}" title="فيديو المنشور" allowfullscreen loading="lazy"></iframe></div>`;
+        }
+        if (media.type === 'video') {
+            return `<div class="tweet-media-item"><video class="tweet-video" controls preload="metadata" playsinline><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video></div>`;
+        }
+        return `<div class="tweet-media-item media-lightbox-trigger" data-media-url="${safeUrl}" role="button" tabindex="0" aria-label="فتح الصورة ${index + 1}">${imageCdn.createResponsiveImage(url, 'صورة المنشور')}</div>`;
+    }).join('');
 
     // Poll
     let pollHtml = '';
@@ -928,7 +945,7 @@ async function renderPost(post, container) {
                     </button>
                 </div>
                 ${post.content ? `<div class="tweet-content">${parseContent(post.content)}</div>` : ''}
-                ${mediaHtml ? `<div onclick="event.stopPropagation(); ${post.imageUrl ? `openLightbox('${post.imageUrl}')` : ''}" style="cursor:${post.imageUrl ? 'zoom-in' : 'default'};">${mediaHtml}</div>` : ''}
+                ${mediaHtml ? `<div class="tweet-media-grid" onclick="event.stopPropagation();">${mediaHtml}</div>` : ''}
                 ${pollHtml}
                 <div class="tweet-actions" onclick="event.stopPropagation();">
                     <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
@@ -952,6 +969,12 @@ async function renderPost(post, container) {
         </div>
         <div id="comments-${postId}" class="comment-section" style="display:none;"></div>
     `;
+
+    container.querySelectorAll('.media-lightbox-trigger').forEach((mediaEl) => {
+        const open = () => { if (typeof window.openLightbox === 'function') window.openLightbox(mediaEl.dataset.mediaUrl || ''); };
+        mediaEl.addEventListener('click', open);
+        mediaEl.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } });
+    });
 
     loadComments(postId);
 }

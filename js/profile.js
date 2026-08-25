@@ -1,11 +1,11 @@
 // Profile Module
 import { ref, get, update, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { showLoading, hideLoading, showView } from './ui.js?v=3';
 import { getUserData } from './firebase-helpers.js?v=3';
 import { showToast } from './utils.js?v=3';
 import { renderPost, renderRetweet } from './posts.js?v=3';
 import { escapeHtml } from './utils.js?v=3';
+import * as cloudinary from './cloudinary.js?v=10';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -211,10 +211,10 @@ function openCropper(file, type) {
 function handleImageSelection(file, type) { openCropper(file, type); }
 
 async function uploadCroppedImage(blob, type) {
-    if (!blob || !storage || !auth.currentUser) return null;
-    const target = storageRef(storage, `profiles/${auth.currentUser.uid}/${type}-${Date.now()}.jpg`);
-    await uploadBytes(target, blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000' });
-    return getDownloadURL(target);
+    if (!blob || !auth.currentUser) return null;
+    const file = new File([blob], `${type}-${Date.now()}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+    const uploaded = await cloudinary.uploadMedia(file, { folder: `mimer/profiles/${auth.currentUser.uid}` });
+    return uploaded.secureUrl;
 }
 
 async function saveProfile() {
@@ -259,7 +259,7 @@ async function saveProfile() {
                 else throw new Error('STORAGE_UNAVAILABLE');
             } catch (uploadError) {
                 pendingCroppedImages.avatar = null;
-                showToast('تم حفظ بيانات الملف، لكن رفع الصورة يحتاج تفعيل Storage المدفوع');
+                showToast('تم حفظ بيانات الملف، لكن تعذر رفع الصورة إلى Cloudinary');
             }
         } else if (picUrl) { new URL(picUrl); updates.profilePicture = picUrl; }
 
@@ -270,7 +270,7 @@ async function saveProfile() {
                 else throw new Error('STORAGE_UNAVAILABLE');
             } catch (uploadError) {
                 pendingCroppedImages.banner = null;
-                showToast('تم حفظ بيانات الملف، لكن رفع صورة الغلاف يحتاج تفعيل Storage المدفوع');
+                showToast('تم حفظ بيانات الملف، لكن تعذر رفع صورة الغلاف إلى Cloudinary');
             }
         } else if (bannerUrl) { new URL(bannerUrl); updates.banner = bannerUrl; }
 

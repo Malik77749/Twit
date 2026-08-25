@@ -5,6 +5,10 @@
  * Generate optimized image URL with size parameters
  * Works with Firebase Storage and common CDNs
  */
+function escapeHtmlAttribute(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
 function getOptimizedImageUrl(url, width = 600, quality = 80) {
     if (!url) return '';
 
@@ -22,6 +26,7 @@ function getOptimizedImageUrl(url, width = 600, quality = 80) {
 
     // Cloudinary CDN
     if (url.includes('cloudinary.com')) {
+        if (/\/upload\/[^/]*\bw_\d+/.test(url)) return url;
         return url.replace('/upload/', `/upload/w_${width},q_${quality},f_auto/`);
     }
 
@@ -40,11 +45,12 @@ function getOptimizedImageUrl(url, width = 600, quality = 80) {
 function createResponsiveImage(src, alt = '', maxWidth = 600) {
     if (!src) return '';
 
-    const optimizedSrc = getOptimizedImageUrl(src, maxWidth);
+    const optimizedSrc = escapeHtmlAttribute(getOptimizedImageUrl(src, maxWidth));
+    const safeAlt = escapeHtmlAttribute(alt);
 
     return `<img
         src="${optimizedSrc}"
-        alt="${alt}"
+        alt="${safeAlt}"
         loading="lazy"
         decoding="async"
         onload="this.classList.add('loaded'); this.style.opacity='1';"

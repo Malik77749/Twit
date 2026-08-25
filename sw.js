@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mimer-v8';
+const CACHE_NAME = 'mimer-v9';
 const APP_ROOT = new URL('./', self.location).pathname;
 const STATIC_ASSETS = [
     './',
@@ -8,6 +8,7 @@ const STATIC_ASSETS = [
     './js/app.js',
     './js/auth.js',
     './js/config.js',
+    './js/cloudinary.js',
     './js/posts.js',
     './js/comments.js',
     './js/ui.js',

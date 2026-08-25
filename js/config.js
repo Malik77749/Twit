@@ -10,4 +10,11 @@ const firebaseConfig = {
     measurementId: "G-QSGNW29K5B"
 };
 
-export { firebaseConfig };
+// Cloudinary client-side configuration: only public upload settings belong here.
+const cloudinaryConfig = {
+    cloudName: "fazunvon",
+    uploadPreset: "mimer_media_unsigned_v1",
+    uploadEndpoint: "https://api.cloudinary.com/v1_1/fazunvon/auto/upload"
+};
+
+export { firebaseConfig, cloudinaryConfig };
