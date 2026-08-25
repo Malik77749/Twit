@@ -1239,3 +1239,7 @@ body { min-width: 0; }
     backdrop-filter:blur(12px);
   }
 }
+
+@media (max-width:760px) {
+  #post-detail-content .comment-section { padding-bottom:calc(90px + env(safe-area-inset-bottom)); }
+}
