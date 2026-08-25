@@ -11,12 +11,14 @@ function showView(viewName) {
 
 function showApp() {
     hideLoading();
+    document.body.classList.add('mimer-authenticated');
     document.getElementById('auth-section').style.display = 'none';
     document.getElementById('app-section').style.display = 'flex';
 }
 
 function showAuth() {
     hideLoading();
+    document.body.classList.remove('mimer-authenticated');
     document.getElementById('auth-section').style.display = 'flex';
     document.getElementById('app-section').style.display = 'none';
 }

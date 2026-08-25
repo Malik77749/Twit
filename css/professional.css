@@ -178,6 +178,13 @@ button, .nav-item, .tweet, .sidebar-profile { transition: background .2s ease, b
   box-shadow: inset -3px 0 var(--accent), 0 6px 18px rgba(0,0,0,.08);
 }
 .nav-item:active, .sidebar-more-btn:active, .mobile-nav-item:active, button:active { transform: scale(.97); }
+
+/* Authentication screens must not reserve or show app navigation. */
+body:not(.mimer-authenticated) .mobile-nav,
+body:not(.mimer-authenticated) .mobile-fab { display: none !important; }
+.mobile-nav-icon { width: 22px; height: 22px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mobile-nav-item.active .mobile-nav-icon { fill: var(--accent-soft); stroke: var(--accent); }
+
 .sidebar-more-dropdown, .dropdown-menu, .more-menu {
   padding: 8px;
   border: 1px solid var(--border-strong);

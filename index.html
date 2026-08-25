@@ -984,19 +984,19 @@
     </div>
 
     <!-- Mobile Bottom Nav (X style — 4 icons) -->
-    <nav class="mobile-nav" id="mobile-nav">
-        <button class="mobile-nav-item active" data-nav="home" onclick="navigateTo('home')">
-            <i class="fas fa-home"></i>
+    <nav class="mobile-nav" id="mobile-nav" aria-label="التنقل الرئيسي">
+        <button class="mobile-nav-item active" data-nav="home" onclick="navigateTo('home')" aria-label="الرئيسية">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-5v-6h-5v6h-5A1.5 1.5 0 0 1 3 19.5z"></path></svg>
         </button>
-        <button class="mobile-nav-item" data-nav="search" onclick="navigateTo('search')">
-            <i class="fas fa-magnifying-glass"></i>
+        <button class="mobile-nav-item" data-nav="search" onclick="navigateTo('search')" aria-label="البحث">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
         </button>
-        <button class="mobile-nav-item" data-nav="notifications" onclick="navigateTo('notifications')" style="position:relative;">
-            <i class="fas fa-bell"></i>
+        <button class="mobile-nav-item" data-nav="notifications" onclick="navigateTo('notifications')" style="position:relative;" aria-label="الإشعارات">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"></path></svg>
             <span class="mobile-notif-badge" id="notif-badge" style="display:none;"></span>
         </button>
-        <button class="mobile-nav-item" data-nav="messages" onclick="navigateTo('messages')">
-            <i class="far fa-envelope"></i>
+        <button class="mobile-nav-item" data-nav="messages" onclick="navigateTo('messages')" aria-label="الرسائل">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m4 7 8 6 8-6"></path></svg>
             <span class="mobile-notif-badge" id="dm-badge" style="display:none;"></span>
         </button>
     </nav>
