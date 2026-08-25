@@ -536,7 +536,10 @@ async function retweetPost(postId, event) {
             const retweetsTx = await runTransaction(ref(database, `posts/${postId}/retweets`), current => Math.max(0, Number(current || 0) - 1));
             const retweets = Number(retweetsTx.snapshot.val() || 0);
             document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
-                btn.innerHTML = `<span class="icon-wrap">${uiIcon('retweet')}</span><span>${retweets}</span>`;
+                btn.classList.remove('active');
+                btn.innerHTML = btn.classList.contains('post-detail-action')
+                    ? `${uiIcon('retweet')}<span class="detail-count">${retweets}</span>`
+                    : `<span class="icon-wrap">${uiIcon('retweet')}</span><span>${retweets}</span>`;
             });
         } catch (error) {
             showToast('خطأ: ' + error.message);
@@ -561,7 +564,10 @@ async function retweetPost(postId, event) {
         }).catch(() => {});
 
         document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
-            btn.innerHTML = `<span class="icon-wrap">${uiIcon('retweet')}</span><span>${retweets}</span>`;
+            btn.classList.add('active');
+            btn.innerHTML = btn.classList.contains('post-detail-action')
+                ? `${uiIcon('retweet')}<span class="detail-count">${retweets}</span>`
+                : `<span class="icon-wrap">${uiIcon('retweet')}</span><span>${retweets}</span>`;
         });
         showToast('تم إعادة النشر');
     } catch (error) {
