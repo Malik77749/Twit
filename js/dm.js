@@ -24,14 +24,15 @@ function init(authInstance, databaseInstance) {
 async function canMessageUser(otherUserId) {
     const currentUserId = auth.currentUser?.uid;
     if (!currentUserId || !otherUserId || currentUserId === otherUserId) return false;
-    const [targetSnap, blockedByMe, blockedMe, followsTarget, followsMe] = await Promise.all([
+    const [targetSnap, blockedByMe, followsTarget, followsMe] = await Promise.all([
         get(ref(database, `users/${otherUserId}`)),
         get(ref(database, `blocks/${currentUserId}/${otherUserId}`)),
-        get(ref(database, `blocks/${otherUserId}/${currentUserId}`)),
         get(ref(database, `followers/${otherUserId}/${currentUserId}`)),
         get(ref(database, `followers/${currentUserId}/${otherUserId}`))
     ]);
-    if (!targetSnap.exists() || blockedByMe.exists() || blockedMe.exists()) return false;
+    // The other account's block list is private. Firebase rules enforce the
+    // final check on message writes, so the client must not read that list.
+    if (!targetSnap.exists() || blockedByMe.exists()) return false;
     const target = targetSnap.val() || {};
     if (['banned', 'suspended', 'deleted'].includes(target.accountStatus)) return false;
     const privacy = target.messagePrivacy || 'everyone';
