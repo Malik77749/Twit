@@ -2702,17 +2702,18 @@ window.postTweet = (...args) => posts.postTweet(...args);
 (function initResponsiveAdjustments() {
     function updateLayout() {
         const isMobile = window.innerWidth <= 768;
+        const isAuthenticated = document.body.classList.contains('mimer-authenticated');
         const mobileNav = document.querySelector('.mobile-nav');
         const sidebar = document.querySelector('.sidebar');
         const rightPanel = document.querySelector('.right-panel');
 
-        if (isMobile) {
-            if (mobileNav) mobileNav.style.display = 'flex';
+        if (isMobile && isAuthenticated) {
+            if (mobileNav) mobileNav.style.removeProperty('display');
             if (sidebar) sidebar.style.display = 'none';
             if (rightPanel) rightPanel.style.display = 'none';
         } else {
-            if (mobileNav) mobileNav.style.display = 'none';
-            if (sidebar) sidebar.style.display = 'flex';
+            if (mobileNav) mobileNav.style.setProperty('display', 'none', 'important');
+            if (sidebar) sidebar.style.display = isAuthenticated ? 'flex' : 'none';
             if (rightPanel) rightPanel.style.display = 'block';
         }
     }
