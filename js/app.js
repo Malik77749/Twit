@@ -37,6 +37,19 @@ import './improvements.js?v=1';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
+const DETAIL_ICON_PATHS = {
+    comment: '<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.4 8.4 0 0 1-4-.98L4 20l1.15-3.08A7.36 7.36 0 0 1 4.5 12 7.5 7.5 0 0 1 12 4.5a7.5 7.5 0 0 1 8 7z"></path>',
+    retweet: '<path d="M7 7h10l-2.5-2.5M17 7l-2.5 2.5M17 17H7l2.5 2.5M7 17l2.5-2.5"></path>',
+    heart: '<path d="M20.8 8.9c0 5.2-8.8 10.1-8.8 10.1S3.2 14.1 3.2 8.9A4.4 4.4 0 0 1 12 6.7a4.4 4.4 0 0 1 8.8 2.2z"></path>',
+    heartFilled: '<path d="M20.8 8.9c0 5.2-8.8 10.1-8.8 10.1S3.2 14.1 3.2 8.9A4.4 4.4 0 0 1 12 6.7a4.4 4.4 0 0 1 8.8 2.2z" fill="currentColor"></path>',
+    bookmark: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z"></path>',
+    bookmarkFilled: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z" fill="currentColor"></path>',
+    share: '<path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path>'
+};
+function detailIcon(name) {
+    return `<svg class="ui-icon detail-ui-icon" viewBox="0 0 24 24" aria-hidden="true">${DETAIL_ICON_PATHS[name] || ''}</svg>`;
+}
+
 // Initialize Firebase
 let app, authInstance, database, storage;
 try {
@@ -1656,19 +1669,19 @@ window.openPostDetail = async function(postId) {
                 </div>
                 <div class="post-detail-actions">
                     <button class="post-detail-action" onclick="toggleComments('${postId}', event)">
-                        <i class="far fa-comment"></i>
+                        ${detailIcon('comment')}
                     </button>
                     <button class="post-detail-action" onclick="retweetPost('${postId}', event)">
-                        <i class="fas fa-retweet"></i>
+                        ${detailIcon('retweet')}
                     </button>
                     <button class="post-detail-action like ${isLiked ? 'active' : ''}" data-like-id="${postId}" onclick="likePost('${postId}', event)">
-                        <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i>
+                        ${detailIcon(isLiked ? 'heartFilled' : 'heart')}
                     </button>
                     <button class="post-detail-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
-                        <i class="${isBookmarked ? 'fas' : 'far'} fa-bookmark"></i>
+                        ${detailIcon(isBookmarked ? 'bookmarkFilled' : 'bookmark')}
                     </button>
                     <button class="post-detail-action" onclick="copyPostLink('${postId}')">
-                        <i class="fas fa-arrow-up-from-bracket"></i>
+                        ${detailIcon('share')}
                     </button>
                 </div>
                 <div class="post-detail-comment-input">
@@ -2334,9 +2347,9 @@ try {
         const dropdown = document.getElementById('post-dropdown');
         if (!dropdown) return;
         dropdown.innerHTML = `
-            <button class="dropdown-item" onclick="copyPostLink('${postId}')"><i class="fas fa-link"></i><span>نسخ الرابط</span></button>
-            <button class="dropdown-item" onclick="sendPostByDM('${postId}')"><i class="far fa-envelope"></i><span>إرسال برسالة خاصة</span></button>
-            <button class="dropdown-item" onclick="quoteTweet('${postId}')"><i class="fas fa-quote-right"></i><span>اقتباس</span></button>
+            <button class="dropdown-item" onclick="copyPostLink('${postId}')">${detailIcon('share')}<span>نسخ الرابط</span></button>
+            <button class="dropdown-item" onclick="sendPostByDM('${postId}')">${detailIcon('comment')}<span>إرسال برسالة خاصة</span></button>
+            <button class="dropdown-item" onclick="quoteTweet('${postId}')">${detailIcon('comment')}<span>اقتباس المنشور</span></button>
         `;
         const rect = event.currentTarget.getBoundingClientRect();
         dropdown.style.display = 'block';

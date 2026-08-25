@@ -499,3 +499,110 @@ body { min-width: 0; }
   .suggested-account-row { padding:8px; }
   .suggested-account-row .follow-btn { min-width:68px; padding-inline:9px; font-size:12px; }
 }
+
+/* Feed card proportions and interaction rail: six stable X-like actions. */
+.tweet-actions {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: center;
+  width: 100%;
+  max-width: none;
+  gap: 4px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148,163,184,.16);
+}
+.tweet-action,
+.tweet-actions > .view-count {
+  min-width: 0;
+  width: 100%;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 3px 4px;
+  border-radius: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+}
+.tweet-action .icon-wrap,
+.tweet-actions > .view-count > .ui-icon {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+.tweet-action .ui-icon,
+.tweet-actions > .view-count > .ui-icon { width: 19px; height: 19px; }
+.tweet-action > span:not(.icon-wrap),
+.tweet-actions > .view-count > span:not(.ui-icon) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.tweet-action.share:hover .icon-wrap { background: rgba(56,189,248,.12); }
+.tweet-action.bookmark:hover .icon-wrap { background: rgba(56,189,248,.12); }
+
+@media (max-width: 760px) {
+  .main-feed { width: 100%; max-width: 100%; }
+  .tweet { padding-block: 15px; }
+  .tweet-actions { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; margin-inline: -2px; width: calc(100% + 4px); }
+  .tweet-action,
+  .tweet-actions > .view-count { min-height: 40px; padding-inline: 1px; }
+  .tweet-action > span:not(.icon-wrap),
+  .tweet-actions > .view-count > span:not(.ui-icon) { display: none !important; }
+  .tweet-action .icon-wrap,
+  .tweet-actions > .view-count > .ui-icon { width: 34px; height: 34px; min-width: 34px; }
+}
+@media (max-width: 380px) {
+  .tweet { padding-inline: 12px; }
+  .tweet-actions { margin-inline: -4px; width: calc(100% + 8px); }
+  .tweet-action .icon-wrap,
+  .tweet-actions > .view-count > .ui-icon { width: 31px; height: 31px; min-width: 31px; }
+  .tweet-action .ui-icon,
+  .tweet-actions > .view-count > .ui-icon { width: 17px; height: 17px; }
+}
+
+/* Post detail: keep the same card rhythm and touch targets as the feed. */
+.post-detail {
+  width: min(100%, 680px);
+  margin-inline: auto;
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, rgba(17,24,43,.96), rgba(11,16,32,.96));
+  box-shadow: var(--shadow-card);
+}
+.post-detail-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  align-items: center;
+  padding: 10px 0;
+}
+.post-detail-action {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: var(--text-muted);
+}
+.post-detail-action .ui-icon { width: 20px; height: 20px; }
+.post-detail-action:hover { transform: translateY(-1px); background: var(--accent-soft); color: var(--accent); }
+.post-detail-action.like:hover, .post-detail-action.like.active { color: var(--like-color); }
+.post-detail-action.bookmark.active { color: var(--accent); }
+
+@media (max-width: 760px) {
+  .post-detail { width: calc(100% - 24px); margin: 12px; padding: 16px; border-radius: 18px; }
+  .post-detail-content { font-size: clamp(18px, 5vw, 22px); line-height: 1.7; }
+  .post-detail-actions { gap: 2px; }
+  .post-detail-action { min-height: 42px; height: 42px; }
+}

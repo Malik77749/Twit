@@ -29,7 +29,8 @@ const UI_ICON_PATHS = {
     bookmarkFilled: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z" fill="currentColor"></path>',
     eye: '<path d="M2.5 12s3.2-5 9.5-5 9.5 5 9.5 5-3.2 5-9.5 5-9.5-5-9.5-5z"></path><circle cx="12" cy="12" r="2.2"></circle>',
     more: '<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>',
-    pin: '<path d="m15 4 5 5-3 1-3 5-2 2-2-2 2-2 5-3zM9 15l-5 5"></path>'
+    pin: '<path d="m15 4 5 5-3 1-3 5-2 2-2-2 2-2 5-3zM9 15l-5 5"></path>',
+    share: '<path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path>'
 };
 function uiIcon(name, className = 'ui-icon') {
     return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true">${UI_ICON_PATHS[name] || ''}</svg>`;
@@ -436,10 +437,13 @@ async function likePost(postId, event) {
 
         // Update all matching buttons with animation
         document.querySelectorAll(`[data-like-id="${postId}"]`).forEach(btn => {
-            btn.className = `tweet-action like ${isLiked ? '' : 'active'}`;
-            btn.innerHTML = `<span class="icon-wrap"><i class="${isLiked ? 'far' : 'fas'} fa-heart"></i></span><span>${likes}</span>`;
-            if (!isLiked) {
-                const icon = btn.querySelector('.fa-heart');
+            const isDetailAction = btn.classList.contains('post-detail-action');
+            btn.classList.toggle('active', isLiked);
+            btn.innerHTML = isDetailAction
+                ? uiIcon(isLiked ? 'heartFilled' : 'heart')
+                : `<span class="icon-wrap">${uiIcon(isLiked ? 'heartFilled' : 'heart')}</span><span>${likes}</span>`;
+            if (isLiked) {
+                const icon = btn.querySelector('.ui-icon');
                 if (icon) {
                     icon.style.animation = 'none';
                     icon.offsetHeight;
@@ -954,7 +958,7 @@ async function renderPost(post, container) {
         }
     } catch (e) { /* no poll */ }
 
-    const viewsHtml = views > 0 ? `<span class="view-count">${uiIcon('eye')} ${formatViews(views)}</span>` : '';
+    const viewsHtml = `<span class="tweet-action view-count" aria-label="المشاهدات">${uiIcon('eye')}<span>${views > 0 ? formatViews(views) : ''}</span></span>`;
     const editedHtml = post.edited ? '<span style="color:var(--text-secondary);font-size:12px;"> (معدّل)</span>' : '';
     const pinnedHtml = post.isPinned ? `<div class="pinned-label">${uiIcon('pin')} منشور مثبت</div>` : '';
 
@@ -993,6 +997,9 @@ async function renderPost(post, container) {
                     ${viewsHtml}
                     <button class="tweet-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
                         <span class="icon-wrap">${uiIcon(isBookmarked ? 'bookmarkFilled' : 'bookmark')}</span>
+                    </button>
+                    <button class="tweet-action share" onclick="window.openShareSheet?.('${postId}', event)" aria-label="مشاركة المنشور">
+                        <span class="icon-wrap">${uiIcon('share')}</span>
                     </button>
                 </div>
             </div>
@@ -1040,7 +1047,7 @@ async function renderRetweet(retweet, originalPost, container) {
         return `<div class="tweet-media-item media-lightbox-trigger" data-media-url="${safeUrl}" role="button" tabindex="0" aria-label="فتح الصورة ${index + 1}">${imageCdn.createResponsiveImage(url, 'صورة المنشور')}</div>`;
     }).join('');
 
-    const viewsHtml = views > 0 ? `<span class="view-count">${uiIcon('eye')} ${formatViews(views)}</span>` : '';
+    const viewsHtml = `<span class="tweet-action view-count" aria-label="المشاهدات">${uiIcon('eye')}<span>${views > 0 ? formatViews(views) : ''}</span></span>`;
 
     container.innerHTML = `
         <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
@@ -1082,6 +1089,9 @@ async function renderRetweet(retweet, originalPost, container) {
                     ${viewsHtml}
                     <button class="tweet-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
                         <span class="icon-wrap">${uiIcon(isBookmarked ? 'bookmarkFilled' : 'bookmark')}</span>
+                    </button>
+                    <button class="tweet-action share" onclick="window.openShareSheet?.('${postId}', event)" aria-label="مشاركة المنشور">
+                        <span class="icon-wrap">${uiIcon('share')}</span>
                     </button>
                 </div>
             </div>
@@ -1175,7 +1185,7 @@ export {
             const postId = post.id;
             const shareBtn = document.createElement('button');
             shareBtn.className = 'tweet-action share';
-            shareBtn.innerHTML = '<span class="icon-wrap"><i class="fas fa-arrow-up-from-bracket"></i></span>';
+            shareBtn.innerHTML = `<span class="icon-wrap">${uiIcon('share')}</span>`;
             shareBtn.onclick = (e) => window.openShareSheet?.(postId, e);
             actions.appendChild(shareBtn);
         }
@@ -1197,7 +1207,7 @@ export {
     likePost = async function(postId, event) {
         await __originalLikePost(postId, event);
         document.querySelectorAll(`[data-like-id="${postId}"]`).forEach(btn => {
-            const icon = btn.querySelector('.fa-heart');
+            const icon = btn.querySelector('.ui-icon');
             if (btn.classList.contains('active') && icon) {
                 icon.style.animation = 'none';
                 void icon.offsetWidth;
