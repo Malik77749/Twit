@@ -30,8 +30,12 @@ async function addComment(postId, parentCommentId, event) {
     event?.preventDefault();
     event?.stopPropagation();
 
+    const visibleSection = getVisibleCommentSection(postId);
     const inputId = `comment-input-${postId}${parentCommentId ? '-' + parentCommentId : ''}`;
-    const input = document.getElementById(inputId) || document.getElementById(`detail-comment-input-${postId}`);
+    let input = visibleSection?.querySelector(`[id="${inputId}"]`);
+    if (!input && !parentCommentId) {
+        input = document.querySelector(`#post-detail-content [id="detail-comment-input-${postId}"]`);
+    }
     if (!input) return;
 
     const text = input.value.trim();
