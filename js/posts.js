@@ -181,7 +181,8 @@ async function postTweet() {
     const location = document.getElementById('postLocation')?.value.trim() || '';
     const communityId = document.getElementById('post-community')?.value || '';
 
-    if (!content && selectedFiles.length === 0 && !imageUrl && !videoUrl && !gifUrl) {
+    const quotedPostId = String(window.currentQuotePostId || '').trim();
+    if (!content && selectedFiles.length === 0 && !imageUrl && !videoUrl && !gifUrl && !quotedPostId) {
         showToast('اكتب شيئاً أو أضف وسائط');
         return;
     }
@@ -224,6 +225,7 @@ async function postTweet() {
         commentCount: 0,
         edited: false
     };
+    if (quotedPostId && quotedPostId !== postRef.key) postData.quotedPostId = quotedPostId;
 
     try {
         // Handle multiple media files
@@ -348,6 +350,7 @@ async function postTweet() {
         // Clear composer
         document.getElementById('postContent').value = '';
         document.getElementById('postContent').style.height = 'auto';
+        window.clearQuoteTweet?.();
         if (document.getElementById('postGif')) document.getElementById('postGif').value = '';
         if (document.getElementById('postLocation')) document.getElementById('postLocation').value = '';
         if (document.getElementById('post-community')) document.getElementById('post-community').value = '';
@@ -488,7 +491,7 @@ async function likePost(postId, event) {
             const isDetailAction = btn.classList.contains('post-detail-action');
             btn.classList.toggle('active', isLiked);
             btn.innerHTML = isDetailAction
-                ? uiIcon(isLiked ? 'heartFilled' : 'heart')
+                ? `${uiIcon(isLiked ? 'heartFilled' : 'heart')}<span class="detail-count">${likes}</span>`
                 : `<span class="icon-wrap">${uiIcon(isLiked ? 'heartFilled' : 'heart')}</span><span>${likes}</span>`;
             if (isLiked) {
                 const icon = btn.querySelector('.ui-icon');
@@ -672,8 +675,9 @@ async function toggleBookmark(postId, event) {
 
     const bookmarkRef = ref(database, `bookmarks/${userId}/${postId}`);
 
-    try {
+        try {
         const snapshot = await get(bookmarkRef);
+        const nextState = !snapshot.exists();
         if (snapshot.exists()) {
             await remove(bookmarkRef);
             showToast('تم إزالة المنشور من المحفوظات');
@@ -681,9 +685,13 @@ async function toggleBookmark(postId, event) {
             await set(bookmarkRef, { timestamp: new Date().toISOString() });
             showToast('تم حفظ المنشور');
         }
-
         document.querySelectorAll(`[data-bookmark-id="${postId}"]`).forEach(btn => {
-            btn.classList.toggle('active', !snapshot.exists());
+            btn.classList.toggle('active', nextState);
+            if (btn.classList.contains('post-detail-action')) {
+                btn.innerHTML = uiIcon(nextState ? 'bookmarkFilled' : 'bookmark');
+            } else {
+                btn.innerHTML = `<span class="icon-wrap">${uiIcon(nextState ? 'bookmarkFilled' : 'bookmark')}</span>`;
+            }
         });
     } catch (error) {
         console.error('Bookmark error:', error);
@@ -998,6 +1006,17 @@ async function renderPost(post, container) {
 
     // Poll
     let pollHtml = '';
+    let quotedHtml = '';
+    if (post.quotedPostId && post.quotedPostId !== postId) {
+        try {
+            const quotedSnap = await get(ref(database, `posts/${post.quotedPostId}`));
+            if (quotedSnap.exists()) {
+                const quoted = quotedSnap.val() || {};
+                const quotedMedia = quoted.imageUrl ? `<img src="${safeImageSource(quoted.imageUrl)}" alt="" loading="lazy">` : quoted.videoUrl ? '<div class="quoted-video-placeholder"><span>فيديو</span></div>' : '';
+                quotedHtml = `<div class="quoted-post-card" onclick="event.stopPropagation(); openPostDetail('${post.quotedPostId}')"><div class="quoted-post-meta"><strong>${escapeHtml(quoted.userName || 'مستخدم')}</strong><span>@${escapeHtml(quoted.userHandle || '')}</span></div>${quoted.content ? `<div class="quoted-post-text">${parseContent(quoted.content)}</div>` : ''}${quotedMedia ? `<div class="quoted-post-media">${quotedMedia}</div>` : ''}</div>`;
+            }
+        } catch (error) { console.warn('Quoted post unavailable:', error?.message || error); }
+    }
     try {
         const pollData = await pollsModule.getPoll(postId);
         if (pollData) {
@@ -1028,6 +1047,7 @@ async function renderPost(post, container) {
                     </button>
                 </div>
                 ${post.content ? `<div class="tweet-content">${parseContent(post.content)}</div>` : ''}
+                ${quotedHtml}
                 ${mediaHtml ? `<div class="tweet-media-grid" onclick="event.stopPropagation();">${mediaHtml}</div>` : ''}
                 ${pollHtml}
                 <div class="tweet-actions" onclick="event.stopPropagation();">

@@ -105,7 +105,7 @@ function loadComments(postId) {
         const commentCount = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
 
         // Update comment count in tweet actions
-        document.querySelectorAll(`[data-post-id="${postId}"] .tweet-action.reply span:last-child`).forEach(el => {
+        document.querySelectorAll(`[data-post-id="${postId}"] .tweet-action.reply span:last-child, [data-comment-count-id="${postId}"] .comment-count`).forEach(el => {
             el.textContent = commentCount;
         });
 

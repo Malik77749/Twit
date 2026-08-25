@@ -1647,14 +1647,36 @@ window.openPostMenu = function(postId, userId, isOwnPost, event) {
     muteBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.muteUser(userId); };
     blockBtn.onclick = () => { dropdown.style.display = 'none'; blockMute.blockUser(userId).then(() => posts.loadPosts()); };
 
-// Quote Tweet
+// Quote post: preserve the original post reference and show a compact preview.
+async function renderQuotePreview(postId) {
+    const preview = document.getElementById('quote-preview');
+    if (!preview) return;
+    preview.hidden = false;
+    preview.innerHTML = '<span>جاري تجهيز الاقتباس...</span>';
+    try {
+        const snapshot = await get(ref(database, `posts/${postId}`));
+        if (!snapshot.exists()) throw new Error('POST_NOT_FOUND');
+        const post = snapshot.val() || {};
+        preview.innerHTML = `<div class="quote-preview-label">اقتباس منشور</div><div class="quote-preview-content"><strong>${escapeHtml(post.userName || 'مستخدم')}</strong><span>@${escapeHtml(post.userHandle || '')}</span>${post.content ? `<p>${parseContent(post.content)}</p>` : ''}</div><button type="button" class="quote-preview-remove" aria-label="إلغاء الاقتباس" onclick="clearQuoteTweet()"><i class="fas fa-times"></i></button>`;
+    } catch (error) {
+        window.clearQuoteTweet?.();
+        showToast('تعذر تحميل المنشور المقتبس');
+    }
+}
+window.clearQuoteTweet = function() {
+    window.currentQuotePostId = '';
+    const preview = document.getElementById('quote-preview');
+    if (preview) { preview.hidden = true; preview.innerHTML = ''; }
+};
 function quoteTweet(postId) {
+    window.currentQuotePostId = postId;
     showHome();
     const composer = document.getElementById('postContent');
+    if (!composer) return;
     composer.focus();
-    composer.value = `\n\nاقتباس منشور: ${window.location.origin}${window.location.pathname}#post/${postId}`;
-    composer.style.height = 'auto';
-    composer.style.height = composer.scrollHeight + 'px';
+    composer.placeholder = 'أضف تعليقك على الاقتباس...';
+    composer.dispatchEvent(new Event('input'));
+    void renderQuotePreview(postId);
 }
 };
 
@@ -1765,14 +1787,14 @@ window.openPostDetail = async function(postId) {
                     ${views > 0 ? `<span><strong>${views}</strong> مشاهدة</span>` : ''}
                 </div>
                 <div class="post-detail-actions">
-                    <button class="post-detail-action" onclick="toggleComments('${postId}', event)">
-                        ${detailIcon('comment')}
+                    <button class="post-detail-action" data-comment-count-id="${postId}" onclick="toggleComments('${postId}', event)">
+                        ${detailIcon('comment')}<span class="detail-count comment-count">${commentCount}</span>
                     </button>
-                    <button class="post-detail-action" onclick="retweetPost('${postId}', event)">
-                        ${detailIcon('retweet')}
+                    <button class="post-detail-action" data-retweet-id="${postId}" onclick="retweetPost('${postId}', event)">
+                        ${detailIcon('retweet')}<span class="detail-count">${retweets}</span>
                     </button>
                     <button class="post-detail-action like ${isLiked ? 'active' : ''}" data-like-id="${postId}" onclick="likePost('${postId}', event)">
-                        ${detailIcon(isLiked ? 'heartFilled' : 'heart')}
+                        ${detailIcon(isLiked ? 'heartFilled' : 'heart')}<span class="detail-count">${likes}</span>
                     </button>
                     <button class="post-detail-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
                         ${detailIcon(isBookmarked ? 'bookmarkFilled' : 'bookmark')}
@@ -2439,12 +2461,7 @@ try {
 
     // Share sheet: copy link / quote / DM
     window.quoteTweet = function(postId) {
-        showHome();
-        const composer = document.getElementById('postContent');
-        if (!composer) return;
-        composer.focus();
-        composer.value = `\n\nاقتباس منشور: ${window.location.origin}${window.location.pathname}#post/${postId}`;
-        composer.dispatchEvent(new Event('input'));
+        quoteTweet(postId);
     };
 
     window.sendPostByDM = async function(postId) {

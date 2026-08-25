@@ -195,6 +195,8 @@ body:not(.mimer-authenticated) .mobile-nav { display: none !important; }
 .mobile-nav-icon { width: 22px; height: 22px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .composer-tool-icon { width:20px; height:20px; }
 .tweet-action .ui-icon { width:19px; height:19px; }
+.detail-count { font-size:12px; line-height:1; color:inherit; }
+.post-detail-action { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-width:48px; }
 .tweet-more .ui-icon { width:19px; height:19px; }
 .view-count { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:38px; color:var(--text-secondary); font-size:12px; }
 .pinned-label { display:flex; align-items:center; gap:7px; margin-bottom:4px; padding-right:52px; color:var(--text-secondary); font-size:13px; }
@@ -832,6 +834,19 @@ body { min-width: 0; }
   .help-center-footer { align-items:stretch; flex-direction:column; padding-inline:16px; }
   .help-center-footer .follow-btn { width:100%; }
 }
+/* Quote posts */
+.quote-preview, .quoted-post-card { position:relative; margin-top:10px; padding:12px; border:1px solid var(--border-color); border-radius:14px; background:var(--surface-2); color:var(--text-secondary); }
+.quote-preview[hidden] { display:none; }
+.quote-preview-label { color:var(--accent); font-size:12px; font-weight:800; margin-bottom:6px; }
+.quote-preview-content, .quoted-post-meta { display:flex; flex-wrap:wrap; align-items:center; gap:7px; font-size:13px; }
+.quote-preview-content strong, .quoted-post-meta strong { color:var(--text-primary); }
+.quote-preview-content p, .quoted-post-text { width:100%; margin:7px 0 0; color:var(--text-primary); line-height:1.7; }
+.quote-preview-remove { position:absolute; inset-inline-start:8px; top:8px; width:28px; height:28px; min-height:28px; padding:0; border:0; border-radius:50%; background:transparent; color:var(--text-muted); }
+.quote-preview-remove:hover { background:var(--accent-soft); color:var(--accent); }
+.quoted-post-card { margin:10px 0 0; cursor:pointer; }
+.quoted-post-card:hover { border-color:rgba(56,189,248,.42); }
+.quoted-post-media img { display:block; width:100%; max-height:220px; object-fit:cover; margin-top:8px; border-radius:10px; }
+.quoted-video-placeholder { display:flex; align-items:center; justify-content:center; min-height:120px; margin-top:8px; border-radius:10px; background:#070b16; color:var(--accent); }
 /* Threaded comment replies */
 .comment-actions { display:flex; align-items:center; gap:8px; margin-top:7px; }
 .comment-reply-btn { min-height:30px; padding:3px 9px; border:0; border-radius:999px; background:transparent; color:var(--text-muted); font-size:12px; font-weight:700; }
