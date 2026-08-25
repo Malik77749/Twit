@@ -133,7 +133,7 @@ async function showProfile(userId) {
                         <input type="checkbox" id="profile-protected-input" ${userData.isProtected ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--accent);">
                         <label for="profile-protected-input" style="font-size:14px;color:var(--text-primary);cursor:pointer;"><i class="fas fa-lock"></i> حساب خاص (المنشورات تظهر للمتابعين فقط)</label>
                     </div>
-                    <button class="follow-btn" onclick="saveProfile()" style="font-size:13px;padding:4px 12px;background:var(--accent);color:white;">حفظ</button>
+                    <div class="profile-edit-actions"><button class="follow-btn" type="button" onclick="saveProfile()" style="font-size:13px;padding:4px 12px;background:var(--accent);color:white;">حفظ</button><button class="profile-edit-cancel" type="button" data-profile-edit-cancel>إلغاء</button></div>
                 </div>
             `;
         } else {
@@ -162,8 +162,30 @@ async function showProfile(userId) {
             tabs.forEach(t => t.classList.remove('active'));
         tabs[0]?.classList.add('active');
 
-        document.getElementById('profile-avatar-file')?.addEventListener('change', (event) => handleImageSelection(event.target.files?.[0], 'avatar'));
-        document.getElementById('profile-banner-file')?.addEventListener('change', (event) => handleImageSelection(event.target.files?.[0], 'banner'));
+        document.getElementById('profile-avatar-file')?.addEventListener('change', (event) => { handleImageSelection(event.target.files?.[0], 'avatar'); event.target.value = ''; });
+        document.getElementById('profile-banner-file')?.addEventListener('change', (event) => { handleImageSelection(event.target.files?.[0], 'banner'); event.target.value = ''; });
+
+        const avatarTarget = document.getElementById('profile-avatar-target');
+        const avatarTrigger = document.getElementById('profile-avatar-edit-trigger');
+        const bannerTrigger = document.getElementById('profile-banner-edit-trigger');
+        const cancelEditButton = document.querySelector('[data-profile-edit-cancel]');
+        const openAvatarPicker = () => {
+            if (!document.getElementById('profile-view')?.classList.contains('profile-editing')) return;
+            triggerProfileImageUpload('avatar');
+        };
+        const openBannerPicker = () => {
+            if (!document.getElementById('profile-view')?.classList.contains('profile-editing')) return;
+            triggerProfileImageUpload('banner');
+        };
+        if (isOwnProfile) {
+            avatarTarget?.addEventListener('click', openAvatarPicker);
+            avatarTarget?.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openAvatarPicker(); } });
+            bannerEl?.addEventListener('click', (event) => { if (!event.target.closest('button')) openBannerPicker(); });
+            avatarTrigger?.addEventListener('click', (event) => { event.stopPropagation(); openAvatarPicker(); });
+            bannerTrigger?.addEventListener('click', (event) => { event.stopPropagation(); openBannerPicker(); });
+            cancelEditButton?.addEventListener('click', () => editProfile(false));
+        }
+        setProfileEditMode(false);
 
         showView('profile');
         loadProfilePosts(userId);
@@ -175,11 +197,60 @@ async function showProfile(userId) {
     }
 }
 
-function editProfile() {
+function setProfileEditMode(enabled) {
+    const view = document.getElementById('profile-view');
     const form = document.getElementById('profile-edit-form');
-    if (form) {
-        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    const avatarTrigger = document.getElementById('profile-avatar-edit-trigger');
+    const bannerTrigger = document.getElementById('profile-banner-edit-trigger');
+    const avatarTarget = document.getElementById('profile-avatar-target');
+    const headerName = document.getElementById('profile-view-name');
+    const editTitle = document.getElementById('profile-edit-title');
+    const topSave = document.getElementById('profile-edit-top-save');
+    const backButton = document.getElementById('profile-back-btn');
+    if (!view) return;
+    view.classList.toggle('profile-editing', Boolean(enabled));
+    headerName?.toggleAttribute('hidden', Boolean(enabled));
+    editTitle?.toggleAttribute('hidden', !enabled);
+    topSave?.toggleAttribute('hidden', !enabled);
+    if (backButton) {
+        backButton.setAttribute('aria-label', enabled ? 'إلغاء التعديل' : 'رجوع');
+        backButton.onclick = enabled ? () => editProfile(false) : () => window.showHome?.();
     }
+    [avatarTrigger, bannerTrigger].forEach((button) => {
+        if (!button) return;
+        if (enabled) button.removeAttribute('hidden');
+        else button.setAttribute('hidden', '');
+    });
+    if (avatarTarget) {
+        avatarTarget.setAttribute('role', enabled ? 'button' : 'img');
+        avatarTarget.setAttribute('tabindex', enabled ? '0' : '-1');
+        avatarTarget.setAttribute('aria-label', enabled ? 'تغيير الصورة الشخصية' : 'صورة الملف الشخصي');
+    }
+    if (form) form.style.display = enabled ? 'block' : 'none';
+}
+
+function editProfile(force) {
+    const form = document.getElementById('profile-edit-form');
+    if (!form) return;
+    const view = document.getElementById('profile-view');
+    const open = typeof force === 'boolean' ? force : !view?.classList.contains('profile-editing');
+    if (open) {
+        setProfileEditMode(true);
+    } else {
+        closeCropper();
+        pendingCroppedImages = { avatar: null, banner: null };
+        setProfileEditMode(false);
+    }
+}
+
+function triggerProfileImageUpload(type) {
+    const inputId = type === 'banner' ? 'profile-banner-file' : 'profile-avatar-file';
+    const input = document.getElementById(inputId);
+    if (!input) {
+        showToast('افتح تعديل الملف الشخصي أولًا');
+        return;
+    }
+    input.click();
 }
 
 function closeCropper() {
@@ -363,7 +434,7 @@ async function saveProfile() {
         document.getElementById('profile-handle').textContent = '@' + newHandle;
         const numericIdEl = document.getElementById('profile-numeric-id');
         if (numericIdEl && currentUserData.numericId) numericIdEl.textContent = `معرّف ميمر: ${currentUserData.numericId}`;
-        document.getElementById('profile-edit-form').style.display = 'none';
+            editProfile(false);
         showToast('تم تحديث الملف الشخصي');
     } catch (error) {
         alert(error.message === 'HANDLE_TAKEN' ? 'اسم المستخدم مستخدم بالفعل' : 'تعذر حفظ التعديلات، تحقق من البيانات وحاول مرة أخرى');
