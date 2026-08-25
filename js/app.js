@@ -847,10 +847,14 @@ document.getElementById('onboarding-save')?.addEventListener('click', window.sav
 async function finishSuggestedAccounts() {
     const uid = authInstance.currentUser?.uid;
     const modal = document.getElementById('suggested-accounts-onboarding');
-    if (uid) { try { await update(ref(database, `users/${uid}`), { needsSuggestions: false, suggestionsCompletedAt: new Date().toISOString() }); } catch (_) {} }
+    // Complete onboarding locally first so a slow database write cannot block navigation.
     if (modal) modal.hidden = true;
+    showApp();
     showView('home');
-    posts.loadPosts();
+    if (uid) {
+        update(ref(database, `users/${uid}`), { needsSuggestions: false, suggestionsCompletedAt: new Date().toISOString() }).catch(() => {});
+    }
+    posts.loadPosts().catch(error => console.warn('Home feed refresh skipped:', error));
 }
 
 window.showSuggestedAccountsOnboarding = async function() {
