@@ -1,5 +1,6 @@
 // Analytics Module — Post & Profile Statistics (like X Analytics)
 import { ref, get, query, orderByChild, startAt, endAt } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { escapeHtml } from './utils.js?v=9';
 
 let auth, database;
 
