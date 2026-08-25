@@ -805,3 +805,20 @@ body { min-width: 0; }
   .community-detail-topline { gap: 6px; }
   .community-detail-topline .follow-btn { padding-inline: 9px; font-size: 12px; }
 }
+
+/* Final mobile guardrails: five balanced destinations, no legacy composer gap */
+@media (max-width: 760px) {
+  #mobile-nav.mobile-nav { display:flex !important; align-items:stretch; justify-content:space-evenly; gap:0; height:calc(58px + env(safe-area-inset-bottom)); min-height:58px; padding:4px 6px env(safe-area-inset-bottom); }
+  #mobile-nav .mobile-nav-item { flex:1 1 0; width:20%; max-width:20%; min-width:0; min-height:48px; display:flex; align-items:center; justify-content:center; border-radius:12px; }
+  #mobile-nav .mobile-nav-icon { width:22px; height:22px; }
+  .main-feed { padding-bottom:calc(68px + env(safe-area-inset-bottom)); }
+  .composer { padding-bottom:14px !important; }
+  .composer-actions, .composer-tools, .composer-right { min-width:0; max-width:100%; }
+  .composer-tools { flex:1 1 auto; }
+  .composer-tool { flex:0 0 36px; }
+}
+@media (max-width:380px) {
+  #mobile-nav { padding-inline:2px; }
+  #mobile-nav .mobile-nav-item { border-radius:10px; }
+  #mobile-nav .mobile-nav-icon { width:20px; height:20px; }
+}

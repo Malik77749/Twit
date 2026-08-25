@@ -95,7 +95,7 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=5">
+    <link rel="stylesheet" href="css/professional.css?v=6">
 
     <!-- PWA Service Worker -->
     <script>
@@ -1013,7 +1013,7 @@
         </button>
     </div>
 
-    <!-- Mobile Bottom Nav (X style — 4 icons) -->
+    <!-- Mobile Bottom Nav (X-inspired — home, search, notifications, messages, profile) -->
     <nav class="mobile-nav" id="mobile-nav" aria-label="التنقل الرئيسي" style="display:none;">
         <button class="mobile-nav-item active" data-nav="home" onclick="navigateTo('home')" aria-label="الرئيسية">
             <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-5v-6h-5v6h-5A1.5 1.5 0 0 1 3 19.5z"></path></svg>
@@ -1029,6 +1029,9 @@
             <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m4 7 8 6 8-6"></path></svg>
             <span class="mobile-notif-badge" id="dm-badge" style="display:none;"></span>
         </button>
+        <button class="mobile-nav-item" data-nav="profile" onclick="navigateTo('profile')" aria-label="الملف الشخصي">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 21a7 7 0 0 1 14 0M12 14v7"></path></svg>
+        </button>
     </nav>
 
     <!-- تحديثات الواجهة:
@@ -1038,6 +1041,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=15"></script>
+    <script type="module" src="js/app.js?v=16"></script>
 </body>
 </html>
