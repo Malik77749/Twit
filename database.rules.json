@@ -73,9 +73,11 @@
           ".validate": "newData.isString()"
         },
         "likes": {
+          ".write": "auth != null && newData.isNumber() && (newData.val() === data.val() + 1 || newData.val() === data.val() - 1)",
           ".validate": "newData.isNumber()"
         },
         "retweets": {
+          ".write": "auth != null && newData.isNumber() && (newData.val() === data.val() + 1 || newData.val() === data.val() - 1)",
           ".validate": "newData.isNumber()"
         },
         "views": {
@@ -193,6 +195,7 @@
 
     "retweets": {
       ".read": "auth != null",
+      ".indexOn": ["originalPostId"],
       "$retweetId": {
         ".read": true,
         ".write": "auth != null && ((!data.exists() && newData.child('userId').val() === auth.uid) || (data.exists() && data.child('userId').val() === auth.uid))",
