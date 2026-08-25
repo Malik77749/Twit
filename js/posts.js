@@ -8,6 +8,7 @@ import * as rateLimiter from './rate-limiter.js?v=3';
 import * as pagination from './pagination.js?v=7';
 import * as blockMute from './block-mute.js?v=3';
 import * as pollsModule from './polls.js?v=3';
+import * as communitiesModule from './communities.js?v=9';
 import * as imageCompress from './image-compress.js?v=3';
 import * as undoTweetModule from './undo-tweet.js?v=3';
 import * as imageCdn from './image-cdn.js?v=3';
@@ -146,6 +147,23 @@ function toggleVideoInput() {
     const row = document.getElementById('video-input-row');
     row.style.display = row.style.display === 'none' ? 'block' : 'none';
     document.getElementById('url-input-row').style.display = 'none';
+    document.getElementById('gif-input-row')?.style.setProperty('display', 'none');
+}
+
+function toggleGifInput() {
+    const row = document.getElementById('gif-input-row');
+    if (!row) return;
+    row.style.display = row.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('video-input-row').style.display = 'none';
+    document.getElementById('url-input-row').style.display = 'none';
+    if (row.style.display !== 'none') document.getElementById('postGif')?.focus();
+}
+
+function toggleLocationInput() {
+    const row = document.getElementById('location-input-row');
+    if (!row) return;
+    row.style.display = row.style.display === 'none' ? 'block' : 'none';
+    if (row.style.display !== 'none') document.getElementById('postLocation')?.focus();
 }
 
 // ===== Character Count =====
@@ -160,8 +178,11 @@ async function postTweet() {
     const content = document.getElementById('postContent').value.trim();
     const imageUrl = document.getElementById('postImageUrl').value.trim();
     const videoUrl = document.getElementById('postVideo').value.trim();
+    const gifUrl = document.getElementById('postGif')?.value.trim() || '';
+    const location = document.getElementById('postLocation')?.value.trim() || '';
+    const communityId = document.getElementById('post-community')?.value || '';
 
-    if (!content && selectedFiles.length === 0 && !imageUrl && !videoUrl) {
+    if (!content && selectedFiles.length === 0 && !imageUrl && !videoUrl && !gifUrl) {
         showToast('اكتب شيئاً أو أضف وسائط');
         return;
     }
@@ -211,7 +232,7 @@ async function postTweet() {
         if (selectedFiles.length > 0) {
             const uploadedMedia = await Promise.all(selectedFiles.map(async file => {
                 try {
-                    const uploadFile = file.type.startsWith('image/')
+                    const uploadFile = file.type.startsWith('image/') && file.type !== 'image/gif'
                         ? await imageCdn.compressImageFile(file, 1600, 0.82)
                         : file;
                     const uploaded = await cloudinary.uploadMedia(uploadFile, { folder: `mimer/posts/${postRef.key}` });
@@ -256,7 +277,21 @@ async function postTweet() {
                 return;
             }
             postData.videoUrl = embedUrl;
+        } else if (gifUrl) {
+            try {
+                const parsedGif = new URL(gifUrl);
+                if (!/^https?:$/i.test(parsedGif.protocol)) throw new Error('invalid protocol');
+                postData.media = [{ type: 'image', url: gifUrl, format: 'gif' }];
+                postData.imageUrl = gifUrl;
+            } catch {
+                showToast('رابط GIF غير صالح');
+                if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'نشر'; }
+                return;
+            }
         }
+
+        if (location) postData.location = location.substring(0, 80);
+        if (communityId) postData.communityId = communityId;
 
         // Handle poll
         const isPollActive = document.getElementById('poll-composer')?.style.display !== 'none';
@@ -290,6 +325,13 @@ async function postTweet() {
 
             await set(postRef, postData);
         }
+        if (communityId) {
+            const communityPosted = await communitiesModule.postToCommunity(communityId, postRef.key);
+            if (communityPosted === false) {
+                await update(ref(database, `posts/${postRef.key}`), { communityId: null });
+                showToast('تعذر النشر في المجتمع؛ تم نشره للجميع');
+            }
+        }
 
         // Record rate limit
         rateLimiter.recordAction(userId, 'post');
@@ -307,7 +349,14 @@ async function postTweet() {
         // Clear composer
         document.getElementById('postContent').value = '';
         document.getElementById('postContent').style.height = 'auto';
+        if (document.getElementById('postGif')) document.getElementById('postGif').value = '';
+        if (document.getElementById('postLocation')) document.getElementById('postLocation').value = '';
+        if (document.getElementById('post-community')) document.getElementById('post-community').value = '';
         removePreview();
+        const gifRow = document.getElementById('gif-input-row');
+        const locationRow = document.getElementById('location-input-row');
+        if (gifRow) gifRow.style.display = 'none';
+        if (locationRow) locationRow.style.display = 'none';
 
         // Prepend new post to feed with animation
         const postsDiv = document.getElementById('posts');
@@ -972,6 +1021,7 @@ async function renderPost(post, container) {
                     <span class="tweet-handle">@${escapeHtml(userHandle || userName).replace(/\s/g, '').toLowerCase()}</span>
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(post.timestamp)}</span>
+                    ${post.location ? `<span class="tweet-location" title="موقع المنشور">· ${escapeHtml(post.location)}</span>` : ''}
                     ${editedHtml}
                     ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${post.userId}" onclick="event.stopPropagation(); followUser('${post.userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
                     <button class="tweet-more" onclick="event.stopPropagation(); openPostMenu('${postId}', '${post.userId}', ${isOwnPost}, event)">
@@ -1135,7 +1185,7 @@ async function unpinPost() {
 export {
     init, postTweet, deletePost, editPost, likePost, retweetPost, followUser,
     reportPost, loadPosts, loadMorePostsCallback, renderPost, renderFeedItem, renderRetweet,
-    handleImageSelect, removePreview, toggleUrlInput, toggleVideoInput, toggleBookmark,
+    handleImageSelect, removePreview, toggleUrlInput, toggleVideoInput, toggleGifInput, toggleLocationInput, toggleBookmark,
     pinPost, unpinPost, subscribeToFeed, unsubscribeFeed
 };
 

@@ -214,10 +214,27 @@ window.navigateTo = function(view) {
     }
 };
 
+async function refreshComposerCommunities() {
+    const select = document.getElementById('post-community');
+    if (!select) return;
+    const userId = authInstance.currentUser?.uid;
+    if (!userId) return;
+    try {
+        const memberships = await communities.getUserCommunities(userId);
+        const previous = select.value;
+        select.innerHTML = '<option value="">الجميع</option>' + memberships.map(comm => `<option value="${escapeHtml(comm.id)}">${escapeHtml(comm.name)}</option>`).join('');
+        if (memberships.some(comm => comm.id === previous)) select.value = previous;
+    } catch (error) {
+        console.warn('Composer communities load skipped:', error);
+    }
+}
+window.refreshComposerCommunities = refreshComposerCommunities;
+
 window.showHome = function() {
     hideAllViews();
     setActiveNav('home');
     showView('home');
+    void refreshComposerCommunities();
     pagination.resetPagination();
     posts.loadPosts();
 };
@@ -609,6 +626,8 @@ window.handleImageSelect = posts.handleImageSelect;
 window.removePreview = posts.removePreview;
 window.toggleUrlInput = posts.toggleUrlInput;
 window.toggleVideoInput = posts.toggleVideoInput;
+window.toggleGifInput = posts.toggleGifInput;
+window.toggleLocationInput = posts.toggleLocationInput;
 window.toggleBookmark = posts.toggleBookmark;
 window.pinPost = posts.pinPost;
 window.unpinPost = posts.unpinPost;
@@ -954,45 +973,50 @@ window.toggleCommunityMembership = async function(commId, isMember) {
 };
 
 window.showCommunityDetail = async function(commId) {
-    // For now just show community feed
     hideAllViews();
-    const commSnap = await get(ref(database, `communities/${commId}`));
-    if (!commSnap.exists()) return;
-
-    const comm = commSnap.val();
+    const view = document.getElementById('communities-view');
     const container = document.getElementById('communities-content');
-
-    let html = `
-        <div class="community-detail-header">
-            <h3>${escapeHtml(comm.name)}</h3>
-            <p style="color:var(--text-secondary);font-size:14px;">${escapeHtml(comm.description || '')}</p>
-            <div style="display:flex;gap:16px;color:var(--text-secondary);font-size:13px;margin-top:8px;">
-                <span>${comm.memberCount || 0} عضو</span>
-                <span>${comm.postCount || 0} منشور</span>
-                <span>${comm.isPrivate ? 'خاص' : 'عام'}</span>
+    if (view) view.style.display = 'block';
+    setActiveNav('communities');
+    if (!container) return;
+    container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+    try {
+        const commSnap = await get(ref(database, `communities/${commId}`));
+        if (!commSnap.exists()) {
+            container.innerHTML = '<div class="empty-state"><h3>المجتمع غير موجود</h3><button class="follow-btn" onclick="showCommunities()">العودة إلى المجتمعات</button></div>';
+            return;
+        }
+        const comm = { id: commId, ...commSnap.val() };
+        const userId = authInstance.currentUser?.uid;
+        const member = await communities.isMember(commId, userId);
+        const membershipAction = member
+            ? `<button class="follow-btn following" onclick="toggleCommunityMembership('${commId}', true)">عضو · مغادرة</button>`
+            : `<button class="follow-btn" onclick="toggleCommunityMembership('${commId}', false)">${comm.isPrivate ? 'طلب الانضمام' : 'انضمام'}</button>`;
+        container.innerHTML = `
+            <div class="community-detail-header">
+                <div class="community-detail-topline"><button class="back-btn" onclick="showCommunities()" aria-label="العودة"><i class="fas fa-arrow-right"></i></button><span class="community-detail-kicker">مجتمع ميمر</span>${membershipAction}</div>
+                <h3>${escapeHtml(comm.name)}</h3>
+                <p>${escapeHtml(comm.description || 'مساحة عربية للنقاش والمشاركة.')}</p>
+                <div class="community-detail-meta"><span>${Number(comm.memberCount || 0)} عضو</span><span>${Number(comm.postCount || 0)} منشور</span><span>${comm.isPrivate ? 'خاص' : 'عام'}</span></div>
             </div>
-        </div>
-        <div id="community-posts"></div>
-    `;
-    container.innerHTML = html;
-
-    // Load community posts
-    const postIds = await communities.getCommunityFeed(commId);
-    const postsDiv = document.getElementById('community-posts');
-
-    if (!postIds.length) {
-        postsDiv.innerHTML = '<div class="empty-state"><p>لا توجد منشورات بعد</p></div>';
-        return;
-    }
-
-    for (const postId of postIds.slice(0, 20)) {
-        const postSnap = await get(ref(database, `posts/${postId}`));
-        if (postSnap.exists()) {
+            <div id="community-posts"></div>`;
+        const postIds = await communities.getCommunityFeed(commId);
+        const postsDiv = document.getElementById('community-posts');
+        if (!postIds.length) {
+            postsDiv.innerHTML = '<div class="empty-state"><h3>لا توجد منشورات بعد</h3><p>كن أول من يشارك في هذا المجتمع.</p></div>';
+            return;
+        }
+        for (const postId of postIds.slice(0, 20)) {
+            const postSnap = await get(ref(database, `posts/${postId}`));
+            if (!postSnap.exists()) continue;
             const el = document.createElement('div');
             el.setAttribute('data-post-id', postId);
             postsDiv.appendChild(el);
-            await posts.renderPost({ id: postId, ...postSnap.val() }, el);
+            try { await posts.renderPost({ id: postId, ...postSnap.val() }, el); } catch (renderError) { console.error('Community post render error:', renderError); }
         }
+    } catch (error) {
+        console.error('Community detail error:', error);
+        container.innerHTML = '<div class="empty-state"><h3>تعذر تحميل المجتمع</h3><p>تحقق من الاتصال ثم حاول مرة أخرى.</p><button class="follow-btn" onclick="showCommunities()">العودة إلى المجتمعات</button></div>';
     }
 };
 

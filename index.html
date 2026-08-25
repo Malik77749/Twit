@@ -95,7 +95,7 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=4">
+    <link rel="stylesheet" href="css/professional.css?v=5">
 
     <!-- PWA Service Worker -->
     <script>
@@ -443,6 +443,9 @@
                 <button class="nav-item" data-nav="lists" onclick="showLists()">
                     <i class="fas fa-list"></i><span>القوائم</span>
                 </button>
+                <button class="nav-item" data-nav="communities" onclick="showCommunities()">
+                    <i class="fas fa-people-group"></i><span>المجتمعات</span>
+                </button>
                 <button class="nav-item" data-nav="analytics" onclick="showAnalytics()">
                     <i class="fas fa-chart-simple"></i><span>الإحصائيات</span>
                 </button>
@@ -579,8 +582,20 @@
                                 <button class="composer-tool" title="حفظ مسودة" onclick="saveDraftAction()">
                                     <svg class="ui-icon composer-tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z"></path></svg>
                                 </button>
+                                <button class="composer-tool" title="إضافة GIF" onclick="toggleGifInput()">
+                                    <svg class="ui-icon composer-tool-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M7 10h3M7 14h2M14 10h3M14 14h-3v-4h3"></path></svg>
+                                </button>
+                                <button class="composer-tool" title="إضافة موقع" onclick="toggleLocationInput()">
+                                    <svg class="ui-icon composer-tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z"></path><circle cx="12" cy="9" r="2.2"></circle></svg>
+                                </button>
                             </div>
                             <div class="composer-right">
+                                <label class="composer-audience-wrap" title="اختيار الجمهور">
+                                    <span class="sr-only">جمهور المنشور</span>
+                                    <select id="post-community" class="composer-audience" aria-label="جمهور المنشور">
+                                        <option value="">الجميع</option>
+                                    </select>
+                                </label>
                                 <!-- Character Counter (like X) -->
                                 <div class="char-counter" id="char-counter" style="display:none;">
                                     <svg class="char-ring" viewBox="0 0 20 20">
@@ -597,6 +612,12 @@
                         </div>
                         <div id="video-input-row" style="display:none;margin-top:8px;">
                             <input type="text" class="auth-input" id="postVideo" placeholder="الصق رابط YouTube هنا" style="margin-bottom:0;font-size:14px;padding:10px;">
+                        </div>
+                        <div id="gif-input-row" style="display:none;margin-top:8px;">
+                            <input type="url" class="auth-input" id="postGif" placeholder="الصق رابط GIF هنا" style="margin-bottom:0;font-size:14px;padding:10px;" dir="ltr">
+                        </div>
+                        <div id="location-input-row" style="display:none;margin-top:8px;">
+                            <input type="text" class="auth-input" id="postLocation" placeholder="أضف موقعًا إلى منشورك" maxlength="80" style="margin-bottom:0;font-size:14px;padding:10px;">
                         </div>
                     </div>
                 </div>
@@ -1017,6 +1038,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=14"></script>
+    <script type="module" src="js/app.js?v=15"></script>
 </body>
 </html>

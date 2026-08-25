@@ -110,9 +110,14 @@ async function leaveCommunity(communityId) {
  * Post to a community
  */
 async function postToCommunity(communityId, postId) {
+    const userId = auth.currentUser?.uid;
+    if (!userId || !communityId || !postId) return false;
     try {
+        const memberSnap = await get(ref(database, `communityMembers/${communityId}/${userId}`));
+        if (!memberSnap.exists()) return false;
         await set(ref(database, `communityPosts/${communityId}/${postId}`), {
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            authorId: userId
         });
 
         const commSnap = await get(ref(database, `communities/${communityId}`));
@@ -142,7 +147,7 @@ async function getAllCommunities() {
             communities.push({ id: child.key, ...child.val() });
         });
 
-        communities.sort((a, b) => b.memberCount - a.memberCount);
+        communities.sort((a, b) => Number(b.memberCount || 0) - Number(a.memberCount || 0));
         return communities;
     } catch (error) {
         return [];
