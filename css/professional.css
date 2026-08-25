@@ -191,7 +191,15 @@ button, .nav-item, .tweet, .sidebar-profile { transition: background .2s ease, b
 
 /* Authentication screens must not reserve or show app navigation. */
 body:not(.mimer-authenticated) .mobile-nav { display: none !important; }
+.ui-icon { width:20px; height:20px; display:inline-block; flex:0 0 auto; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; vertical-align:middle; }
 .mobile-nav-icon { width: 22px; height: 22px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.composer-tool-icon { width:20px; height:20px; }
+.tweet-action .ui-icon { width:19px; height:19px; }
+.tweet-more .ui-icon { width:19px; height:19px; }
+.view-count { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:38px; color:var(--text-secondary); font-size:12px; }
+.pinned-label { display:flex; align-items:center; gap:7px; margin-bottom:4px; padding-right:52px; color:var(--text-secondary); font-size:13px; }
+.pinned-label .ui-icon { width:15px; height:15px; }
+
 .mobile-header { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
 .mobile-header-center { position:static; transform:none; display:flex; align-items:center; justify-content:center; }
 .mobile-header-logo { width:36px; height:36px; object-fit:contain; display:block; }
@@ -239,8 +247,8 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 .tweet::after { content: ''; position: absolute; inset: 10px 0; border-radius: 16px; pointer-events: none; transition: background .2s var(--ease-out); }
 .tweet:hover::after { background: rgba(56,189,248,.025); }
 .tweet > * { position: relative; z-index: 1; }
-.tweet-actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.tweet-action { min-width: 0; min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 11px; }
+.tweet-actions { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; align-items:center; width:100%; margin-top:14px; padding-top:10px; border-top:1px solid rgba(148,163,184,.16); }
+.tweet-action { min-width:0; min-height:40px; display:inline-flex; align-items:center; justify-content:center; gap:5px; border-radius:12px; padding:4px 6px; color:var(--text-secondary); }
 .tweet-action span { font-size: 12px; }
 .tweet-action:hover { transform: translateY(-1px); }
 .tweet-media, .post-detail-media { border-radius: 16px; border-color: var(--border-color); }
@@ -291,7 +299,16 @@ body { min-width: 0; }
   .main-feed { overflow-x: clip; padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
   .feed-header, .mobile-header { width: 100%; max-width: 100%; }
   .feed-header h2 { padding-inline: var(--mobile-gutter); font-size: clamp(17px, 4.8vw, 20px); }
-  .composer, .tweet, .post-composer, .post-detail, .profile-header, .settings-panel, .analytics-section { max-width: 100%; min-width: 0; padding-inline: var(--mobile-gutter); }
+  .composer, .tweet, .post-composer, .post-detail, .profile-header, .settings-panel, .analytics-section { max-width:100%; min-width:0; padding-inline:var(--mobile-gutter); }
+.composer { margin:0; padding-block:18px 14px; border-bottom:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg,rgba(17,24,43,.96),rgba(11,16,32,.96)); }
+.composer-body { min-width:0; padding:14px 16px 10px; border:1px solid rgba(56,189,248,.18); border-radius:20px; background:rgba(15,23,42,.72); box-shadow:0 10px 30px rgba(0,0,0,.14); }
+.composer-input { min-height:64px; padding:4px 0 10px; font-size:18px; line-height:1.7; }
+.composer-actions { min-height:46px; align-items:center; }
+.composer-tools { display:flex; align-items:center; gap:2px; flex-wrap:wrap; }
+.composer-tool { width:38px; height:38px; color:var(--accent); border-radius:11px; }
+.composer-tool:hover { color:var(--accent); background:var(--accent-soft); }
+.composer-submit { min-height:40px; border-radius:12px; padding:8px 18px; }
+
   .tweet-body, .tweet-content, .tweet-header, .tweet-meta, .post-detail-content, .profile-details { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
   .tweet-content, .post-detail-content { line-height: 1.75; }
   .tweet-header { flex-wrap: wrap; gap: 5px 7px; }

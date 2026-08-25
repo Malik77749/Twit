@@ -20,6 +20,21 @@ function safeImageSource(value) {
     return escapeHtml(/^(https?:\/\/|data:image\/)/i.test(raw) ? raw : DEFAULT_AVATAR);
 }
 
+const UI_ICON_PATHS = {
+    comment: '<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.4 8.4 0 0 1-4-.98L4 20l1.15-3.08A7.36 7.36 0 0 1 4.5 12 7.5 7.5 0 0 1 12 4.5a7.5 7.5 0 0 1 8 7z"></path>',
+    retweet: '<path d="M7 7h10l-2.5-2.5M17 7l-2.5 2.5M17 17H7l2.5 2.5M7 17l2.5-2.5"></path>',
+    heart: '<path d="M20.8 8.9c0 5.2-8.8 10.1-8.8 10.1S3.2 14.1 3.2 8.9A4.4 4.4 0 0 1 12 6.7a4.4 4.4 0 0 1 8.8 2.2z"></path>',
+    heartFilled: '<path d="M20.8 8.9c0 5.2-8.8 10.1-8.8 10.1S3.2 14.1 3.2 8.9A4.4 4.4 0 0 1 12 6.7a4.4 4.4 0 0 1 8.8 2.2z" fill="currentColor"></path>',
+    bookmark: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z"></path>',
+    bookmarkFilled: '<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21z" fill="currentColor"></path>',
+    eye: '<path d="M2.5 12s3.2-5 9.5-5 9.5 5 9.5 5-3.2 5-9.5 5-9.5-5-9.5-5z"></path><circle cx="12" cy="12" r="2.2"></circle>',
+    more: '<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>',
+    pin: '<path d="m15 4 5 5-3 1-3 5-2 2-2-2 2-2 5-3zM9 15l-5 5"></path>'
+};
+function uiIcon(name, className = 'ui-icon') {
+    return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true">${UI_ICON_PATHS[name] || ''}</svg>`;
+}
+
 let auth, database, storage;
 let selectedFiles = []; // Support multiple files
 
@@ -466,7 +481,7 @@ async function retweetPost(postId, event) {
             const retweetsTx = await runTransaction(ref(database, `posts/${postId}/retweets`), current => Math.max(0, Number(current || 0) - 1));
             const retweets = Number(retweetsTx.snapshot.val() || 0);
             document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
-                btn.innerHTML = `<span class="icon-wrap"><i class="fas fa-retweet"></i></span><span>${retweets}</span>`;
+                btn.innerHTML = `<span class="icon-wrap">${uiIcon('retweet')}</span><span>${retweets}</span>`;
             });
         } catch (error) {
             showToast('خطأ: ' + error.message);
@@ -491,7 +506,7 @@ async function retweetPost(postId, event) {
         }).catch(() => {});
 
         document.querySelectorAll(`[data-retweet-id="${postId}"]`).forEach(btn => {
-            btn.innerHTML = `<span class="icon-wrap"><i class="fas fa-retweet"></i></span><span>${retweets}</span>`;
+            btn.innerHTML = `<span class="icon-wrap">${uiIcon('retweet')}</span><span>${retweets}</span>`;
         });
         showToast('تم إعادة النشر');
     } catch (error) {
@@ -939,9 +954,9 @@ async function renderPost(post, container) {
         }
     } catch (e) { /* no poll */ }
 
-    const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
+    const viewsHtml = views > 0 ? `<span class="view-count">${uiIcon('eye')} ${formatViews(views)}</span>` : '';
     const editedHtml = post.edited ? '<span style="color:var(--text-secondary);font-size:12px;"> (معدّل)</span>' : '';
-    const pinnedHtml = post.isPinned ? '<div style="display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:13px;margin-bottom:4px;padding-right:52px;"><i class="fas fa-thumbtack" style="font-size:12px;"></i> منشور مثبت</div>' : '';
+    const pinnedHtml = post.isPinned ? `<div class="pinned-label">${uiIcon('pin')} منشور مثبت</div>` : '';
 
     container.innerHTML = `
         <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
@@ -956,7 +971,7 @@ async function renderPost(post, container) {
                     ${editedHtml}
                     ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${post.userId}" onclick="event.stopPropagation(); followUser('${post.userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
                     <button class="tweet-more" onclick="event.stopPropagation(); openPostMenu('${postId}', '${post.userId}', ${isOwnPost}, event)">
-                        <i class="fas fa-ellipsis"></i>
+                        ${uiIcon('more')}
                     </button>
                 </div>
                 ${post.content ? `<div class="tweet-content">${parseContent(post.content)}</div>` : ''}
@@ -964,20 +979,20 @@ async function renderPost(post, container) {
                 ${pollHtml}
                 <div class="tweet-actions" onclick="event.stopPropagation();">
                     <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
-                        <span class="icon-wrap"><i class="far fa-comment"></i></span>
+                        <span class="icon-wrap">${uiIcon('comment')}</span>
                         <span>${commentCount}</span>
                     </button>
                     <button class="tweet-action retweet" data-retweet-id="${postId}" onclick="retweetPost('${postId}', event)">
-                        <span class="icon-wrap"><i class="fas fa-retweet"></i></span>
+                        <span class="icon-wrap">${uiIcon('retweet')}</span>
                         <span>${post.retweets || 0}</span>
                     </button>
                     <button class="tweet-action like ${isLiked ? 'active' : ''}" data-like-id="${postId}" onclick="likePost('${postId}', event)">
-                        <span class="icon-wrap"><i class="${isLiked ? 'fas' : 'far'} fa-heart"></i></span>
+                        <span class="icon-wrap">${uiIcon(isLiked ? 'heartFilled' : 'heart')}</span>
                         <span>${post.likes || 0}</span>
                     </button>
                     ${viewsHtml}
                     <button class="tweet-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
-                        <span class="icon-wrap"><i class="${isBookmarked ? 'fas' : 'far'} fa-bookmark"></i></span>
+                        <span class="icon-wrap">${uiIcon(isBookmarked ? 'bookmarkFilled' : 'bookmark')}</span>
                     </button>
                 </div>
             </div>
@@ -1025,7 +1040,7 @@ async function renderRetweet(retweet, originalPost, container) {
         return `<div class="tweet-media-item media-lightbox-trigger" data-media-url="${safeUrl}" role="button" tabindex="0" aria-label="فتح الصورة ${index + 1}">${imageCdn.createResponsiveImage(url, 'صورة المنشور')}</div>`;
     }).join('');
 
-    const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
+    const viewsHtml = views > 0 ? `<span class="view-count">${uiIcon('eye')} ${formatViews(views)}</span>` : '';
 
     container.innerHTML = `
         <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
@@ -1038,7 +1053,7 @@ async function renderRetweet(retweet, originalPost, container) {
                     <span class="tweet-time">${formatTime(retweet.timestamp)}</span>
                 </div>
                 <div class="retweet-label">
-                    <i class="fas fa-retweet"></i> أعاد نشر
+                    ${uiIcon('retweet')} أعاد نشر
                 </div>
                 <div style="border:1px solid var(--border-color);border-radius:16px;padding:12px;" onclick="event.stopPropagation();">
                     <div class="tweet-header">
@@ -1053,20 +1068,20 @@ async function renderRetweet(retweet, originalPost, container) {
                 </div>
                 <div class="tweet-actions" onclick="event.stopPropagation();">
                     <button class="tweet-action reply" onclick="toggleComments('${postId}', event)">
-                        <span class="icon-wrap"><i class="far fa-comment"></i></span>
+                        <span class="icon-wrap">${uiIcon('comment')}</span>
                         <span>${commentCount}</span>
                     </button>
                     <button class="tweet-action retweet" data-retweet-id="${postId}" onclick="retweetPost('${postId}', event)">
-                        <span class="icon-wrap"><i class="fas fa-retweet"></i></span>
+                        <span class="icon-wrap">${uiIcon('retweet')}</span>
                         <span>${originalPost.retweets || 0}</span>
                     </button>
                     <button class="tweet-action like ${isLiked ? 'active' : ''}" data-like-id="${postId}" onclick="likePost('${postId}', event)">
-                        <span class="icon-wrap"><i class="${isLiked ? 'fas' : 'far'} fa-heart"></i></span>
+                        <span class="icon-wrap">${uiIcon(isLiked ? 'heartFilled' : 'heart')}</span>
                         <span>${originalPost.likes || 0}</span>
                     </button>
                     ${viewsHtml}
                     <button class="tweet-action bookmark ${isBookmarked ? 'active' : ''}" data-bookmark-id="${postId}" onclick="toggleBookmark('${postId}', event)">
-                        <span class="icon-wrap"><i class="${isBookmarked ? 'fas' : 'far'} fa-bookmark"></i></span>
+                        <span class="icon-wrap">${uiIcon(isBookmarked ? 'bookmarkFilled' : 'bookmark')}</span>
                     </button>
                 </div>
             </div>
