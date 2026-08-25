@@ -1100,7 +1100,7 @@ body { min-width: 0; }
 
 /* Public profile options follow the compact account menu pattern on phones. */
 @media (max-width:760px) {
-  .profile-options-backdrop { display:block; background:transparent; pointer-events:none; padding:0; }
+  .profile-options-backdrop { display:block; background:transparent; pointer-events:auto; padding:0; }
   .profile-options-sheet { position:fixed; top:var(--profile-options-top,120px); inset-inline-start:var(--profile-options-start,12px); width:min(360px,calc(100vw - 24px)); max-height:min(72dvh,560px); border:1px solid rgba(255,255,255,.08); border-radius:14px; transform-origin:top start; box-shadow:0 16px 44px rgba(0,0,0,.55); animation:profileOptionsPop .16s ease-out; pointer-events:auto; }
   .profile-options-header { display:none; }
   .profile-options-body { padding:6px; }
