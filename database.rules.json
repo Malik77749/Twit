@@ -129,6 +129,10 @@
           },
           "edited": { ".validate": "newData.isBoolean()" },
           "editedAt": { ".validate": "newData.isString()" },
+          "likeCount": {
+            ".write": "auth != null && newData.isNumber() && (newData.val() === data.val() + 1 || newData.val() === data.val() - 1)",
+            ".validate": "newData.isNumber()"
+          },
           "userName": { ".validate": "newData.isString() && newData.val().length <= 80" },
           "userAvatar": { ".validate": "newData.isString()" },
           "parentCommentId": { ".validate": "newData.isString() || newData.val() === null" },
@@ -175,6 +179,19 @@
       }
     },
 
+    "commentLikes": {
+      ".read": "auth != null",
+      "$postId": {
+        "$commentId": {
+          ".read": "auth != null",
+          "$uid": {
+            ".read": "auth.uid === $uid",
+            ".write": "auth.uid === $uid",
+            ".validate": "newData.hasChildren(['timestamp']) && newData.child('timestamp').isString()"
+          }
+        }
+      }
+    },
     "bookmarks": {
       "$uid": {
         ".read": "auth.uid === $uid",
