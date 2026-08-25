@@ -847,6 +847,16 @@ body { min-width: 0; }
 .quoted-post-card:hover { border-color:rgba(56,189,248,.42); }
 .quoted-post-media img { display:block; width:100%; max-height:220px; object-fit:cover; margin-top:8px; border-radius:10px; }
 .quoted-video-placeholder { display:flex; align-items:center; justify-content:center; min-height:120px; margin-top:8px; border-radius:10px; background:#070b16; color:var(--accent); }
+/* Post detail media: Cloudinary arrays and responsive video */
+.post-detail-media { min-width: 0; overflow: hidden; background: var(--bg-secondary); }
+.post-detail-media img { display: block; width: 100%; max-width: 100%; max-height: 560px; object-fit: contain; }
+.post-detail-media video { display: block; width: 100%; max-width: 100%; max-height: 560px; background: #020617; object-fit: contain; }
+.post-detail-media iframe { display: block; width: 100%; max-width: 100%; min-height: 240px; aspect-ratio: 16 / 9; border: 0; }
+.detail-image-trigger:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+@media (max-width: 480px) {
+  .post-detail-media iframe { min-height: 190px; }
+  .post-detail-media img, .post-detail-media video { max-height: 420px; }
+}
 /* Threaded comment replies */
 .comment-actions { display:flex; align-items:center; gap:8px; margin-top:7px; }
 .comment-reply-btn { min-height:30px; padding:3px 9px; border:0; border-radius:999px; background:transparent; color:var(--text-muted); font-size:12px; font-weight:700; }

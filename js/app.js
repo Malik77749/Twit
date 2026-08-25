@@ -1748,6 +1748,28 @@ document.addEventListener('keydown', (e) => {
 
 // ===== Post Detail View =====
 
+function renderDetailMedia(post) {
+    const mediaItems = Array.isArray(post.media) && post.media.length
+        ? post.media
+        : post.imageUrl
+            ? [{ type: 'image', url: post.imageUrl }]
+            : post.videoUrl
+                ? [{ type: 'embed', url: post.videoUrl }]
+                : [];
+    return mediaItems.map((media, index) => {
+        const url = String(media?.url || '').trim();
+        if (!url) return '';
+        const safeUrl = escapeHtml(url);
+        if (media.type === 'video') {
+            return `<div class="post-detail-media"><video class="post-detail-video" controls playsinline preload="metadata"><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video></div>`;
+        }
+        if (media.type === 'embed') {
+            return `<div class="post-detail-media"><iframe src="${safeUrl}" title="فيديو المنشور" allowfullscreen loading="lazy"></iframe></div>`;
+        }
+        return `<div class="post-detail-media detail-image-trigger" data-detail-image-url="${safeUrl}" role="button" tabindex="0" aria-label="فتح الصورة ${index + 1}"><img src="${safeUrl}" alt="صورة المنشور" loading="lazy"></div>`;
+    }).join('');
+}
+
 window.openPostDetail = async function(postId) {
     hideAllViews();
     document.getElementById('post-detail-view').style.display = 'block';
@@ -1786,11 +1808,23 @@ window.openPostDetail = async function(postId) {
         const likes = post.likes || 0;
                 const retweets = post.retweets || 0;
         const commentCount = Number(post.commentCount || 0);
-        let mediaHtml = '';
-        if (post.imageUrl) {
-            mediaHtml = `<div class="post-detail-media" onclick="openLightbox('${post.imageUrl}')"><img src="${post.imageUrl}" alt=""></div>`;
-        } else if (post.videoUrl) {
-            mediaHtml = `<div class="post-detail-media"><iframe src="${post.videoUrl}" style="width:100%;height:350px;border:none;" allowfullscreen></iframe></div>`;
+        const mediaHtml = renderDetailMedia(post);
+        let quotedHtml = '';
+        if (post.quotedPostId && post.quotedPostId !== postId) {
+            try {
+                const quotedSnap = await get(ref(database, `posts/${post.quotedPostId}`));
+                if (quotedSnap.exists()) {
+                    const quoted = quotedSnap.val() || {};
+                    const quotedText = quoted.content ? `<div class="quoted-post-text">${parseContent(quoted.content)}</div>` : '';
+                    const quotedMedia = Array.isArray(quoted.media) && quoted.media.length ? quoted.media[0] : (quoted.imageUrl ? { type: 'image', url: quoted.imageUrl } : null);
+                    const quotedMediaHtml = quotedMedia?.url
+                        ? `<img src="${escapeHtml(String(quotedMedia.url))}" alt="وسائط المنشور المقتبس" loading="lazy">`
+                        : quoted.videoUrl ? '<div class="quoted-video-placeholder"><span>فيديو</span></div>' : '';
+                    quotedHtml = `<div class="quoted-post-card" onclick="event.stopPropagation(); openPostDetail('${escapeHtml(post.quotedPostId)}')"><div class="quoted-post-meta"><strong>${escapeHtml(quoted.userName || 'مستخدم')}</strong><span>@${escapeHtml(quoted.userHandle || '')}</span></div>${quotedText}${quotedMediaHtml ? `<div class="quoted-post-media">${quotedMediaHtml}</div>` : ''}</div>`;
+                }
+            } catch (quoteError) {
+                console.warn('Quoted post unavailable:', quoteError?.message || quoteError);
+            }
         }
 
         const editedHtml = post.edited ? '<span style="color:var(--text-secondary);font-size:12px;"> (معدّل)</span>' : '';
@@ -1806,6 +1840,7 @@ window.openPostDetail = async function(postId) {
                     ${!isOwnPost ? `<button class="follow-btn" data-follow-id="${post.userId}" onclick="followUser('${post.userId}', event)">متابعة</button>` : ''}
                 </div>
                 ${post.content ? `<div class="post-detail-content">${parseContent(post.content)}${editedHtml}</div>` : ''}
+                ${quotedHtml}
                 ${mediaHtml}
                 <div class="post-detail-timestamp">
                     <span>${timeStr}</span>
@@ -1843,6 +1878,13 @@ window.openPostDetail = async function(postId) {
             <div id="comments-${postId}" class="comment-section" style="display:block;"></div>
         `;
 
+        container.querySelectorAll('.detail-image-trigger').forEach((mediaEl) => {
+            const open = () => window.openLightbox?.(mediaEl.dataset.detailImageUrl || '');
+            mediaEl.addEventListener('click', open);
+            mediaEl.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+            });
+        });
         comments.loadComments(postId);
 
         if (!isOwnPost) {
