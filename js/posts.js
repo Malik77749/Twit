@@ -15,6 +15,11 @@ import * as cloudinary from './cloudinary.js?v=10';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
+function safeImageSource(value) {
+    const raw = String(value || '').trim();
+    return escapeHtml(/^(https?:\/\/|data:image\/)/i.test(raw) ? raw : DEFAULT_AVATAR);
+}
+
 let auth, database, storage;
 let selectedFiles = []; // Support multiple files
 
@@ -873,12 +878,12 @@ async function renderPost(post, container) {
         if (!followCheck.exists()) {
             container.innerHTML = `
                 <div class="tweet" style="opacity:0.6;cursor:default;">
-                    <img class="tweet-avatar" src="${avatar}" alt="">
+                    <img class="tweet-avatar" src="${safeImageSource(avatar)}" alt="">
                     <div class="tweet-body">
                         <div class="tweet-header">
                             <span class="tweet-name">${escapeHtml(userName)}</span>
                             <span class="protected-lock-icon"><i class="fas fa-lock"></i></span>
-                            <span class="tweet-handle">@${userHandle || escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
+                            <span class="tweet-handle">@${escapeHtml(userHandle || userName).replace(/\s/g, '').toLowerCase()}</span>
                         </div>
                         <div class="tweet-content" style="color:var(--text-secondary);">هذا الحساب خاص. تابعه لرؤية منشوراته.</div>
                     </div>
@@ -930,12 +935,12 @@ async function renderPost(post, container) {
 
     container.innerHTML = `
         <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
-            <img class="tweet-avatar" src="${avatar}" alt="" onclick="event.stopPropagation(); showProfile('${post.userId}')">
+            <img class="tweet-avatar" src="${safeImageSource(avatar)}" alt="" onclick="event.stopPropagation(); showProfile('${post.userId}')">
             <div class="tweet-body">
                 ${pinnedHtml}
                 <div class="tweet-header">
                     <span class="tweet-name" onclick="event.stopPropagation(); showProfile('${post.userId}')">${escapeHtml(userName)}</span>${protectedBadge}
-                    <span class="tweet-handle">@${userHandle || escapeHtml(userName).replace(/\s/g, '').toLowerCase()}</span>
+                    <span class="tweet-handle">@${escapeHtml(userHandle || userName).replace(/\s/g, '').toLowerCase()}</span>
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(post.timestamp)}</span>
                     ${editedHtml}
@@ -1014,11 +1019,11 @@ async function renderRetweet(retweet, originalPost, container) {
 
     container.innerHTML = `
         <div class="tweet" onclick="openPostDetail('${postId}')" style="cursor:pointer;">
-            <img class="tweet-avatar" src="${retweetUser.profilePicture || DEFAULT_AVATAR}" alt="" onclick="event.stopPropagation(); showProfile('${retweet.userId}')">
+            <img class="tweet-avatar" src="${safeImageSource(retweetUser.profilePicture)}" alt="" onclick="event.stopPropagation(); showProfile('${retweet.userId}')">
             <div class="tweet-body">
                 <div class="tweet-header">
                     <span class="tweet-name" onclick="event.stopPropagation(); showProfile('${retweet.userId}')">${escapeHtml(retweetUser.name || 'مستخدم')}</span>
-                    <span class="tweet-handle">@${escapeHtml(retweetUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
+                    <span class="tweet-handle">@${escapeHtml(retweetUser.handle || retweetUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
                     <span class="tweet-dot">·</span>
                     <span class="tweet-time">${formatTime(retweet.timestamp)}</span>
                 </div>
@@ -1027,9 +1032,9 @@ async function renderRetweet(retweet, originalPost, container) {
                 </div>
                 <div style="border:1px solid var(--border-color);border-radius:16px;padding:12px;" onclick="event.stopPropagation();">
                     <div class="tweet-header">
-                        <img class="tweet-avatar" src="${originalUser.profilePicture || DEFAULT_AVATAR}" style="width:32px;height:32px;" alt="" onclick="showProfile('${originalPost.userId}')">
+                        <img class="tweet-avatar" src="${safeImageSource(originalUser.profilePicture)}" style="width:32px;height:32px;" alt="" onclick="showProfile('${originalPost.userId}')">
                         <span class="tweet-name" onclick="showProfile('${originalPost.userId}')">${escapeHtml(originalUser.name || 'مستخدم')}</span>
-                        <span class="tweet-handle">@${escapeHtml(originalUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
+                        <span class="tweet-handle">@${escapeHtml(originalUser.handle || originalUser.name || '').replace(/\s/g, '').toLowerCase()}</span>
                         <span class="tweet-dot">·</span>
                         <span class="tweet-time">${formatTime(originalPost.timestamp)}</span>
                     </div>

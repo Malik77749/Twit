@@ -10,6 +10,16 @@ import * as imageCdn from './image-cdn.js?v=3';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
+function safeImageUrl(value) {
+    const raw = String(value || '').trim();
+    return /^(https?:\/\/|data:image\/)/i.test(raw) ? raw : DEFAULT_AVATAR;
+}
+
+function isSafeRemoteImageUrl(value) {
+    const raw = String(value || '').trim();
+    return /^(https:\/\/|http:\/\/|data:image\/)/i.test(raw);
+}
+
 let auth, database, storage;
 let currentProfileUserId = null;
 let pendingCroppedImages = { avatar: null, banner: null };
@@ -257,23 +267,29 @@ async function saveProfile() {
             try {
                 const uploadedAvatar = await uploadCroppedImage(pendingCroppedImages.avatar, 'avatar');
                 if (uploadedAvatar) updates.profilePicture = uploadedAvatar;
-                else throw new Error('STORAGE_UNAVAILABLE');
+                else throw new Error('CLOUDINARY_UNAVAILABLE');
             } catch (uploadError) {
                 pendingCroppedImages.avatar = null;
                 showToast('تم حفظ بيانات الملف، لكن تعذر رفع الصورة إلى Cloudinary');
             }
-        } else if (picUrl) { new URL(picUrl); updates.profilePicture = picUrl; }
+        } else if (picUrl) {
+            if (!isSafeRemoteImageUrl(picUrl)) throw new Error('INVALID_PROFILE_IMAGE_URL');
+            updates.profilePicture = picUrl;
+        }
 
         if (pendingCroppedImages.banner) {
             try {
                 const uploadedBanner = await uploadCroppedImage(pendingCroppedImages.banner, 'banner');
                 if (uploadedBanner) updates.banner = uploadedBanner;
-                else throw new Error('STORAGE_UNAVAILABLE');
+                else throw new Error('CLOUDINARY_UNAVAILABLE');
             } catch (uploadError) {
                 pendingCroppedImages.banner = null;
                 showToast('تم حفظ بيانات الملف، لكن تعذر رفع صورة الغلاف إلى Cloudinary');
             }
-        } else if (bannerUrl) { new URL(bannerUrl); updates.banner = bannerUrl; }
+        } else if (bannerUrl) {
+            if (!isSafeRemoteImageUrl(bannerUrl)) throw new Error('INVALID_PROFILE_IMAGE_URL');
+            updates.banner = bannerUrl;
+        }
 
         await update(ref(database, 'users/' + auth.currentUser.uid), updates);
 
@@ -667,7 +683,7 @@ async function showFollowersList(userId) {
             el.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-color);cursor:pointer;';
             el.onclick = () => showProfile(fid);
             el.innerHTML = `
-                <img src="${userData.profilePicture || DEFAULT_AVATAR}" style="width:40px;height:40px;border-radius:50%;" alt="">
+                <img src="${escapeHtml(safeImageUrl(userData.profilePicture))}" style="width:40px;height:40px;border-radius:50%;" alt="">
                 <div style="flex:1;">
                     <div style="font-weight:700;font-size:15px;">${escapeHtml(userData.name)}</div>
                     <div style="color:var(--text-secondary);font-size:13px;">@${escapeHtml(userData.name).replace(/\s/g, '').toLowerCase()}</div>
@@ -718,7 +734,7 @@ async function showFollowingList(userId) {
             el.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-color);cursor:pointer;';
             el.onclick = () => showProfile(fid);
             el.innerHTML = `
-                <img src="${userData.profilePicture || DEFAULT_AVATAR}" style="width:40px;height:40px;border-radius:50%;" alt="">
+                <img src="${escapeHtml(safeImageUrl(userData.profilePicture))}" style="width:40px;height:40px;border-radius:50%;" alt="">
                 <div style="flex:1;">
                     <div style="font-weight:700;font-size:15px;">${escapeHtml(userData.name)}</div>
                     <div style="color:var(--text-secondary);font-size:13px;">@${escapeHtml(userData.name).replace(/\s/g, '').toLowerCase()}</div>
