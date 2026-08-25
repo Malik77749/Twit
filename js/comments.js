@@ -71,8 +71,12 @@ async function toggleCommentLike(postId, commentId, event) {
             button.classList.toggle('active', liked);
             const countEl = button.querySelector('.comment-like-count');
             if (countEl) countEl.textContent = formatSmartCount(count);
-            const icon = button.querySelector('i');
-            if (icon) icon.className = `${liked ? 'fas' : 'far'} fa-heart`;
+            const icon = button.querySelector('.comment-ui-icon');
+            if (icon) {
+                icon.classList.toggle('is-filled', liked);
+                if (liked) icon.setAttribute('fill', 'currentColor');
+                else icon.removeAttribute('fill');
+            }
         });
         return liked;
     } catch (error) {
@@ -389,6 +393,7 @@ function loadComments(postId) {
         const viewerLikes = viewerLikesSnapshot?.exists() ? viewerLikesSnapshot.val() || {} : {};
         const isDetailSection = Boolean(commentSection.closest('#post-detail-view'));
         const composerHtml = isDetailSection ? '' : `<div class="comment-input-row"><img src="${viewerAvatar}" alt=""><input type="text" id="comment-input-${postId}" placeholder="أضف ردًا إلى المحادثة..." onkeydown="if(event.key==='Enter')addComment('${postId}',null,event)"><button type="button" onclick="addComment('${postId}',null,event)" aria-label="إرسال الرد">إرسال</button></div>`;
+        const inlineReplyHtml = isDetailSection ? '' : `<div class="comment-reply-input" id="comment-reply-${postId}-__COMMENT_ID__" hidden><input type="text" id="comment-input-${postId}-__COMMENT_ID__" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')addComment('${postId}','__COMMENT_ID__',event)"><button type="button" class="follow-btn" onclick="addComment('${postId}','__COMMENT_ID__',event)">إرسال</button></div>`;
 
         // Keep the card and detail counters synchronized with the live comments snapshot.
         updateCommentCounters(postId, commentCount);
@@ -421,10 +426,7 @@ function loadComments(postId) {
                         <div class="comment-meta"><span class="name">${escapeHtml(name)}</span><span class="time">${formatCommentTime(comment.timestamp)}</span></div>
                         <div class="comment-text">${escapeHtml(comment.content)}${comment.edited ? ' <span class="comment-edited">(معدّل)</span>' : ''}</div>
                         <div class="comment-actions comment-engagement-bar"><button type="button" class="comment-engagement-btn comment-reply-btn" onclick="showCommentReplyInput('${postId}','${safeCommentId}',event)" aria-label="الرد على التعليق">${commentIcon('reply')}<span class="comment-reply-count">${formatSmartCount(replies.length)}</span></button><button type="button" class="comment-engagement-btn comment-like-btn ${viewerLikes?.[comment.id]?.[viewerId] ? 'active' : ''}" data-comment-like-id="${safeCommentId}" onclick="toggleCommentLike('${postId}','${safeCommentId}',event)" aria-label="الإعجاب بالتعليق">${commentIcon('heart', Boolean(viewerLikes?.[comment.id]?.[viewerId]))}<span class="comment-like-count">${formatSmartCount(comment.likeCount || 0)}</span></button><button type="button" class="comment-engagement-btn" onclick="copyCommentLink('${postId}','${safeCommentId}',event)" aria-label="مشاركة التعليق">${commentIcon('share')}</button><button type="button" class="comment-more-btn" onclick="openCommentOptions('${postId}','${safeCommentId}','${escapeHtml(String(comment.userId || ''))}',${canModerate},event)" aria-label="خيارات التعليق">${commentIcon('more')}</button></div>
-                        <div class="comment-reply-input" id="comment-reply-${postId}-${safeCommentId}" hidden>
-                            <input type="text" id="comment-input-${postId}-${safeCommentId}" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')addComment('${postId}','${safeCommentId}',event)">
-                            <button type="button" class="follow-btn" onclick="addComment('${postId}','${safeCommentId}',event)">إرسال</button>
-                        </div>
+                        ${(inlineReplyHtml || '').replaceAll('__COMMENT_ID__', safeCommentId)}
                     </div>
                 </article>
             `;
