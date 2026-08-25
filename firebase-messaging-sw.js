@@ -19,14 +19,15 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage(function(payload) {
     console.log('[SW] Background message:', payload);
 
-    const { title, body, icon, click_action } = payload.notification || payload.data || {};
+    const { title, body, icon, click_action, link } = payload.notification || payload.data || {};
+    const actionUrl = click_action || link || payload.data?.link || '/';
 
     self.registration.showNotification(title || 'ميمر Mimer', {
         body: body || 'لديك إشعار جديد',
         icon: icon || './assets/mimer-icon-original.png',
         badge: './assets/mimer-icon-original.png',
         tag: payload.data?.tag || 'mimer-notification',
-        data: { url: click_action || '/' },
+        data: { url: actionUrl },
         vibrate: [200, 100, 200],
         actions: [
             { action: 'open', title: 'فتح' },

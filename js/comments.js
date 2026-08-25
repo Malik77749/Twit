@@ -26,6 +26,36 @@ function init(authInstance, databaseInstance) {
     database = databaseInstance;
 }
 
+async function incrementCommentCount(postId) {
+    const counterRef = ref(database, `posts/${postId}/commentCount`);
+    let lastError = null;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+        try {
+            await runTransaction(counterRef, current => Math.max(0, Number(current) || 0) + 1);
+            return true;
+        } catch (error) {
+            lastError = error;
+            if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1)));
+        }
+    }
+    throw lastError || new Error('comment counter update failed');
+}
+
+async function decrementCommentCount(postId, amount = 1) {
+    const counterRef = ref(database, `posts/${postId}/commentCount`);
+    let lastError = null;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+        try {
+            await runTransaction(counterRef, current => Math.max(0, (Number(current) || 0) - amount));
+            return true;
+        } catch (error) {
+            lastError = error;
+            if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1)));
+        }
+    }
+    throw lastError || new Error('comment counter update failed');
+}
+
 async function addComment(postId, parentCommentId, event) {
     event?.preventDefault();
     event?.stopPropagation();
@@ -72,7 +102,7 @@ async function addComment(postId, parentCommentId, event) {
             timestamp: new Date().toISOString(),
             parentCommentId: parentCommentId
         });
-        void runTransaction(ref(database, `posts/${postId}/commentCount`), current => Number(current || 0) + 1).catch(() => {});
+        void incrementCommentCount(postId).catch(error => console.warn('Comment count update delayed:', error));
 
         input.value = '';
 
@@ -92,7 +122,7 @@ async function addComment(postId, parentCommentId, event) {
                 const actorData = userData || await getUserData(database, userId);
                 const name = actorData.name || await getUserName(database, userId);
                 const text = parentOwnerId ? `رد ${name} على تعليقك` : `رد ${name} على منشورك`;
-                void addNotification(database, targetUserId, text, postId, { actorId: userId, actorName: name, actorAvatar: actorData.profilePicture || DEFAULT_AVATAR, type: 'mentions' });
+                void addNotification(database, targetUserId, text, postId, { actorId: userId, actorName: name, actorAvatar: actorData.profilePicture || DEFAULT_AVATAR, type: parentCommentId ? 'replies' : 'comments' });
             }
         }).catch(() => {});
     } catch (error) {
@@ -122,7 +152,7 @@ async function deleteComment(postId, commentId, event) {
         }
         const idsToDelete = [commentId, ...Object.entries(allComments).filter(([, value]) => value?.parentCommentId === commentId).map(([id]) => id)];
         await Promise.all(idsToDelete.map(id => remove(ref(database, `comments/${postId}/${id}`))));
-        await runTransaction(ref(database, `posts/${postId}/commentCount`), current => Math.max(0, (Number(current) || 0) - idsToDelete.length));
+        await decrementCommentCount(postId, idsToDelete.length);
         window.showToast?.('تم حذف التعليق');
         return true;
     } catch (error) {

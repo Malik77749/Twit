@@ -38,7 +38,7 @@ function inferIcon(type) {
     if (type === 'likes') return '❤️';
     if (type === 'retweets') return '🔄';
     if (type === 'follows') return '👤';
-    if (type === 'mentions') return '💬';
+    if (type === 'mentions' || type === 'comments' || type === 'replies') return '💬';
     return '🔔';
 }
 
@@ -80,8 +80,10 @@ function groupNotifications(notifications) {
                     summary = `${names[0] || 'أحدهم'}${names[1] ? ' و' + names[1] : ''}${group.notifications.length > 2 ? ' و' + (group.notifications.length - 2) + ' آخرون' : ''} أعادوا نشر منشورك`;
                 } else if (group.type === 'follows') {
                     summary = `${names[0] || 'أحدهم'}${names[1] ? ' و' + names[1] : ''}${group.notifications.length > 2 ? ' و' + (group.notifications.length - 2) + ' آخرون' : ''} بدؤوا بمتابعتك`;
-                } else if (group.type === 'mentions') {
-                    summary = `${names[0] || 'أحدهم'}${names[1] ? ' و' + names[1] : ''}${group.notifications.length > 2 ? ' و' + (group.notifications.length - 2) + ' آخرون' : ''} ذكروك أو ردوا عليك`;
+                } else if (['mentions', 'comments', 'replies'].includes(group.type)) {
+                    summary = group.type === 'replies'
+                        ? `${names[0] || 'أحدهم'}${names[1] ? ' و' + names[1] : ''}${group.notifications.length > 2 ? ' و' + (group.notifications.length - 2) + ' آخرون' : ''} ردوا على تعليقك`
+                        : `${names[0] || 'أحدهم'}${names[1] ? ' و' + names[1] : ''}${group.notifications.length > 2 ? ' و' + (group.notifications.length - 2) + ' آخرون' : ''} علقوا على منشورك`;
                 }
             }
 
@@ -95,7 +97,7 @@ function groupNotifications(notifications) {
 function filterNotifications(grouped) {
     return grouped.filter(group => {
         const type = group.type;
-        if (currentNotificationsTab === 'mentions' && type !== 'mentions') return false;
+        if (currentNotificationsTab === 'mentions' && !['mentions', 'comments', 'replies'].includes(type)) return false;
         if (currentNotificationsFilter !== 'all' && type !== currentNotificationsFilter) return false;
         return true;
     });

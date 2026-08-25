@@ -7,7 +7,11 @@ let database = null;
 let currentToken = null;
 let onMessageCallback = null;
 
-const VAPID_KEY = 'BKh4bKlE5N渼1k2l3m4n5o6p7q8r9s0t'; // Replace with your VAPID key from Firebase Console
+function tokenKey(token) {
+    return btoa(token).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+const VAPID_KEY = 'BDDXVuB5y0zYCibkdYEeebK4N-2EyLcUaemwwXAyrlfSVncJ6sMjweapPTNKtBOz61s0mowMPKDS34m3l_mZvl0';
 
 /**
  * Initialize push notifications
@@ -19,6 +23,7 @@ function init(app, databaseInstance, onNotifCallback) {
     try {
         messaging = getMessaging(app);
         console.log('FCM Messaging initialized');
+        if (onMessageCallback) onForegroundMessage(onMessageCallback);
     } catch (error) {
         console.warn('FCM not supported:', error);
     }
@@ -87,7 +92,7 @@ async function saveToken(userId, token) {
 
     try {
         // Store token with metadata
-        const tokenRef = ref(database, `fcmTokens/${userId}/${btoa(token).replace(/[=]/g, '')}`);
+        const tokenRef = ref(database, `fcmTokens/${userId}/${tokenKey(token)}`);
         await set(tokenRef, {
             token: token,
             platform: getPlatform(),
@@ -106,7 +111,7 @@ async function removeToken(userId) {
     if (!userId || !currentToken) return;
 
     try {
-        const tokenRef = ref(database, `fcmTokens/${userId}/${btoa(currentToken).replace(/[=]/g, '')}`);
+        const tokenRef = ref(database, `fcmTokens/${userId}/${tokenKey(currentToken)}`);
         await remove(tokenRef);
         await deleteToken(messaging);
         currentToken = null;
@@ -126,19 +131,20 @@ function onForegroundMessage(callback) {
 
         // Show browser notification even in foreground
         if (Notification.permission === 'granted') {
-            const { title, body, icon, click_action } = payload.notification || payload.data || {};
+            const { title, body, icon, click_action, link } = payload.notification || payload.data || {};
+            const actionUrl = click_action || link || payload.data?.link || '/';
 
             const notification = new Notification(title || 'ميمر Mimer', {
                 body: body || 'لديك إشعار جديد',
                 icon: icon || './assets/mimer-icon-original.png',
                 tag: payload.data?.tag || 'mimer-notification',
-                data: { url: click_action || '/' }
+                data: { url: actionUrl }
             });
 
             notification.onclick = function() {
                 window.focus();
-                if (click_action) {
-                    window.location.href = click_action;
+                if (actionUrl) {
+                    window.location.href = actionUrl;
                 }
                 notification.close();
             };
