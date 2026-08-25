@@ -55,6 +55,16 @@ function formatDetailCount(value) {
     try { return new Intl.NumberFormat('ar-EG', { notation: 'compact', maximumFractionDigits: 1 }).format(count); }
     catch { return String(count); }
 }
+function formatDetailTime(timestamp) {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
+    const diff = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+    if (diff < 60) return 'الآن';
+    if (diff < 3600) return `${Math.floor(diff / 60)}د`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}س`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}ي`;
+    return date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+}
 
 // Initialize Firebase
 let app, authInstance, database;
@@ -1934,7 +1944,7 @@ window.openPostDetail = async function(postId) {
                             ? `<video class="quoted-post-video" controls playsinline preload="metadata"><source src="${escapeHtml(String(quotedMedia.url))}">متصفحك لا يدعم تشغيل الفيديو.</video>`
                             : `<img src="${escapeHtml(String(quotedMedia.url))}" alt="وسائط المنشور المقتبس" loading="lazy">`
                         : '<div class="quoted-video-placeholder"><span>وسائط غير متاحة</span></div>';
-                    quotedHtml = `<div class="quoted-post-card" onclick="event.stopPropagation(); openPostDetail('${escapeHtml(post.quotedPostId)}')"><div class="quoted-post-meta"><img class="quoted-post-avatar" src="${quotedAvatar}" alt=""><div class="quoted-post-author"><strong>${escapeHtml(quoted.userName || 'مستخدم')}</strong><span>@${quotedHandle}</span></div><span class="quoted-post-time">${formatTime(quoted.timestamp)}</span></div>${quotedText}${quotedMediaHtml ? `<div class="quoted-post-media">${quotedMediaHtml}</div>` : ''}</div>`;
+                    quotedHtml = `<div class="quoted-post-card" onclick="event.stopPropagation(); openPostDetail('${escapeHtml(post.quotedPostId)}')"><div class="quoted-post-meta"><img class="quoted-post-avatar" src="${quotedAvatar}" alt=""><div class="quoted-post-author"><strong>${escapeHtml(quoted.userName || 'مستخدم')}</strong><span>@${quotedHandle}</span></div><span class="quoted-post-time">${formatDetailTime(quoted.timestamp)}</span></div>${quotedText}${quotedMediaHtml ? `<div class="quoted-post-media">${quotedMediaHtml}</div>` : ''}</div>`;
                 }
             } catch (quoteError) {
                 console.warn('Quoted post unavailable:', quoteError?.message || quoteError);
@@ -2007,7 +2017,7 @@ window.openPostDetail = async function(postId) {
         comments.loadComments(postId);
 
         if (!isOwnPost) {
-            void update(ref(database, `posts/${postId}`), { views: (views || 0) + 1 }).catch(() => {});
+            void runTransaction(ref(database, `posts/${postId}/views`), current => Math.max(0, Number(current) || 0) + 1).catch(() => {});
         }
     } catch (error) {
         container.innerHTML = '<div class="empty-state"><p>خطأ في التحميل</p></div>';

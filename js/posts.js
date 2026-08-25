@@ -711,14 +711,10 @@ async function toggleBookmark(postId, event) {
 
 async function incrementViewCount(postId) {
     try {
-        const postRef = ref(database, `posts/${postId}`);
-        const snapshot = await get(postRef);
-        if (snapshot.exists()) {
-            const views = (snapshot.val().views || 0) + 1;
-            await update(postRef, { views });
-        }
+        const postRef = ref(database, `posts/${postId}/views`);
+        await runTransaction(postRef, current => Math.max(0, Number(current) || 0) + 1);
     } catch (error) {
-        // Silent fail
+        // View counters are best-effort and must never block rendering.
     }
 }
 
