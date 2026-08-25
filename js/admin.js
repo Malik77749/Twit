@@ -85,7 +85,9 @@ function getUserStatus(userData) {
 }
 
 function getUserAvatar(userData) {
-    return userData.profilePicture || DEFAULT_AVATAR;
+    const raw = String(userData?.profilePicture || '').trim();
+    const safe = /^(https?:\/\/|data:image\/)/i.test(raw) ? raw : DEFAULT_AVATAR;
+    return escapeHtml(safe);
 }
 
 function getUserName(userData) {
@@ -402,7 +404,7 @@ function renderActivityFeed() {
     allAuditLogs.slice(0, 10).forEach(log => {
         activities.push({
             type: log.action,
-            text: `${log.adminName || 'أدمن'} — ${log.action}: ${log.targetName || log.targetId || ''}`,
+            text: `${escapeHtml(log.adminName || 'أدمن')} — ${escapeHtml(log.action || '')}: ${escapeHtml(log.targetName || log.targetId || '')}`,
             time: log.timestamp,
             icon: getAuditIcon(log.action)
         });
@@ -413,7 +415,7 @@ function renderActivityFeed() {
         const user = allUsers.find(u => u.id === post.userId);
         activities.push({
             type: 'post',
-            text: `${getUserName(user || {})} نشر: ${escapeHtml((post.content || '').substring(0, 50))}`,
+            text: `${escapeHtml(getUserName(user || {}))} نشر: ${escapeHtml((post.content || '').substring(0, 50))}`,
             time: post.timestamp,
             icon: 'post'
         });
@@ -466,7 +468,7 @@ function renderUsersTable() {
     if (currentUsersFilter === 'active') filtered = filtered.filter(u => !u.banStatus || u.banStatus === 'active');
     else if (currentUsersFilter === 'suspended') filtered = filtered.filter(u => u.banStatus === 'suspended');
     else if (currentUsersFilter === 'banned') filtered = filtered.filter(u => u.banStatus === 'banned');
-    else if (currentUsersFilter === 'verified') filtered = filtered.filter(u => u.verified === true);
+    else if (currentUsersFilter === 'verified') filtered = filtered.filter(u => u.verified === true || u.verified === 'blue');
 
     // Apply search
     const search = document.getElementById('users-search')?.value?.toLowerCase() || '';
@@ -547,7 +549,7 @@ window.openUserModal = async (uid) => {
             <img class="user-detail-avatar" src="${getUserAvatar(user)}" alt="">
             <div>
                 <div class="user-detail-name">${escapeHtml(getUserName(user))} ${user.verified ? '<i class="fas fa-check-circle verified-badge"></i>' : ''}</div>
-                <div class="user-detail-handle">${user.email || user.phoneDisplay || ''}</div>
+                <div class="user-detail-handle">${escapeHtml(user.email || user.phoneDisplay || '')}</div>
                 <span class="status-badge ${status}"><span class="dot"></span>${statusLabel}</span>
             </div>
         </div>
@@ -809,6 +811,21 @@ window.openPostModal = (postId) => {
     if (!post) return;
     const user = allUsers.find(u => u.id === post.userId);
 
+    const postMediaItems = Array.isArray(post.media) && post.media.length
+        ? post.media.filter(item => item?.url)
+        : post.imageUrl
+            ? [{ type: 'image', url: post.imageUrl }]
+            : post.videoUrl
+                ? [{ type: 'embed', url: post.videoUrl }]
+                : [];
+    const postMediaHtml = postMediaItems.map(item => {
+        const url = String(item.url || '').trim();
+        if (!url) return '';
+        const safeUrl = escapeHtml(url);
+        if (item.type === 'video') return `<video controls playsinline preload="metadata" style="max-width:100%;border-radius:16px;margin-bottom:12px;"><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video>`;
+        if (item.type === 'embed') return `<iframe src="${safeUrl}" title="فيديو المنشور" allowfullscreen loading="lazy" style="width:100%;aspect-ratio:16/9;border:0;border-radius:16px;margin-bottom:12px;"></iframe>`;
+        return `<img src="${safeUrl}" style="max-width:100%;max-height:360px;object-fit:contain;border-radius:16px;border:1px solid var(--border-color);margin-bottom:12px;" alt="صورة المنشور" loading="lazy">`;
+    }).join('');
     document.getElementById('post-modal-body').innerHTML = `
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
             <img src="${getUserAvatar(user || {})}" style="width:48px;height:48px;border-radius:50%;" alt="">
@@ -818,7 +835,7 @@ window.openPostModal = (postId) => {
             </div>
         </div>
         <div style="font-size:18px;line-height:1.5;margin-bottom:16px;white-space:pre-wrap;">${escapeHtml(post.content)}</div>
-        ${post.imageUrl ? `<img src="${post.imageUrl}" style="max-width:100%;border-radius:16px;border:1px solid var(--border-color);margin-bottom:16px;" alt="">` : ''}
+        ${postMediaHtml}
         <div style="display:flex;gap:20px;padding:12px 0;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color);margin-bottom:16px;color:var(--text-secondary);">
             <span><i class="fas fa-heart" style="color:var(--like-color);"></i> ${countLikes(post)}</span>
             <span><i class="fas fa-comment"></i> ${post.commentCount || 0}</span>

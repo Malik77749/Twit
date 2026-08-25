@@ -994,12 +994,21 @@ async function renderRetweet(retweet, originalPost, container) {
     const commentCount = originalPost.commentCount || 0;
     const views = originalPost.views || 0;
 
-    let mediaHtml = '';
-    if (originalPost.imageUrl) {
-        mediaHtml = `<div class="tweet-media" onclick="event.stopPropagation(); openLightbox('${originalPost.imageUrl}')" style="cursor:zoom-in;"><img src="${originalPost.imageUrl}" alt="صورة" loading="lazy"></div>`;
-    } else if (originalPost.videoUrl) {
-        mediaHtml = `<div class="tweet-media"><iframe src="${originalPost.videoUrl}" allowfullscreen loading="lazy"></iframe></div>`;
-    }
+    const retweetMediaItems = Array.isArray(originalPost.media) && originalPost.media.length
+        ? originalPost.media
+        : originalPost.imageUrl
+            ? [{ type: 'image', url: originalPost.imageUrl }]
+            : originalPost.videoUrl
+                ? [{ type: 'embed', url: originalPost.videoUrl }]
+                : [];
+    const mediaHtml = retweetMediaItems.map((media, index) => {
+        const url = String(media?.url || '').trim();
+        if (!url) return '';
+        const safeUrl = escapeHtml(url);
+        if (media.type === 'embed') return `<div class="tweet-media-item"><iframe src="${safeUrl}" title="فيديو المنشور" allowfullscreen loading="lazy"></iframe></div>`;
+        if (media.type === 'video') return `<div class="tweet-media-item"><video class="tweet-video" controls preload="metadata" playsinline><source src="${safeUrl}">متصفحك لا يدعم تشغيل الفيديو.</video></div>`;
+        return `<div class="tweet-media-item media-lightbox-trigger" data-media-url="${safeUrl}" role="button" tabindex="0" aria-label="فتح الصورة ${index + 1}">${imageCdn.createResponsiveImage(url, 'صورة المنشور')}</div>`;
+    }).join('');
 
     const viewsHtml = views > 0 ? `<span class="view-count"><i class="far fa-eye"></i> ${formatViews(views)}</span>` : '';
 

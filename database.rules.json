@@ -91,7 +91,7 @@
         "userName": { ".validate": "newData.isString() && newData.val().length <= 80" },
         "userAvatar": { ".validate": "newData.isString()" },
         "userHandle": { ".validate": "newData.isString() && newData.val().length <= 24" },
-        "media": { ".validate": "newData.isString()" },
+        "media": { ".validate": "newData.hasChildren()" },
         "mediaUrls": { ".validate": "newData.val() != null" },
         "replySetting": { ".validate": "newData.isString() && (newData.val() === 'everyone' || newData.val() === 'following')" },
         "hidden": { ".validate": "newData.isBoolean()" },

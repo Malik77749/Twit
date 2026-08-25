@@ -6,6 +6,7 @@ import { showToast } from './utils.js?v=3';
 import { renderPost, renderRetweet } from './posts.js?v=3';
 import { escapeHtml } from './utils.js?v=3';
 import * as cloudinary from './cloudinary.js?v=10';
+import * as imageCdn from './image-cdn.js?v=3';
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -520,7 +521,8 @@ async function loadProfileMedia(userId, container) {
         const mediaPosts = [];
         postsSnap.forEach(child => {
             const post = child.val();
-            if (post.userId === userId && (post.imageUrl || post.videoUrl)) {
+            const hasCloudinaryMedia = Array.isArray(post.media) && post.media.some(item => item?.url);
+            if (post.userId === userId && (hasCloudinaryMedia || post.imageUrl || post.videoUrl)) {
                 mediaPosts.push({ id: child.key, ...post });
             }
         });
@@ -538,20 +540,34 @@ async function loadProfileMedia(userId, container) {
         const grid = document.createElement('div');
         grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:2px;';
         for (const post of mediaPosts) {
-            const mediaUrl = post.imageUrl || '';
+            const mediaItems = Array.isArray(post.media) && post.media.length
+                ? post.media.filter(item => item?.url)
+                : post.imageUrl
+                    ? [{ type: 'image', url: post.imageUrl }]
+                    : post.videoUrl
+                        ? [{ type: 'embed', url: post.videoUrl }]
+                        : [];
+            const firstMedia = mediaItems[0];
+            const mediaUrl = String(firstMedia?.url || '');
             const el = document.createElement('div');
-            el.style.cssText = 'aspect-ratio:1;overflow:hidden;cursor:pointer;';
+            el.style.cssText = 'aspect-ratio:1;overflow:hidden;cursor:pointer;position:relative;background:var(--bg-secondary);';
+            el.setAttribute('aria-label', firstMedia?.type === 'video' || firstMedia?.type === 'embed' ? 'فتح فيديو المنشور' : 'فتح صورة المنشور');
             el.onclick = () => {
-                if (post.imageUrl) {
-                    openLightbox(post.imageUrl);
-                } else {
-                    openPostDetail(post.id);
-                }
+                if (firstMedia?.type === 'image' && mediaUrl) openLightbox(mediaUrl);
+                else openPostDetail(post.id);
             };
-            if (post.imageUrl) {
-                el.innerHTML = `<img src="${post.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+            if (firstMedia?.type === 'image' && mediaUrl) {
+                el.innerHTML = imageCdn.createResponsiveImage(mediaUrl, 'صورة المنشور');
+                const img = el.querySelector('img');
+                if (img) { img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; }
             } else {
-                el.innerHTML = `<div style="width:100%;height:100%;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;"><i class="fas fa-play" style="font-size:32px;color:var(--text-secondary);"></i></div>`;
+                el.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><i class="fas fa-play" style="font-size:32px;color:var(--text-secondary);"></i></div>`;
+            }
+            if (mediaItems.length > 1) {
+                const count = document.createElement('span');
+                count.textContent = `+${mediaItems.length - 1}`;
+                count.style.cssText = 'position:absolute;top:8px;left:8px;padding:3px 7px;border-radius:999px;background:rgba(0,0,0,.7);color:#fff;font-size:12px;font-weight:700;';
+                el.appendChild(count);
             }
             grid.appendChild(el);
         }
