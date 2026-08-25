@@ -632,6 +632,7 @@ window.unpinPost = posts.unpinPost;
 
 window.addComment = comments.addComment;
 window.toggleComments = comments.toggleComments;
+window.showCommentReplyInput = comments.showCommentReplyInput;
 
 window.showProfile = profile.showProfile;
 window.updateProfilePicture = profile.updateProfilePicture;

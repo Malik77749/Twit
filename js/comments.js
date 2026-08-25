@@ -123,7 +123,7 @@ function loadComments(postId) {
             const avatar = comment.userAvatar || DEFAULT_AVATAR;
 
             commentsHtml += `
-                <div class="comment">
+                <div class="comment" data-comment-id="${escapeHtml(comment.id)}">
                     <img src="${avatar}" alt="">
                     <div class="comment-body">
                         <div class="comment-meta">
@@ -131,6 +131,11 @@ function loadComments(postId) {
                             <span class="time">${formatCommentTime(comment.timestamp)}</span>
                         </div>
                         <div class="comment-text">${escapeHtml(comment.content)}</div>
+                        <div class="comment-actions"><button type="button" class="comment-reply-btn" onclick="showCommentReplyInput('${postId}','${comment.id}',event)">رد</button></div>
+                        <div class="comment-reply-input" id="comment-reply-${postId}-${comment.id}" hidden>
+                            <input type="text" id="comment-input-${postId}-${comment.id}" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')addComment('${postId}','${comment.id}',event)">
+                            <button type="button" class="follow-btn" onclick="addComment('${postId}','${comment.id}',event)">إرسال</button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -142,7 +147,7 @@ function loadComments(postId) {
                 const replyAvatar = reply.userAvatar || DEFAULT_AVATAR;
 
                 commentsHtml += `
-                    <div class="comment reply">
+                    <div class="comment reply" data-comment-id="${escapeHtml(reply.id)}">
                         <img src="${replyAvatar}" alt="">
                         <div class="comment-body">
                             <div class="comment-meta">
@@ -170,6 +175,17 @@ function formatCommentTime(timestamp) {
     return `${Math.floor(diff / 86400)}ي`;
 }
 
+function showCommentReplyInput(postId, commentId, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    document.querySelectorAll(`#comments-${postId} .comment-reply-input`).forEach(input => { input.hidden = true; });
+    const replyBox = document.getElementById(`comment-reply-${postId}-${commentId}`);
+    if (replyBox) {
+        replyBox.hidden = false;
+        replyBox.querySelector('input')?.focus();
+    }
+}
+
 function toggleComments(postId, event) {
     event?.preventDefault();
     event?.stopPropagation();
@@ -181,4 +197,4 @@ function toggleComments(postId, event) {
     }
 }
 
-export { init, addComment, loadComments, toggleComments };
+export { init, addComment, loadComments, toggleComments, showCommentReplyInput };

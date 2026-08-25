@@ -832,6 +832,14 @@ body { min-width: 0; }
   .help-center-footer { align-items:stretch; flex-direction:column; padding-inline:16px; }
   .help-center-footer .follow-btn { width:100%; }
 }
+/* Threaded comment replies */
+.comment-actions { display:flex; align-items:center; gap:8px; margin-top:7px; }
+.comment-reply-btn { min-height:30px; padding:3px 9px; border:0; border-radius:999px; background:transparent; color:var(--text-muted); font-size:12px; font-weight:700; }
+.comment-reply-btn:hover { color:var(--accent); background:var(--accent-soft); }
+.comment-reply-input { display:flex; align-items:center; gap:7px; margin-top:8px; }
+.comment-reply-input[hidden] { display:none; }
+.comment-reply-input input { flex:1; min-width:0; height:36px; padding-inline:10px; border:1px solid var(--border-color); border-radius:999px; background:var(--bg-input); color:var(--text-primary); }
+.comment-reply-input .follow-btn { min-height:34px; }
 /* Direct-message media and emoji tools */
 .dm-input-bar { display:flex; align-items:center; gap:7px; padding:10px 12px; border-top:1px solid var(--border-color); background:var(--surface); }
 .dm-input-bar input[type="text"] { flex:1; min-width:0; height:42px; padding:0 12px; border:1px solid var(--border-color); border-radius:999px; background:var(--bg-input); color:var(--text-primary); }
