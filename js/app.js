@@ -1998,11 +1998,6 @@ window.openPostDetail = async function(postId) {
                         ${detailIcon('share')}
                     </button>
                 </div>
-                <div class="post-detail-comment-input">
-                    <img src="${safeAvatar}" alt="">
-                    <input type="text" id="detail-comment-input-${safePostId}" placeholder="أضف ردًا إلى المحادثة..." onkeydown="if(event.key==='Enter')addComment('${safePostId}',null,event)">
-                    <button type="button" onclick="addComment('${safePostId}', null, event)">رد</button>
-                </div>
             </article>
             <div id="comments-${safePostId}" class="comment-section" style="display:block;"></div>
         `;
