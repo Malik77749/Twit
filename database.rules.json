@@ -96,6 +96,8 @@
         "media": { ".validate": "newData.hasChildren()" },
         "mediaUrls": { ".validate": "newData.val() != null" },
         "replySetting": { ".validate": "newData.isString() && (newData.val() === 'everyone' || newData.val() === 'following')" },
+        "location": { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "communityId": { ".validate": "newData.isString() && newData.val().length <= 80" },
         "hidden": { ".validate": "newData.isBoolean()" },
         "pinned": { ".validate": "newData.isBoolean()" },
         "$other": { ".validate": false }
@@ -331,6 +333,37 @@
         "$msgId": {
           ".write": "auth != null && root.child('conversations').child($convId).child('participants').hasChild(auth.uid) && root.child('conversations').child($convId).child('status').val() !== 'rejected' && root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('accountStatus').val() !== 'banned' && root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('accountStatus').val() !== 'suspended' && !root.child('blocks').child(auth.uid).child(root.child('conversations').child($convId).child('recipientId').val()).exists() && !root.child('blocks').child(root.child('conversations').child($convId).child('recipientId').val()).child(auth.uid).exists() && (root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('messagePrivacy').val() === null || root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('messagePrivacy').val() === 'everyone' || (root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('messagePrivacy').val() === 'following' && root.child('followers').child(root.child('conversations').child($convId).child('recipientId').val()).child(auth.uid).exists()) || (root.child('users').child(root.child('conversations').child($convId).child('recipientId').val()).child('messagePrivacy').val() === 'mutual' && root.child('followers').child(root.child('conversations').child($convId).child('recipientId').val()).child(auth.uid).exists() && root.child('followers').child(auth.uid).child(root.child('conversations').child($convId).child('recipientId').val()).exists())) && ((!data.exists() && newData.child('senderId').val() === auth.uid && (root.child('conversations').child($convId).child('status').val() === 'accepted' || (root.child('conversations').child($convId).child('status').val() === 'pending' && root.child('conversations').child($convId).child('requesterId').val() === auth.uid))) || (data.exists() && data.child('senderId').val() === auth.uid) || (data.exists() && data.child('senderId').val() !== auth.uid && newData.child('read').val() === true))",
           ".validate": "newData.hasChildren(['senderId','text','timestamp','read']) && newData.child('senderId').isString() && newData.child('text').isString() && newData.child('text').val().length <= 1000 && newData.child('timestamp').isString() && newData.child('read').isBoolean()"
+        }
+      }
+    },
+
+    "communities": {
+      ".read": "auth != null",
+      "$communityId": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('ownerId').val() === auth.uid) || (data.exists() && data.child('ownerId').val() === auth.uid) || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+        ".validate": "newData.hasChildren(['name','ownerId','memberCount','postCount','createdAt']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 80 && newData.child('ownerId').isString() && newData.child('memberCount').isNumber() && newData.child('postCount').isNumber() && newData.child('createdAt').isString()"
+      }
+    },
+
+    "communityMembers": {
+      "$communityId": {
+        ".read": "auth != null",
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null && (auth.uid === $uid || root.child('communities').child($communityId).child('ownerId').val() === auth.uid || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+          ".validate": "newData.hasChildren(['role','joinedAt']) && newData.child('role').isString() && newData.child('joinedAt').isString()"
+        }
+      }
+    },
+
+    "communityPosts": {
+      "$communityId": {
+        ".read": "auth != null",
+        "$postId": {
+          ".read": "auth != null",
+          ".write": "auth != null && (root.child('communityMembers').child($communityId).child(auth.uid).exists() && ((!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid)) || root.child('communities').child($communityId).child('ownerId').val() === auth.uid || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+          ".validate": "newData.hasChildren(['timestamp','authorId']) && newData.child('timestamp').isString() && newData.child('authorId').isString()"
         }
       }
     },
