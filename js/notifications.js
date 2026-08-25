@@ -13,6 +13,7 @@ let seenRealtimeNotificationIds = new Set();
 let realtimeSnapshotReady = false;
 let realtimePollTimer = null;
 let realtimePollInFlight = false;
+let realtimeSessionStartedAt = 0;
 
 const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
 
@@ -156,7 +157,9 @@ function processRealtimeNotifications(userId, notifications) {
     }
     const freshNotifications = notifications.filter(notif => !seenRealtimeNotificationIds.has(notif.id));
     notifications.forEach(notif => seenRealtimeNotificationIds.add(notif.id));
+    const sessionFresh = freshNotifications.filter(notif => Date.parse(notif.timestamp || '') >= realtimeSessionStartedAt);
     if (realtimeSnapshotReady) freshNotifications.slice(0, 3).forEach(showRealtimeNotification);
+    else sessionFresh.slice(0, 3).forEach(showRealtimeNotification);
     realtimeSnapshotReady = true;
 }
 
@@ -175,6 +178,7 @@ function updateBadges(unread) {
 
 function loadNotifications() {
     const userId = auth.currentUser?.uid;
+    realtimeSessionStartedAt = Date.now();
     if (!userId) return;
 
     if (notificationsUnsub) notificationsUnsub();
