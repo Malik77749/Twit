@@ -350,8 +350,11 @@ body { min-width: 0; }
 }
 
 /* First-visit Mimer brand experience */
-.mimer-splash { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; overflow: hidden; background: #030711; animation: mimer-splash-in .55s ease both; }
-.mimer-splash.is-leaving { animation: mimer-splash-out .52s cubic-bezier(.7,0,.2,1) both; pointer-events: none; }
+.mimer-splash { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; overflow: hidden; background: #030711; animation: mimer-splash-in .35s ease both, mimer-splash-fallback .35s ease 1.8s forwards; }
+.mimer-splash.is-leaving { animation: mimer-splash-out .35s cubic-bezier(.7,0,.2,1) both; pointer-events: none; }
+.mimer-splash-skip { position: absolute; inset-inline-end: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 1; border: 1px solid rgba(191,219,254,.38); border-radius: 999px; padding: 9px 16px; color: #dbeafe; background: rgba(15,23,42,.72); font-weight: 700; cursor: pointer; }
+.mimer-splash-skip:focus-visible { outline: 3px solid rgba(125,211,252,.75); outline-offset: 3px; }
+.mimer-splash-skip:active { transform: scale(.97); }
 .mimer-splash-glow { position: absolute; width: min(86vw, 760px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(13,147,255,.23), rgba(13,93,255,.08) 36%, transparent 68%); filter: blur(22px); }
 .mimer-splash-content { position: relative; display: grid; justify-items: center; width: min(88vw, 560px); text-align: center; }
 .mimer-splash-logo { display: block; width: min(82vw, 460px); height: auto; filter: drop-shadow(0 24px 46px rgba(15,105,255,.22)); animation: mimer-logo-rise .85s cubic-bezier(.23,1,.32,1) .12s both; }
@@ -360,10 +363,11 @@ body { min-width: 0; }
 .mimer-splash-continue span { display: inline-block; margin-inline-start: 8px; transition: transform .2s ease; }
 .mimer-splash-continue:hover span, .mimer-splash-continue:focus-visible span { transform: translateX(-4px); }
 @keyframes mimer-splash-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mimer-splash-fallback { to { opacity: 0; visibility: hidden; pointer-events: none; } }
 @keyframes mimer-splash-out { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
 @keyframes mimer-logo-rise { from { opacity: 0; transform: translateY(20px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (max-width: 480px) { .mimer-splash-logo { width: min(91vw, 390px); } .mimer-splash-welcome { margin-top: 0; } }
-@media (prefers-reduced-motion: reduce) { .mimer-splash, .mimer-splash.is-leaving, .mimer-splash-logo, .mimer-splash-welcome, .mimer-splash-continue { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .mimer-splash, .mimer-splash.is-leaving, .mimer-splash-logo, .mimer-splash-welcome, .mimer-splash-continue { animation: none; } .mimer-splash-skip { transition: none; } }
 
 /* Keep the complete lockup visible on short and tall screens */
 .mimer-splash { min-height: 100dvh; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }

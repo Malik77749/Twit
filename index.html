@@ -129,7 +129,8 @@
                 splash.classList.add('is-leaving');
                 window.setTimeout(() => splash.remove(), 420);
             };
-            window.setTimeout(closeSplash, 2000);
+                document.getElementById('mimer-splash-skip')?.addEventListener('click', closeSplash);
+                window.setTimeout(closeSplash, 900);
         });
     </script>
 </head>
@@ -170,8 +171,9 @@
     <section id="mimer-splash" class="mimer-splash" aria-label="مرحبًا بك في ميمر">
         <div class="mimer-splash-glow" aria-hidden="true"></div>
         <div class="mimer-splash-content" aria-hidden="true">
-            <img class="mimer-splash-logo" src="assets/mimer-launch-original.jpg" alt="ميمر Mimer">
+            <img class="mimer-splash-logo" src="assets/mimer-launch-original.jpg" alt="ميمر Mimer" fetchpriority="high" decoding="async">
         </div>
+        <button id="mimer-splash-skip" class="mimer-splash-skip" type="button" aria-label="تخطي شاشة البداية">تخطي</button>
     </section>
 
     <!-- Loading Overlay -->
