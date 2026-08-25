@@ -95,6 +95,10 @@ button, .nav-item, .tweet, .sidebar-profile { transition: background .2s ease, b
 .google-signup-only p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
 .google-signup-only .auth-btn-google { width: 100%; min-height: 50px; justify-content: center; }
 .google-signup-note { color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+/* Google is the only public signup path; legacy forms stay unavailable even if old JS runs. */
+#signup-section > .auth-tabs,
+#signup-section #signup-phone-form,
+#signup-section #signup-email-form { display: none !important; }
 
 .auth-box input, .auth-box select { min-height: 48px; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(15,23,42,.9); }
 .auth-box input:focus, .auth-box select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
