@@ -396,6 +396,12 @@ async function loadProfileTab(userId, tabType) {
     }
 }
 
+function renderProfilePostFallback(item, container) {
+    const userName = item.userName || 'مستخدم';
+    const handle = item.userHandle || userName.replace(/\s/g, '').toLowerCase();
+    container.innerHTML = `<article class="tweet profile-post-fallback" data-post-id="${escapeHtml(item.id || '')}" onclick="window.openPostDetail?.('${escapeHtml(item.id || '')}')"><div class="tweet-body"><div class="tweet-header"><strong class="tweet-name">${escapeHtml(userName)}</strong><span class="tweet-handle">@${escapeHtml(handle)}</span><span class="tweet-time">${escapeHtml(item.timestamp || '')}</span></div>${item.content ? `<div class="tweet-content">${escapeHtml(item.content)}</div>` : ''}<div class="profile-fallback-note">عرض المنشور</div></div></article>`;
+}
+
 async function loadProfilePosts(userId) {
     const container = document.getElementById('profile-posts');
     container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
@@ -458,18 +464,29 @@ async function loadProfilePosts(userId) {
             el.setAttribute('data-post-id', item.id);
             container.appendChild(el);
             if (item.type === 'post') {
-                await renderPost(item, el);
+                try {
+                    await renderPost(item, el);
+                } catch (renderError) {
+                    console.error('Profile post render error:', renderError);
+                    renderProfilePostFallback(item, el);
+                }
             } else {
-                const snap = await get(ref(database, 'posts/' + item.originalPostId));
-                if (snap.exists()) {
-                    await renderRetweet(item, { id: snap.key, ...snap.val() }, el);
+                try {
+                    const snap = await get(ref(database, 'posts/' + item.originalPostId));
+                    if (snap.exists()) {
+                        await renderRetweet(item, { id: snap.key, ...snap.val() }, el);
+                    }
+                } catch (renderError) {
+                    console.error('Profile retweet render error:', renderError);
+                    renderProfilePostFallback(item, el);
                 }
             }
         }
 
         hideLoading();
     } catch (error) {
-        container.innerHTML = '<div class="empty-state"><p>خطأ</p></div>';
+        console.error('Profile posts load error:', error);
+        renderProfileError(container, 'تعذر تحميل منشورات الحساب');
         hideLoading();
     }
 }
@@ -528,7 +545,8 @@ async function loadProfileReplies(userId, container) {
 
         hideLoading();
     } catch (error) {
-        container.innerHTML = '<div class="empty-state"><p>خطأ</p></div>';
+        console.error('Profile tab load error:', error);
+        renderProfileError(container, 'تعذر تحميل هذا القسم');
         hideLoading();
     }
 }
@@ -599,7 +617,8 @@ async function loadProfileMedia(userId, container) {
 
         hideLoading();
     } catch (error) {
-        container.innerHTML = '<div class="empty-state"><p>خطأ</p></div>';
+        console.error('Profile tab load error:', error);
+        renderProfileError(container, 'تعذر تحميل هذا القسم');
         hideLoading();
     }
 }
@@ -639,7 +658,8 @@ async function loadProfileLikes(userId, container) {
 
         hideLoading();
     } catch (error) {
-        container.innerHTML = '<div class="empty-state"><p>خطأ</p></div>';
+        console.error('Profile tab load error:', error);
+        renderProfileError(container, 'تعذر تحميل هذا القسم');
         hideLoading();
     }
 }
