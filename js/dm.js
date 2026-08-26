@@ -87,6 +87,13 @@ async function getOrCreateConversation(otherUserId) {
         });
     }
 
+    // Keep a private per-user index so the conversation list does not need
+    // to read the entire conversations collection, which is denied by RTDB rules.
+    await update(ref(database), {
+        [`users/${currentUserId}/conversationIndex/${conversationId}`]: true,
+        [`users/${otherUserId}/conversationIndex/${conversationId}`]: true
+    });
+
     return conversationId;
 }
 
@@ -206,76 +213,61 @@ function loadConversations(callback) {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
 
-    // Cleanup old listener
-    if (conversationsListener) {
-        conversationsListener();
-    }
+    if (conversationsListener) conversationsListener();
 
-    const convRef = ref(database, 'conversations');
-
-    conversationsListener = onValue(convRef, async (snapshot) => {
-        const conversations = [];
-
-        if (snapshot.exists()) {
-            snapshot.forEach(child => {
-                const conv = child.val();
-                if (conv.participants && conv.participants[userId] && !conv.deletedFor?.[userId]) {
-                    conversations.push({
-                        id: child.key,
-                        ...conv
-                    });
-                }
-            });
+    const indexRef = ref(database, `users/${userId}/conversationIndex`);
+    conversationsListener = onValue(indexRef, async (indexSnapshot) => {
+        const conversationIds = [];
+        if (indexSnapshot.exists()) {
+            indexSnapshot.forEach(child => { if (child.val() === true) conversationIds.push(child.key); });
         }
 
-        // Sort by last message time
+        const snapshots = await Promise.all(conversationIds.map(id => get(ref(database, `conversations/${id}`))));
+        const conversations = snapshots
+            .map((snapshot, index) => snapshot.exists() ? { id: conversationIds[index], ...snapshot.val() } : null)
+            .filter(conv => conv && conv.participants?.[userId] && !conv.deletedFor?.[userId]);
+
         conversations.sort((a, b) => {
             const timeA = a.lastMessageTime ? new Date(a.lastMessageTime) : new Date(a.createdAt);
             const timeB = b.lastMessageTime ? new Date(b.lastMessageTime) : new Date(b.createdAt);
             return timeB - timeA;
         });
 
-        // Get other user info for each conversation
-        const enrichedConversations = [];
-        for (const conv of conversations) {
+        const enrichedConversations = await Promise.all(conversations.map(async (conv) => {
             const unreadCount = conv.unreadCounts?.[userId] || 0;
+            if (conv.isGroup) return {
+                id: conv.id,
+                isGroup: true,
+                groupName: conv.groupName || 'مجموعة',
+                participants: conv.participants,
+                participantInfo: conv.participantInfo,
+                lastMessage: conv.lastMessage || 'لا توجد رسائل',
+                lastMessageTime: conv.lastMessageTime || conv.createdAt,
+                unreadCount,
+                status: conv.status || 'accepted',
+                requestedBy: conv.requestedBy
+            };
 
-            if (conv.isGroup) {
-                // Group conversation
-                enrichedConversations.push({
-                    id: conv.id,
-                    isGroup: true,
-                    groupName: conv.groupName || 'مجموعة',
-                    participants: conv.participants,
-                    participantInfo: conv.participantInfo,
-                    lastMessage: conv.lastMessage || 'لا توجد رسائل',
-                    lastMessageTime: conv.lastMessageTime || conv.createdAt,
-                    unreadCount: unreadCount,
-                    status: conv.status || 'accepted',
-                    requestedBy: conv.requestedBy
-                });
-            } else {
-                // 1-on-1 conversation
-                const otherUserId = Object.keys(conv.participants).find(id => id !== userId);
-                if (!otherUserId) continue;
+            const otherUserId = Object.keys(conv.participants || {}).find(id => id !== userId);
+            if (!otherUserId) return null;
+            const otherUserInfo = conv.participantInfo?.[otherUserId] || await getUserData(database, otherUserId);
+            return {
+                id: conv.id,
+                otherUserId,
+                otherUserName: otherUserInfo.name || 'مستخدم',
+                otherUserAvatar: otherUserInfo.profilePicture || DEFAULT_AVATAR,
+                lastMessage: conv.lastMessage || 'لا توجد رسائل',
+                lastMessageTime: conv.lastMessageTime || conv.createdAt,
+                unreadCount,
+                status: conv.status || 'accepted',
+                requestedBy: conv.requestedBy
+            };
+        }));
 
-                const otherUserInfo = conv.participantInfo?.[otherUserId] || await getUserData(database, otherUserId);
-
-                enrichedConversations.push({
-                    id: conv.id,
-                    otherUserId: otherUserId,
-                    otherUserName: otherUserInfo.name || 'مستخدم',
-                    otherUserAvatar: otherUserInfo.profilePicture || DEFAULT_AVATAR,
-                    lastMessage: conv.lastMessage || 'لا توجد رسائل',
-                    lastMessageTime: conv.lastMessageTime || conv.createdAt,
-                    unreadCount: unreadCount,
-                    status: conv.status || 'accepted',
-                    requestedBy: conv.requestedBy
-                });
-            }
-        }
-
-        callback(enrichedConversations);
+        callback(enrichedConversations.filter(Boolean));
+    }, (error) => {
+        console.error('Load conversations error:', error);
+        callback([]);
     });
 }
 
