@@ -419,6 +419,12 @@ async function postTweet() {
         window.clearComposerDraft?.();
         showToast('تم النشر بنجاح');
         if (postBtn) { postBtn.disabled = false; postBtn.removeAttribute('aria-busy'); delete postBtn.dataset.publishBusy; postBtn.textContent = 'نشر'; }
+        // The composer now lives on its own route. Return to the feed only
+        // after the write and local optimistic render have completed.
+        const createView = document.getElementById('create-post-view');
+        if (createView && getComputedStyle(createView).display !== 'none') {
+            window.setTimeout(() => window.showHome?.(), 120);
+        }
         publishInFlight = false;
         publishRequestId = null;
         // Remove undo timer - post is instant

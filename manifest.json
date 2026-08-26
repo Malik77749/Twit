@@ -1,8 +1,8 @@
 {
     "name": "Mimer — منصة تواصل اجتماعي عربية",
     "short_name": "Mimer",
-    "version": "2.2.8",
-    "version_name": "2.2.8",
+    "version": "2.2.9",
+    "version_name": "2.2.9",
     "description": "ميمر Mimer — منصة تواصل اجتماعي عربية",
     "start_url": "./",
     "display": "standalone",
