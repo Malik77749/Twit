@@ -6,7 +6,7 @@ import { firebaseConfig } from './config.js?v=9';
 import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=11';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=10';
-import * as posts from './posts.js?v=26';
+import * as posts from './posts.js?v=27';
 import * as comments from './comments.js?v=24';
 import * as notifications from './notifications.js?v=18';
 import * as profile from './profile.js?v=18';
@@ -17,7 +17,7 @@ import * as dm from './dm.js?v=9';
 import * as blockMute from './block-mute.js?v=9';
 import * as polls from './polls.js?v=9';
 import * as theme from './theme.js?v=10';
-import * as drafts from './drafts.js?v=10';
+import * as drafts from './drafts.js?v=11';
 import * as threads from './threads.js?v=9';
 import * as analytics from './analytics.js?v=10';
 import * as lists from './lists.js?v=9';
@@ -2196,6 +2196,16 @@ function updateSidebar(userData) {
     document.getElementById('drawer-avatar').src = pic;
     document.getElementById('drawer-followers').textContent = userData?.followers || 0;
     document.getElementById('drawer-following').textContent = userData?.following || 0;
+    const userId = authInstance.currentUser?.uid;
+    if (userId) {
+        Promise.all([get(ref(database, `followers/${userId}`)), get(ref(database, 'followers'))]).then(([followersSnap, allFollowersSnap]) => {
+            const followersCount = followersSnap.exists() ? Object.keys(followersSnap.val() || {}).length : 0;
+            let followingCount = 0;
+            if (allFollowersSnap.exists()) allFollowersSnap.forEach(target => { if (target.hasChild(userId)) followingCount += 1; });
+            document.getElementById('drawer-followers')?.replaceChildren(document.createTextNode(String(followersCount)));
+            document.getElementById('drawer-following')?.replaceChildren(document.createTextNode(String(followingCount)));
+        }).catch(() => {});
+    }
 
     document.getElementById('mobile-avatar').src = pic;
     document.getElementById('composer-avatar').src = pic;

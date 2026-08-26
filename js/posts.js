@@ -225,10 +225,12 @@ async function postTweet() {
         userData = await getUserData(database, userId);
     } catch (error) {
         console.error('Post author lookup failed:', error);
+        const failedDraftId = await window.saveFailedPostDraft?.(content, imageUrl, videoUrl);
+        if (failedDraftId) window.pendingDraftId = failedDraftId;
         if (postBtn) { postBtn.disabled = false; postBtn.removeAttribute('aria-busy'); delete postBtn.dataset.publishBusy; postBtn.textContent = 'نشر'; }
         publishInFlight = false;
         publishRequestId = null;
-        showToast('تعذر تجهيز المنشور، حاول مرة أخرى');
+        showToast(navigator.onLine === false ? 'لا يوجد اتصال؛ حُفظ المنشور كمسودة' : 'تعذر تجهيز المنشور؛ حُفظ المحتوى كمسودة');
         return;
     }
 
