@@ -26,7 +26,7 @@ html { background: var(--bg-primary); }
 body {
   background: radial-gradient(circle at 18% 0%, rgba(56,189,248,.08), transparent 32rem), var(--bg-primary);
   color: var(--text-primary);
-  font-family: "Tajawal", "Noto Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Noto Sans Arabic", "Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
   letter-spacing: -.01em;
   user-select: auto;
 }
@@ -2065,4 +2065,125 @@ body {
   .composer-submit,
   .primary-btn,
   .profile-edit-top-save { transition: none; }
+}
+
+/* Arabic social typography layer — font treatment only; icons and layout remain unchanged. */
+:root {
+  --mimer-font-ar: "Noto Sans Arabic", "Noto Kufi Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+html,
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--mimer-font-ar);
+}
+
+body {
+  font-size: 15.5px;
+  line-height: 1.65;
+  font-weight: 450;
+  font-variant-numeric: proportional-nums;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong,
+.font-bold,
+.font-semibold {
+  font-family: var(--mimer-font-ar);
+  letter-spacing: 0;
+}
+
+h1 { font-size: clamp(26px, 4vw, 34px); line-height: 1.25; font-weight: 850; }
+h2 { font-size: clamp(21px, 3vw, 28px); line-height: 1.3; font-weight: 800; }
+h3 { font-size: clamp(18px, 2.5vw, 22px); line-height: 1.35; font-weight: 800; }
+
+.tweet-name,
+.profile-name,
+.profile-header-info h2,
+.post-detail-author strong,
+.sidebar-profile-info strong,
+.drawer-name,
+.suggested-account-name,
+.who-to-follow-name {
+  font-size: 16px;
+  line-height: 1.45;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.tweet-content,
+.comment-text,
+.post-detail-text,
+.composer-input,
+.comment-input,
+.detail-reply-dock textarea,
+.comment-reply-input textarea {
+  font-size: 16px;
+  line-height: 1.8;
+  font-weight: 450;
+  letter-spacing: 0;
+}
+
+.profile-name { font-size: 22px; line-height: 1.4; font-weight: 850; }
+.profile-handle,
+.tweet-handle,
+.profile-header-info span,
+.tweet-time,
+.profile-join-date,
+.profile-numeric-id { font-size: 13px; line-height: 1.5; font-weight: 400; }
+
+.tweet-action,
+.comment-engagement-btn,
+.comment-more-btn,
+.profile-stat,
+.profile-tab,
+.follow-btn,
+.profile-edit-btn,
+.profile-message-btn,
+.reply-selector-btn,
+.composer-submit,
+.drawer-item,
+.sidebar-item,
+.mobile-nav-item {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.tweet-action span:not(.icon-wrap),
+.comment-engagement-btn span,
+.comment-more-btn span { font-variant-numeric: tabular-nums; }
+
+/* SVG and icon font elements keep their existing icon stylesheet; only surrounding Arabic copy changes. */
+@media (max-width:760px) {
+  body { font-size: 15px; line-height: 1.62; }
+  .tweet-name,
+  .profile-name,
+  .profile-header-info h2 { font-size: 16px; }
+  .profile-name { font-size: 21px; }
+  .tweet-content,
+  .comment-text,
+  .post-detail-text,
+  .composer-input,
+  .comment-input,
+  .detail-reply-dock textarea,
+  .comment-reply-input textarea { font-size: 15.5px; line-height: 1.78; }
+  .tweet-action,
+  .comment-engagement-btn,
+  .comment-more-btn,
+  .profile-stat,
+  .profile-tab,
+  .follow-btn,
+  .profile-edit-btn,
+  .profile-message-btn,
+  .reply-selector-btn,
+  .composer-submit { font-size: 12px; }
 }
