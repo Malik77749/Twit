@@ -1567,3 +1567,15 @@ body { color: var(--text-primary); }
 [data-mimer-theme="dim"] .mobile-header,
 [data-mimer-theme="dim"] .mobile-feed-tabs,
 [data-mimer-theme="dim"] .mobile-bottom-nav { background: #15202b !important; }
+
+/* Inputs stay visually open while focused; accessibility remains through cursor and contrast, not an inner frame. */
+#search-input:focus,
+.search-box input:focus,
+.search-container input:focus,
+.composer-input:focus,
+#postContent:focus,
+.detail-reply-input:focus {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
