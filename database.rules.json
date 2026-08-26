@@ -394,6 +394,16 @@
       }
     },
 
+    "conversationIndex": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$convId": {
+          ".write": "auth != null && root.child('conversations').child($convId).child('participants').hasChild(auth.uid) && root.child('conversations').child($convId).child('participants').hasChild($uid)",
+          ".validate": "newData.isBoolean()"
+        }
+      }
+    },
+
     "messages": {
       "$convId": {
         ".read": "auth != null && root.child('conversations').child($convId).child('participants').hasChild(auth.uid)",

@@ -89,9 +89,10 @@ async function getOrCreateConversation(otherUserId) {
 
     // Keep a private per-user index so the conversation list does not need
     // to read the entire conversations collection, which is denied by RTDB rules.
+    // Rules allow either participant to add the shared conversation to both indexes.
     await update(ref(database), {
-        [`users/${currentUserId}/conversationIndex/${conversationId}`]: true,
-        [`users/${otherUserId}/conversationIndex/${conversationId}`]: true
+        [`conversationIndex/${currentUserId}/${conversationId}`]: true,
+        [`conversationIndex/${otherUserId}/${conversationId}`]: true
     });
 
     return conversationId;
@@ -215,7 +216,7 @@ function loadConversations(callback) {
 
     if (conversationsListener) conversationsListener();
 
-    const indexRef = ref(database, `users/${userId}/conversationIndex`);
+    const indexRef = ref(database, `conversationIndex/${userId}`);
     conversationsListener = onValue(indexRef, async (indexSnapshot) => {
         const conversationIds = [];
         if (indexSnapshot.exists()) {
