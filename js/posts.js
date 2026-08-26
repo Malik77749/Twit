@@ -840,6 +840,8 @@ async function loadPosts() {
         for (const item of allItems) {
             const container = document.createElement('div');
             container.setAttribute('data-post-id', item.id);
+            container.className = 'feed-item-shell';
+            container.innerHTML = `<div class="feed-batch-skeleton" aria-hidden="true"><span class="skeleton-avatar skeleton"></span><span class="feed-batch-skeleton-lines"><i class="skeleton-line short skeleton"></i><i class="skeleton-line long skeleton"></i><i class="skeleton-line medium skeleton"></i></span></div>`;
             fragment.appendChild(container);
             containers.push({ item, container });
         }
@@ -847,10 +849,16 @@ async function loadPosts() {
         postsDiv.innerHTML = '';
         postsDiv.appendChild(fragment);
 
-        // Render all posts
-        for (const { item, container } of containers) {
-            await renderFeedItem(item, container);
-        }
+        // All shells are visible immediately; hydrate them concurrently so the
+        // first page settles as one batch instead of appearing card by card.
+        await Promise.all(containers.map(async ({ item, container }) => {
+            try {
+                await renderFeedItem(item, container);
+            } catch (error) {
+                console.warn('Feed item render skipped:', error?.message || error);
+                container.innerHTML = '<div class="empty-state feed-item-error">تعذر عرض هذا المنشور</div>';
+            }
+        }));
 
         // Initialize infinite scroll with callback
         pagination.initInfiniteScroll('.main-feed', database, loadMorePostsCallback);
@@ -952,15 +960,23 @@ function unsubscribeFeed() {
  */
 async function loadMorePostsCallback(newPosts) {
     const postsDiv = document.getElementById('posts');
-
+    const existing = new Set(Array.from(postsDiv.querySelectorAll('[data-post-id]')).map(el => el.dataset.postId));
+    const fragment = document.createDocumentFragment();
+    const batch = [];
     for (const post of newPosts) {
-        const alreadyRendered = Array.from(postsDiv.querySelectorAll('[data-post-id]')).some(el => el.dataset.postId === post.id);
-        if (alreadyRendered) continue;
+        if (existing.has(post.id)) continue;
         const container = document.createElement('div');
         container.setAttribute('data-post-id', post.id);
-        postsDiv.appendChild(container);
-        await renderPost(post, container);
+        container.className = 'feed-item-shell';
+        container.innerHTML = `<div class="feed-batch-skeleton" aria-hidden="true"><span class="skeleton-avatar skeleton"></span><span class="feed-batch-skeleton-lines"><i class="skeleton-line short skeleton"></i><i class="skeleton-line long skeleton"></i><i class="skeleton-line medium skeleton"></i></span></div>`;
+        fragment.appendChild(container);
+        batch.push({ post, container });
     }
+    postsDiv.appendChild(fragment);
+    await Promise.all(batch.map(async ({ post, container }) => {
+        try { await renderPost(post, container); }
+        catch (error) { console.warn('More feed item render skipped:', error?.message || error); container.innerHTML = '<div class="empty-state feed-item-error">تعذر عرض هذا المنشور</div>'; }
+    }));
 }
 
 async function renderFeedItem(item, container) {
