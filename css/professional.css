@@ -1810,3 +1810,39 @@ body { color: var(--text-primary); }
 .draft-delete { position: static !important; margin-inline-start: auto; }
 [data-mimer-theme="dark"] .mimer-network-status { color: #fef3c7; background: #422006; border-color: rgba(245,158,11,.55); }
 [data-mimer-theme="dim"] .mimer-network-status { color: #fef3c7; background: #3b2f14; border-color: rgba(245,158,11,.45); }
+
+/* Final mobile profile composition: compact cover, anchored avatar, readable identity block. */
+@media (max-width:760px) {
+  #profile-view { width:100%; min-width:0; overflow-x:hidden; background:var(--bg-primary); }
+  #profile-view .profile-header-bar { min-height:52px; height:52px; padding:6px 12px; border-bottom:1px solid var(--border-color); background:var(--bg-primary); }
+  #profile-view .profile-header-info { display:flex; flex-direction:column; justify-content:center; gap:1px; }
+  #profile-view .profile-header-info h2 { margin:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:16px; line-height:1.25; }
+  #profile-view .profile-header-info span { font-size:11px; line-height:1.2; }
+  #profile-view .profile-banner { height:136px; min-height:136px; background-color:var(--surface); background-image:var(--profile-banner-image, none); border:0; border-radius:0; }
+  #profile-view .profile-banner-gradient { height:46px; background:linear-gradient(transparent,rgba(0,0,0,.22)); }
+  #profile-view .profile-avatar-row { height:0; min-height:0; padding:0 16px; margin-top:-44px; align-items:flex-start; justify-content:flex-start; }
+  #profile-view .profile-avatar-target { width:88px; height:88px; }
+  #profile-view .profile-avatar-large { display:block; width:88px; height:88px; border:4px solid var(--bg-primary); box-shadow:0 2px 12px rgba(0,0,0,.28); object-fit:cover; }
+  #profile-view .profile-avatar-edit-trigger { width:30px; height:30px; right:0; bottom:0; border-width:2px; }
+  #profile-view .profile-avatar-edit-trigger i { font-size:13px; }
+  #profile-view .profile-details { padding:56px 16px 0; text-align:start; }
+  #profile-view .profile-name { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:21px; line-height:1.3; font-weight:850; }
+  #profile-view .profile-handle { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; color:var(--text-secondary); font-size:13px; line-height:1.4; }
+  #profile-view .profile-numeric-id { margin-top:7px; color:var(--text-secondary); font-size:11px; }
+  #profile-view .profile-bio { max-width:100%; margin-top:9px !important; font-size:14px !important; line-height:1.65; }
+  #profile-view .profile-join-date { margin-top:10px; font-size:12px; }
+  #profile-view .profile-stats { display:flex; align-items:center; gap:20px; flex-wrap:nowrap; margin-top:13px; }
+  #profile-view .profile-stat { display:inline-flex; align-items:baseline; gap:4px; padding:0; border:0; background:transparent; font-size:13px; white-space:nowrap; }
+  #profile-view .profile-stat strong { font-size:14px; }
+  #profile-view .profile-actions { width:auto; margin:14px 16px 0; }
+  #profile-view .profile-public-actions { display:flex; align-items:center; gap:8px; }
+  #profile-view .profile-public-actions .profile-message-btn,
+  #profile-view .profile-public-actions .profile-follow-btn { min-height:42px; font-size:14px; }
+  #profile-view .profile-edit-btn { width:100%; min-height:42px; padding:8px 16px; border:1px solid var(--border-color); border-radius:999px; color:var(--text-primary); background:transparent; font-size:14px; font-weight:800; }
+  #profile-view .profile-edit-btn:hover { color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+  #profile-view .profile-public-quick-actions { top:calc(52px + 136px - 4px); inset-inline-start:auto; inset-inline-end:14px; gap:7px; }
+  #profile-view .profile-public-share,
+  #profile-view .profile-notification-button { width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,.42); }
+  #profile-view #profile-posts { margin-top:16px; border-top:1px solid var(--border-color); }
+  #profile-view #profile-posts .tweet { padding-inline:12px; }
+}
