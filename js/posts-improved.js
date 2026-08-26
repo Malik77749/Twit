@@ -144,9 +144,8 @@ async function postTweet() {
         return;
     }
 
-    // Character limit (500 chars like X)
-    if (content.length > 500) {
-        showToast(`الحد الأقصى 500 حرف (لديك ${content.length})`);
+    if (content.length > 12000) {
+        showToast(`الحد الأقصى 12000 حرف (لديك ${content.length})`);
         return;
     }
 
@@ -347,8 +346,8 @@ async function editPost(postId, currentContent) {
     const newContent = prompt('تعديل المنشور:', currentContent);
     if (newContent === null || newContent.trim() === currentContent) return;
 
-    if (newContent.length > 500) {
-        showToast(`الحد الأقصى 500 حرف (لديك ${newContent.length})`);
+    if (newContent.length > 12000) {
+        showToast(`الحد الأقصى 12000 حرف (لديك ${newContent.length})`);
         return;
     }
 

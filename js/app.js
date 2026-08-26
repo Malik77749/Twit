@@ -16,7 +16,7 @@ import * as pushNotif from './push-notifications.js?v=12';
 import * as dm from './dm.js?v=9';
 import * as blockMute from './block-mute.js?v=9';
 import * as polls from './polls.js?v=9';
-import * as theme from './theme.js?v=9';
+import * as theme from './theme.js?v=10';
 import * as drafts from './drafts.js?v=9';
 import * as threads from './threads.js?v=9';
 import * as analytics from './analytics.js?v=10';
@@ -2261,7 +2261,7 @@ function setupComposerTextarea() {
         this.style.height = this.scrollHeight + 'px';
 
         const len = this.value.length;
-        const maxLen = 500;
+        const maxLen = 12000;
         const counter = document.getElementById('char-counter');
         const ringFill = document.getElementById('char-ring-fill');
         const countText = document.getElementById('char-count-text');

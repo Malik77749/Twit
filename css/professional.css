@@ -1367,3 +1367,198 @@ body.detail-reply-open #post-detail-view { padding-bottom:calc(88px + env(safe-a
   .comment-engagement-btn .comment-ui-icon, .comment-more-btn .comment-ui-icon { width:20px; height:20px; }
   .detail-reply-tool .comment-ui-icon, .detail-reply-send .comment-ui-icon { width:20px; height:20px; }
 }
+
+/* Mimer editorial visual system: calm surfaces, precise hierarchy, no plastic framing. */
+html,
+body { background: var(--bg-primary) !important; }
+body { color: var(--text-primary); }
+.main-feed,
+.feed-header,
+.mobile-header,
+.mobile-feed-tabs,
+.mobile-bottom-nav,
+.composer,
+.tweet,
+.search-container,
+.search-box,
+.sidebar-card,
+.trends-card,
+.who-to-follow,
+.premium-card,
+.right-panel > section,
+.sidebar-card,
+.trending-card,
+.who-to-follow-card,
+.premium-card,
+.stat-card,
+.news-card,
+.dm-conversation-item,
+.settings-section,
+.profile-stat,
+.community-card,
+.list-card,
+.user-card {
+  background: var(--surface) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border-color: var(--border-color) !important;
+}
+.main-feed { border-radius: 16px; }
+.feed-header,
+.mobile-header,
+.mobile-feed-tabs,
+.mobile-bottom-nav { backdrop-filter: none; }
+.tweet { border-bottom-color: var(--border-color) !important; }
+.tweet:hover { background: var(--bg-hover) !important; }
+.tweet-content { color: var(--text-primary) !important; }
+
+/* Writing surfaces remain open and natural; only the page structure provides separation. */
+.composer-body,
+#home-view .composer-body,
+.post-composer,
+.composer-input,
+#postContent,
+.search-box input,
+.search-container input {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+.composer-body,
+#home-view .composer-body { padding: 0 !important; border-radius: 0 !important; background: transparent !important; }
+.composer-input,
+#postContent {
+  width: 100%;
+  min-height: 52px;
+  max-height: none !important;
+  height: auto;
+  overflow-y: hidden !important;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.75;
+}
+.composer-divider { background: var(--border-color) !important; }
+.search-box,
+.search-container { border-width: 0 !important; }
+.search-box input,
+.search-container input { min-width: 0; max-width: none; overflow: visible; text-overflow: clip; }
+
+/* The detail reply bar has one clean writing line, not a box inside a box. */
+.detail-reply-dock {
+  background: var(--surface) !important;
+  border-top: 1px solid var(--border-color) !important;
+  box-shadow: 0 -4px 16px rgba(0,0,0,.08) !important;
+  backdrop-filter: none !important;
+}
+.detail-reply-row {
+  min-height: 44px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.detail-reply-input {
+  min-height: 38px;
+  max-height: min(30vh, 240px) !important;
+  overflow-y: auto !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.detail-reply-dock:has(.detail-reply-input:focus) { box-shadow: 0 -4px 16px rgba(0,0,0,.10) !important; }
+.composer-submit,
+.detail-reply-send,
+.post-btn-sidebar,
+.post-detail-comment-input button,
+.comment-input-row button { background: var(--accent) !important; background-image: none !important; box-shadow: none !important; }
+
+/* Light means genuinely white and black, not a washed-out gray theme. */
+[data-mimer-theme="light"] body,
+[data-mimer-theme="light"] html { background: #fff !important; color: #000 !important; }
+[data-mimer-theme="light"] .main-feed,
+[data-mimer-theme="light"] .feed-header,
+[data-mimer-theme="light"] .mobile-header,
+[data-mimer-theme="light"] .mobile-feed-tabs,
+[data-mimer-theme="light"] .mobile-bottom-nav,
+[data-mimer-theme="light"] .composer,
+[data-mimer-theme="light"] .tweet,
+[data-mimer-theme="light"] .search-container,
+[data-mimer-theme="light"] .search-box,
+[data-mimer-theme="light"] .sidebar-card,
+[data-mimer-theme="light"] .trends-card,
+[data-mimer-theme="light"] .who-to-follow,
+[data-mimer-theme="light"] .premium-card,
+[data-mimer-theme="light"] .right-panel > section,
+[data-mimer-theme="light"] .trending-card,
+[data-mimer-theme="light"] .who-to-follow-card,
+[data-mimer-theme="light"] .premium-card,
+[data-mimer-theme="light"] .stat-card,
+[data-mimer-theme="light"] .news-card,
+[data-mimer-theme="light"] .dm-conversation-item,
+[data-mimer-theme="light"] .settings-section,
+[data-mimer-theme="light"] .profile-stat,
+[data-mimer-theme="light"] .community-card,
+[data-mimer-theme="light"] .list-card,
+[data-mimer-theme="light"] .user-card,
+[data-mimer-theme="light"] .detail-reply-dock {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: rgba(0,0,0,.14) !important;
+}
+[data-mimer-theme="light"] .tweet-content,
+[data-mimer-theme="light"] .comment-text,
+[data-mimer-theme="light"] .composer-input,
+[data-mimer-theme="light"] #postContent,
+[data-mimer-theme="light"] .search-box input,
+[data-mimer-theme="light"] .search-container input,
+[data-mimer-theme="light"] .detail-reply-input { color: #000 !important; }
+[data-mimer-theme="light"] .tweet-handle,
+[data-mimer-theme="light"] .tweet-time,
+[data-mimer-theme="light"] .trend-category,
+[data-mimer-theme="light"] .trend-count,
+[data-mimer-theme="light"] .empty-state,
+[data-mimer-theme="light"] .no-content,
+[data-mimer-theme="light"] .comment-meta .time,
+[data-mimer-theme="light"] .comment-edited { color: #333 !important; }
+[data-mimer-theme="light"] .auth-box,
+[data-mimer-theme="light"] .auth-box input,
+[data-mimer-theme="light"] .auth-box select,
+[data-mimer-theme="light"] .modal-content,
+[data-mimer-theme="light"] .dropdown-menu,
+[data-mimer-theme="light"] .more-menu,
+[data-mimer-theme="light"] .settings-panel,
+[data-mimer-theme="light"] .comment-options-sheet {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: rgba(0,0,0,.14) !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,.10) !important;
+}
+[data-mimer-theme="light"] .auth-box input,
+[data-mimer-theme="light"] .auth-box select { color: #000 !important; }
+[data-mimer-theme="light"] .nav-item,
+[data-mimer-theme="light"] .mobile-nav-item,
+[data-mimer-theme="light"] .feed-tab,
+[data-mimer-theme="light"] .mobile-feed-tab,
+[data-mimer-theme="light"] .comment-engagement-btn,
+[data-mimer-theme="light"] .comment-more-btn { color: #333 !important; }
+[data-mimer-theme="light"] .nav-item.active,
+[data-mimer-theme="light"] .mobile-nav-item.active,
+[data-mimer-theme="light"] .feed-tab.active,
+[data-mimer-theme="light"] .mobile-feed-tab.active { color: #000 !important; }
+
+/* Dim is a blue-gray reading mode; dark is near-black. Keep the distinction explicit. */
+[data-mimer-theme="dark"] .main-feed,
+[data-mimer-theme="dark"] .composer,
+[data-mimer-theme="dark"] .tweet,
+[data-mimer-theme="dark"] .detail-reply-dock { background: #0b0b0c !important; }
+[data-mimer-theme="dim"] .main-feed,
+[data-mimer-theme="dim"] .composer,
+[data-mimer-theme="dim"] .tweet,
+[data-mimer-theme="dim"] .detail-reply-dock { background: #192734 !important; }
+[data-mimer-theme="dim"] .feed-header,
+[data-mimer-theme="dim"] .mobile-header,
+[data-mimer-theme="dim"] .mobile-feed-tabs,
+[data-mimer-theme="dim"] .mobile-bottom-nav { background: #15202b !important; }

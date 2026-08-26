@@ -179,7 +179,7 @@ function mountDetailReplyDock(postId, avatar) {
     dock.id = 'detail-reply-dock';
     dock.className = 'detail-reply-dock';
     dock.dataset.postId = postId;
-    dock.innerHTML = `<div class="detail-reply-context" hidden><span class="detail-reply-context-text">الرد على التعليق</span><button type="button" class="detail-reply-cancel" aria-label="إلغاء الرد">×</button></div><div class="detail-reply-row"><img class="detail-reply-avatar" src="${escapeHtml(String(avatar || DEFAULT_AVATAR))}" alt=""><button type="button" class="detail-reply-tool" data-tool="expand" aria-label="توسيع مربع الرد">${commentIcon('expand')}</button><textarea class="detail-reply-input" rows="1" maxlength="500" placeholder="أنشر ردك…" aria-label="اكتب ردك"></textarea><button type="button" class="detail-reply-tool detail-reply-gif" data-tool="gif" aria-label="إضافة GIF">GIF</button><button type="button" class="detail-reply-tool" data-tool="media" aria-label="إضافة صورة">${commentIcon('image')}</button><button type="button" class="detail-reply-send" aria-label="إرسال الرد">${commentIcon('send')}</button></div>`;
+    dock.innerHTML = `<div class="detail-reply-context" hidden><span class="detail-reply-context-text">الرد على التعليق</span><button type="button" class="detail-reply-cancel" aria-label="إلغاء الرد">×</button></div><div class="detail-reply-row"><img class="detail-reply-avatar" src="${escapeHtml(String(avatar || DEFAULT_AVATAR))}" alt=""><button type="button" class="detail-reply-tool" data-tool="expand" aria-label="توسيع مربع الرد">${commentIcon('expand')}</button><textarea class="detail-reply-input" rows="1" maxlength="12000" placeholder="أنشر ردك…" aria-label="اكتب ردك"></textarea><button type="button" class="detail-reply-tool detail-reply-gif" data-tool="gif" aria-label="إضافة GIF">GIF</button><button type="button" class="detail-reply-tool" data-tool="media" aria-label="إضافة صورة">${commentIcon('image')}</button><button type="button" class="detail-reply-send" aria-label="إرسال الرد">${commentIcon('send')}</button></div>`;
     host.appendChild(dock);
     document.body.classList.add('detail-reply-open');
     const syncKeyboardOffset = () => {
@@ -240,8 +240,8 @@ async function addComment(postId, parentCommentId, event) {
     }
 
     // Character limit
-    if (text.length > 500) {
-        if (window.showToast) window.showToast('الحد الأقصى 500 حرف');
+    if (text.length > 12000) {
+        if (window.showToast) window.showToast('الحد الأقصى 12000 حرف');
         return;
     }
 
@@ -325,7 +325,7 @@ async function editComment(postId, commentId, event) {
         if (nextText === null) return false;
         const trimmed = nextText.trim();
         if (!trimmed || trimmed === currentText.trim()) return false;
-        if (trimmed.length > 500) { window.showToast?.('الحد الأقصى 500 حرف'); return false; }
+        if (trimmed.length > 12000) { window.showToast?.('الحد الأقصى 12000 حرف'); return false; }
         await update(ref(database, `comments/${postId}/${commentId}`), { content: escapeHtml(trimmed), edited: true, editedAt: new Date().toISOString() });
         loadComments(postId);
         window.showToast?.('تم تعديل التعليق');
