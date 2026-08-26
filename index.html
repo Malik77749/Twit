@@ -96,13 +96,13 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=47">
+    <link rel="stylesheet" href="css/professional.css?v=48">
 
     <!-- PWA Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=35')
+                navigator.serviceWorker.register('./sw.js?v=37')
                     .then(reg => console.log('SW registered'))
                     .catch(err => console.log('SW registration failed'));
             });
@@ -521,7 +521,7 @@
             <!-- ===== CREATE POST VIEW ===== -->
             <div id="create-post-view" style="display:none;">
                 <div class="create-post-header">
-                    <button class="back-btn" onclick="goBackInApp()" aria-label="العودة"><i class="fas fa-arrow-right"></i></button>
+                    <button class="back-btn" onclick="requestCreatePostExit()" aria-label="العودة"><i class="fas fa-arrow-right"></i></button>
                     <h2>إنشاء منشور</h2>
                     <span class="create-post-header-mark"><i class="fas fa-plus"></i></span>
                 </div>
@@ -1119,6 +1119,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn create-post-fab" id="scroll-top-btn" onclick="openCreatePost()" aria-label="إنشاء منشور" title="إنشاء منشور"><i class="fas fa-plus" aria-hidden="true"></i></button>
-    <script type="module" src="js/app.js?v=85"></script>
+    <script type="module" src="js/app.js?v=86"></script>
 </body>
 </html>

@@ -276,6 +276,122 @@ window.openCreatePost = function() {
     return renderCreatePostView();
 };
 
+function getComposerSnapshot() {
+    const value = id => document.getElementById(id)?.value?.trim() || '';
+    const preview = document.getElementById('composer-preview');
+    const quote = document.getElementById('quote-preview');
+    const poll = document.getElementById('poll-composer');
+    const files = [...document.querySelectorAll('#postImage, #postStudio')].some(input => input.files?.length);
+    return {
+        content: value('postContent'),
+        imageUrl: value('postImageUrl'),
+        videoUrl: value('postVideo'),
+        gifUrl: value('postGif'),
+        location: value('postLocation'),
+        pollQuestion: value('poll-question'),
+        hasPoll: Boolean(poll && poll.style.display !== 'none' && (value('poll-question') || document.querySelectorAll('#poll-composer input').length > 0)),
+        hasQuote: Boolean(quote && !quote.hidden && quote.textContent.trim()),
+        hasFiles: files || Boolean(preview && preview.children.length)
+    };
+}
+
+function composerSnapshotHasContent(snapshot = getComposerSnapshot()) {
+    return Boolean(snapshot.content || snapshot.imageUrl || snapshot.videoUrl || snapshot.gifUrl || snapshot.location || snapshot.hasPoll || snapshot.hasQuote || snapshot.hasFiles);
+}
+
+function clearComposerForDiscard() {
+    ['postContent', 'postImageUrl', 'postVideo', 'postGif', 'postLocation', 'poll-question', 'poll-opt1', 'poll-opt2'].forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = '';
+    });
+    document.querySelectorAll('#poll-extra-options input').forEach(input => { input.value = ''; });
+    document.querySelectorAll('#postImage, #postStudio').forEach(input => { input.value = ''; });
+    const preview = document.getElementById('composer-preview');
+    if (preview) { preview.innerHTML = ''; preview.style.display = 'none'; }
+    document.getElementById('quote-preview')?.setAttribute('hidden', '');
+    document.getElementById('reply-selector')?.setAttribute('hidden', '');
+    ['url-input-row', 'video-input-row', 'gif-input-row', 'location-input-row', 'poll-composer'].forEach(id => {
+        const row = document.getElementById(id);
+        if (row) row.style.display = 'none';
+    });
+    window.clearQuoteTweet?.();
+    window.resetReplySetting?.();
+    window.clearComposerDraft?.();
+}
+
+let createPostExitBypass = false;
+
+function closeCreatePostExitDialog() {
+    document.getElementById('create-post-exit-dialog')?.remove();
+}
+
+function leaveCreatePostAfterDecision() {
+    closeCreatePostExitDialog();
+    createPostExitBypass = true;
+    const current = history.state?.mimerNavigation;
+    const result = current?.view === 'create-post' ? window.goBackInApp?.() : window.showHome?.();
+    window.setTimeout(() => { createPostExitBypass = false; }, 500);
+    return result;
+}
+
+async function saveCreatePostAsDraftAndLeave(snapshot) {
+    const draftId = await drafts.saveDraft(snapshot.content, snapshot.imageUrl, snapshot.videoUrl, {
+        source: 'create-post-exit',
+        gifUrl: snapshot.gifUrl || null,
+        location: snapshot.location || null,
+        pollQuestion: snapshot.pollQuestion || null,
+        hasQuote: snapshot.hasQuote || false,
+        hasFiles: snapshot.hasFiles || false
+    });
+    if (draftId) {
+        clearComposerForDiscard();
+        showToast('حُفظ المنشور كمسودة');
+        leaveCreatePostAfterDecision();
+    } else {
+        showToast('تعذر حفظ المسودة؛ بقيت في المحرر');
+    }
+}
+
+function showCreatePostExitDialog() {
+    if (document.getElementById('create-post-exit-dialog')) return;
+    const snapshot = getComposerSnapshot();
+    const dialog = document.createElement('div');
+    dialog.id = 'create-post-exit-dialog';
+    dialog.className = 'create-post-exit-dialog';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-labelledby', 'create-post-exit-title');
+    dialog.innerHTML = `<div class="create-post-exit-backdrop" data-exit-action="cancel"></div>
+        <section class="create-post-exit-card">
+            <div class="create-post-exit-icon"><i class="fas fa-file-pen" aria-hidden="true"></i></div>
+            <h3 id="create-post-exit-title">هل تريد مغادرة إنشاء المنشور؟</h3>
+            <p>لديك محتوى غير منشور. اختر ما تريد فعله قبل الخروج.</p>
+            <div class="create-post-exit-actions">
+                <button type="button" class="create-post-exit-save" data-exit-action="save"><i class="fas fa-bookmark"></i><span>حفظ كمسودة</span></button>
+                <button type="button" class="create-post-exit-discard" data-exit-action="discard"><i class="fas fa-trash"></i><span>مسح والخروج</span></button>
+                <button type="button" class="create-post-exit-cancel" data-exit-action="cancel">إلغاء</button>
+            </div>
+        </section>`;
+    document.body.appendChild(dialog);
+    const cancel = () => closeCreatePostExitDialog();
+    dialog.addEventListener('click', async event => {
+        const action = event.target.closest('[data-exit-action]')?.dataset.exitAction;
+        if (!action) return;
+        if (action === 'cancel') return cancel();
+        if (action === 'discard') { clearComposerForDiscard(); leaveCreatePostAfterDecision(); return; }
+        if (action === 'save') {
+            dialog.querySelector('.create-post-exit-save').disabled = true;
+            await saveCreatePostAsDraftAndLeave(snapshot);
+        }
+    });
+    dialog.querySelector('.create-post-exit-cancel')?.focus();
+}
+
+window.requestCreatePostExit = function() {
+    if (!composerSnapshotHasContent()) return leaveCreatePostAfterDecision();
+    showCreatePostExitDialog();
+};
+
 window.showHome = function() {
     document.body.classList.remove('create-post-mode');
     window.currentFeedMode = 'foryou';
@@ -3052,6 +3168,7 @@ if (navigator.onLine === false) setNetworkNotice(true);
     const NAV_STATE_KEY = 'mimerNavigation';
     const ROOT_BACK_WINDOW_MS = 1800;
     let restoring = false;
+    let lastRenderedState = null;
     let rootBackTimer = null;
     let rootBackArmed = false;
 
@@ -3182,6 +3299,7 @@ if (navigator.onLine === false) setNetworkNotice(true);
             }
         } finally {
             restoring = false;
+            lastRenderedState = state;
             setRootBackState(state.view === 'home');
             if (options.restoreScroll !== false) restoreScroll(state.scroll);
         }
@@ -3230,10 +3348,18 @@ if (navigator.onLine === false) setNetworkNotice(true);
 
     const initialState = getCurrentState();
     if (!history.state?.[NAV_STATE_KEY]) replaceCurrentState(makeState(initialState.view || 'home', initialState));
+    lastRenderedState = getCurrentState();
     setRootBackState(getCurrentState().view === 'home');
 
-    window.goBackInApp = requestBack;
-    window.goBackFromPost = requestBack;
+    window.goBackInApp = function() {
+        const current = getCurrentState();
+        if (!createPostExitBypass && current.view === 'create-post' && composerSnapshotHasContent()) {
+            showCreatePostExitDialog();
+            return false;
+        }
+        return requestBack();
+    };
+    window.goBackFromPost = window.goBackInApp;
 
     window.navigateTo = function(view) {
         if (restoring) return base.navigateTo?.(view);
@@ -3294,6 +3420,12 @@ if (navigator.onLine === false) setNetworkNotice(true);
     window.addEventListener('popstate', (event) => {
         const state = event.state?.[NAV_STATE_KEY];
         if (!state) return;
+        const current = lastRenderedState || getCurrentState();
+        if (!createPostExitBypass && current.view === 'create-post' && state.view !== 'create-post' && composerSnapshotHasContent()) {
+            history.pushState({ ...(history.state || {}), [NAV_STATE_KEY]: current }, '', window.location.href);
+            showCreatePostExitDialog();
+            return;
+        }
         rootBackArmed = false;
         clearTimeout(rootBackTimer);
         void renderState(state);
