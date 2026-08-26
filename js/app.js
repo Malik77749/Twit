@@ -3,7 +3,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref, get, update, runTransaction, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { firebaseConfig } from './config.js?v=9';
-import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=11';
+import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=13';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=10';
 import * as posts from './posts.js?v=29';
@@ -128,7 +128,7 @@ window.setTimeout(() => {
 const allViews = [
     'home', 'notifications', 'profile', 'search', 'messages', 'bookmarks',
     'post-detail', 'lists', 'analytics', 'settings', 'drafts', 'communities',
-    'dm-chat', 'dm-conversations'
+    'dm-chat', 'dm-conversations', 'create-post'
 ];
 
 function hideAllViews() {
@@ -158,6 +158,17 @@ function resetViewPosition() {
     const main = document.querySelector('.main-feed');
     if (main) main.scrollTo({ top: 0, behavior: 'auto' });
     window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function renderCreatePostView() {
+    closeTransientMenus();
+    hideAllViews();
+    if (!safeDisplay('create-post')) return false;
+    setActiveNav('create-post');
+    document.body.classList.add('create-post-mode');
+    void refreshComposerCommunities();
+    requestAnimationFrame(() => document.getElementById('postContent')?.focus({ preventScroll: true }));
+    return true;
 }
 
 function safeDisplay(view, display = 'block') {
@@ -196,6 +207,9 @@ window.navigateTo = function(view) {
         case 'messages':
             if (typeof window.showMessages === 'function') window.showMessages();
             else safeDisplay('messages');
+            break;
+        case 'create-post':
+            renderCreatePostView();
             break;
         case 'profile':
             if (typeof window.showProfile === 'function') window.showProfile();
@@ -258,7 +272,12 @@ async function refreshComposerCommunities() {
 }
 window.refreshComposerCommunities = refreshComposerCommunities;
 
+window.openCreatePost = function() {
+    return renderCreatePostView();
+};
+
 window.showHome = function() {
+    document.body.classList.remove('create-post-mode');
     window.currentFeedMode = 'foryou';
     document.querySelectorAll('.mobile-feed-tab').forEach((tab, index) => tab.classList.toggle('active', index === 0));
     hideAllViews();
@@ -3048,7 +3067,8 @@ if (navigator.onLine === false) setNetworkNotice(true);
         showAnalytics: window.showAnalytics,
         showSettings: window.showSettings,
         showDrafts: window.showDrafts,
-        openPostDetail: window.openPostDetail
+        openPostDetail: window.openPostDetail,
+        openCreatePost: window.openCreatePost
     };
 
     function getScrollState() {
@@ -3137,6 +3157,9 @@ if (navigator.onLine === false) setNetworkNotice(true);
                 case 'messages':
                     if (typeof base.showMessages === 'function') await base.showMessages();
                     break;
+                case 'create-post':
+                    if (typeof base.openCreatePost === 'function') base.openCreatePost();
+                    break;
                 case 'lists':
                     if (typeof base.showLists === 'function') await base.showLists();
                     break;
@@ -3215,6 +3238,11 @@ if (navigator.onLine === false) setNetworkNotice(true);
     window.navigateTo = function(view) {
         if (restoring) return base.navigateTo?.(view);
         navigate(view === 'profile' ? 'profile' : view || 'home', view === 'profile' ? { profileId: profileIdForNavigation() } : {});
+    };
+
+    window.openCreatePost = function() {
+        if (restoring) return base.openCreatePost?.();
+        return navigate('create-post');
     };
 
     window.showHome = function() {

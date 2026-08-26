@@ -45,6 +45,14 @@ function hideLoading() {
 }
 
 function focusComposer() {
+    const openCreatePost = window.openCreatePost;
+    if (typeof openCreatePost === 'function') {
+        const result = openCreatePost();
+        Promise.resolve(result).finally(() => {
+            requestAnimationFrame(() => document.getElementById('postContent')?.focus({ preventScroll: true }));
+        });
+        return result;
+    }
     showView('home');
     const input = document.getElementById('postContent');
     if (input) input.focus();

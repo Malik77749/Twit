@@ -2621,3 +2621,95 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 [data-mimer-theme="light"] .main-feed { background: #f4f7fa !important; }
 [data-mimer-theme="light"] .composer,
 [data-mimer-theme="light"] .tweet { background: #fff !important; }
+
+/* Create-post surface and floating entry point */
+.create-post-header {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--mimer-line);
+  background: rgba(14,25,37,.92);
+  backdrop-filter: blur(18px);
+}
+.create-post-header h2 { flex: 1; margin: 0; font-size: 20px; font-weight: 850; }
+.create-post-header-mark {
+  width: 32px; height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #031018;
+  background: var(--mimer-accent);
+  box-shadow: 0 6px 18px rgba(25,185,238,.24);
+}
+.create-post-editor { padding: 12px 0 28px; }
+.create-post-editor .composer {
+  margin: 0;
+  border-inline: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.create-post-editor .composer-input { min-height: 180px; font-size: 18px; }
+.create-post-editor .composer-body { min-height: 260px; }
+.create-post-editor .composer-submit { min-width: 96px; }
+.back-btn {
+  width: 38px; height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+  border: 1px solid var(--mimer-line);
+  border-radius: 50%;
+  color: var(--mimer-ink);
+  background: transparent;
+  transition: background-color .16s ease, color .16s ease, transform .16s ease;
+}
+.back-btn:hover { color: var(--mimer-accent); background: var(--mimer-accent-soft); }
+.back-btn:active { transform: scale(.96); }
+.create-post-fab {
+  width: 54px;
+  height: 54px;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  right: max(18px, calc((100vw - 1380px) / 2 + 18px));
+  border: 1px solid rgba(255,255,255,.25);
+  background: var(--mimer-accent);
+  color: #031018;
+  font-size: 22px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.28), 0 0 0 5px rgba(25,185,238,.08);
+  opacity: 0;
+  transform: translateY(8px) scale(.96);
+  pointer-events: none;
+  transition: opacity .18s var(--mimer-ease), transform .18s var(--mimer-ease), filter .18s ease;
+}
+.create-post-fab:hover { filter: brightness(1.08); transform: translateY(0) scale(1.02); }
+.create-post-fab:active { transform: translateY(1px) scale(.96); }
+body.mimer-authenticated.mimer-navigation-root:not(.create-post-mode) .create-post-fab,
+body.mimer-authenticated #home-view:not([style*="display: none"]) ~ .create-post-fab {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+[data-mimer-theme="light"] .create-post-header { background: rgba(255,255,255,.94); }
+[data-mimer-theme="light"] .create-post-fab { color: #fff; }
+@media (max-width: 760px) {
+  .create-post-header { min-height: 56px; padding-inline: 12px; }
+  .create-post-header h2 { font-size: 18px; }
+  .create-post-editor { padding: 0 0 calc(76px + env(safe-area-inset-bottom)); }
+  .create-post-editor .composer { padding: 18px 12px 14px; }
+  .create-post-editor .composer-input { min-height: 190px; font-size: 17px; }
+  .create-post-fab {
+    width: 56px; height: 56px;
+    right: 18px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+}
+
+/* The legacy scroll listener may add .visible; create-post has an explicit route guard. */
+body.mimer-authenticated:not(.mimer-navigation-root) .create-post-fab,
+body.mimer-authenticated.create-post-mode .create-post-fab {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(8px) scale(.96) !important;
+}
