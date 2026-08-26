@@ -36,8 +36,8 @@ const THEMES = {
         '--surface': '#ffffff',
         '--surface-raised': '#ffffff',
         '--text-primary': '#000000',
-        '--text-secondary': '#111111',
-        '--text-muted': '#333333',
+        '--text-secondary': '#000000',
+        '--text-muted': '#000000',
         '--border-color': 'rgba(0,0,0,.16)',
         '--border-strong': 'rgba(0,0,0,.28)',
         '--shadow-card': '0 1px 3px rgba(0,0,0,.10)'
