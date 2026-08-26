@@ -102,7 +102,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=21')
+                navigator.serviceWorker.register('./sw.js?v=22')
                     .then(reg => console.log('SW registered'))
                     .catch(err => console.log('SW registration failed'));
             });
@@ -595,12 +595,6 @@
                                 </button>
                             </div>
                             <div class="composer-right">
-                                <label class="composer-audience-wrap" title="اختيار المجتمع" hidden>
-                                    <span class="sr-only">مجتمع النشر</span>
-                                    <select id="post-community" class="composer-audience" aria-label="مجتمع النشر">
-                                        <option value="">النشر العام</option>
-                                    </select>
-                                </label>
                                 <!-- Character Counter (like X) -->
                                 <div class="char-counter" id="char-counter" style="display:none;">
                                     <svg class="char-ring" viewBox="0 0 20 20">
@@ -1112,6 +1106,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=79"></script>
+    <script type="module" src="js/app.js?v=80"></script>
 </body>
 </html>

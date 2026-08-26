@@ -1019,13 +1019,6 @@ async function renderPost(post, container) {
     const likeSnapshot = await get(ref(database, `likes/${postId}/${userId}`));
     const isLiked = likeSnapshot.exists();
 
-    // Check follow status (only for non-own posts)
-    let isFollowing = false;
-    if (!isOwnPost) {
-        const followSnap = await get(ref(database, `followers/${post.userId}/${userId}`));
-        isFollowing = followSnap.exists();
-    }
-
     // Check bookmark status
     const bookmarkSnap = await get(ref(database, `bookmarks/${userId}/${postId}`));
     const isBookmarked = bookmarkSnap.exists();
@@ -1127,7 +1120,6 @@ async function renderPost(post, container) {
                     <span class="tweet-time">${formatTime(post.timestamp)}</span>
                     ${post.location ? `<span class="tweet-location" title="موقع المنشور">· ${escapeHtml(post.location)}</span>` : ''}
                     ${editedHtml}
-                    ${!isOwnPost ? `<button class="follow-btn ${isFollowing ? 'following' : ''}" data-follow-id="${post.userId}" onclick="event.stopPropagation(); followUser('${post.userId}', event)">${isFollowing ? 'متابَع' : 'متابعة'}</button>` : ''}
                     <button class="tweet-more" onclick="event.stopPropagation(); openPostMenu('${postId}', '${post.userId}', ${isOwnPost}, event)">
                         ${uiIcon('more')}
                     </button>
