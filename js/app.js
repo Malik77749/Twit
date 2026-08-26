@@ -9,11 +9,11 @@ import * as auth from './auth.js?v=10';
 import * as posts from './posts.js?v=29';
 import * as comments from './comments.js?v=24';
 import * as notifications from './notifications.js?v=18';
-import * as profile from './profile.js?v=18';
+import * as profile from './profile.js?v=19';
 import * as pagination from './pagination.js?v=10';
 import * as rateLimiter from './rate-limiter.js?v=10';
 import * as pushNotif from './push-notifications.js?v=12';
-import * as dm from './dm.js?v=11';
+import * as dm from './dm.js?v=12';
 import * as blockMute from './block-mute.js?v=9';
 import * as polls from './polls.js?v=9';
 import * as theme from './theme.js?v=10';
@@ -35,7 +35,7 @@ import * as cloudinary from './cloudinary.js?v=11';
 import { getUserData, clearUserCache } from './firebase-helpers.js?v=9';
 import './improvements.js?v=2';
 
-const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="#333" width="40" height="40" rx="20"/><circle cx="20" cy="15" r="7" fill="#555"/><path d="M8 36c0-7 5-12 12-12s12 5 12 12" fill="#555"/></svg>');
+const DEFAULT_AVATAR = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><defs><linearGradient id="mimerAvatar" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#11b5e4"/><stop offset="1" stop-color="#1769aa"/></linearGradient></defs><circle cx="40" cy="40" r="40" fill="url(#mimerAvatar)"/><circle cx="40" cy="29" r="12" fill="#fff" fill-opacity=".95"/><path d="M17 68c2-13 11-21 23-21s21 8 23 21" fill="#fff" fill-opacity=".95"/><path d="M26 14h28" stroke="#fff" stroke-opacity=".55" stroke-width="4" stroke-linecap="round"/></svg>');
 
 const DETAIL_ICON_PATHS = {
     comment: '<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.4 8.4 0 0 1-4-.98L4 20l1.15-3.08A7.36 7.36 0 0 1 4.5 12 7.5 7.5 0 0 1 12 4.5a7.5 7.5 0 0 1 8 7z"></path>',
@@ -908,8 +908,16 @@ window.closeDMChat = function() {
 };
 
 window.openDMWithUser = async function(userId) {
-    showMessages();
-    await openDMConversation(userId);
+    if (!userId || !authInstance.currentUser) return;
+    try {
+        // The final navigation wrapper is asynchronous; wait for the messages
+        // surface before openDMConversation changes the nested view to the chat.
+        await window.showMessages?.();
+        await openDMConversation(userId);
+    } catch (error) {
+        console.error('Open direct message error:', error);
+        showToast('تعذر فتح المحادثة، حاول مرة أخرى');
+    }
 };
 
 function updateDMBadge() {
@@ -3160,10 +3168,7 @@ if (navigator.onLine === false) setNetworkNotice(true);
         const current = getCurrentState();
         const candidate = makeState(view, extra);
         if (stateMatches(current, candidate)) {
-            if (view === 'home') {
-                void renderState(candidate, { restoreScroll: false });
-            }
-            return;
+            return view === 'home' ? renderState(candidate, { restoreScroll: false }) : Promise.resolve();
         }
         rememberScroll();
         if (view === 'home' && current.view !== 'home') {
@@ -3175,7 +3180,7 @@ if (navigator.onLine === false) setNetworkNotice(true);
         }
         const next = makeState(view, { ...extra, depth: (Number.isFinite(current.depth) ? current.depth : 0) + 1 });
         pushState(next);
-        void renderState(next, { restoreScroll: false });
+        return renderState(next, { restoreScroll: false });
     }
 
     function requestBack() {
@@ -3226,7 +3231,7 @@ if (navigator.onLine === false) setNetworkNotice(true);
     };
     window.showMessages = function() {
         if (restoring) return base.showMessages?.();
-        navigate('messages');
+        return navigate('messages');
     };
     window.showProfile = function(userId) {
         if (restoring) return base.showProfile?.(userId);
