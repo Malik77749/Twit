@@ -280,6 +280,10 @@ window.showMessages = function() {
     hideAllViews();
     setActiveNav('messages');
     document.getElementById('messages-view').style.display = 'block';
+    // dm-* views are nested inside messages-view but are also listed as
+    // navigation views, so explicitly restore the list surface after reset.
+    document.getElementById('dm-conversations-view').style.display = 'block';
+    document.getElementById('dm-chat-view').style.display = 'none';
     loadConversationsList();
 };
 
