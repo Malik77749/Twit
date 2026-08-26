@@ -6,7 +6,7 @@ import { firebaseConfig } from './config.js?v=9';
 import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=11';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=10';
-import * as posts from './posts.js?v=25';
+import * as posts from './posts.js?v=26';
 import * as comments from './comments.js?v=24';
 import * as notifications from './notifications.js?v=18';
 import * as profile from './profile.js?v=18';
@@ -17,7 +17,7 @@ import * as dm from './dm.js?v=9';
 import * as blockMute from './block-mute.js?v=9';
 import * as polls from './polls.js?v=9';
 import * as theme from './theme.js?v=10';
-import * as drafts from './drafts.js?v=9';
+import * as drafts from './drafts.js?v=10';
 import * as threads from './threads.js?v=9';
 import * as analytics from './analytics.js?v=10';
 import * as lists from './lists.js?v=9';
@@ -242,8 +242,16 @@ async function refreshComposerCommunities() {
     try {
         const memberships = await communities.getUserCommunities(userId);
         const previous = select.value;
-        select.innerHTML = '<option value="">الجميع</option>' + memberships.map(comm => `<option value="${escapeHtml(comm.id)}">${escapeHtml(comm.name)}</option>`).join('');
+        const wrap = select.closest('.composer-audience-wrap');
+        if (!memberships.length) {
+            select.innerHTML = '<option value="">النشر العام</option>';
+            select.value = '';
+            if (wrap) wrap.hidden = true;
+            return;
+        }
+        select.innerHTML = '<option value="">النشر العام</option>' + memberships.map(comm => `<option value="${escapeHtml(comm.id)}">${escapeHtml(comm.name)}</option>`).join('');
         if (memberships.some(comm => comm.id === previous)) select.value = previous;
+        if (wrap) wrap.hidden = false;
     } catch (error) {
         console.warn('Composer communities load skipped:', error);
     }
@@ -675,6 +683,18 @@ window.editProfile = profile.editProfile;
 window.saveProfile = profile.saveProfile;
 window.showFollowersList = profile.showFollowersList;
 window.showFollowingList = profile.showFollowingList;
+window.openMyFollowing = async function() {
+    const userId = authInstance.currentUser?.uid;
+    if (!userId) return;
+    await profile.showProfile(userId);
+    await profile.showFollowingList(userId);
+};
+window.openMyFollowers = async function() {
+    const userId = authInstance.currentUser?.uid;
+    if (!userId) return;
+    await profile.showProfile(userId);
+    await profile.showFollowersList(userId);
+};
 
 window.focusComposer = focusComposer;
 
@@ -1384,46 +1404,65 @@ window.searchTrend = function(topic) {
 // ===== Draft Functions =====
 
 window.saveDraftAction = async function() {
-    const content = document.getElementById('postContent').value.trim();
-    const imageUrl = document.getElementById('postImageUrl').value.trim();
-    const videoUrl = document.getElementById('postVideo').value.trim();
-
-    if (!content && !imageUrl && !videoUrl) {
-        showToast('لا شيء لحفظه');
-        return;
-    }
-
-    const draftId = await drafts.saveDraft(content, imageUrl, videoUrl);
+    const content = document.getElementById('postContent')?.value.trim() || '';
+    const imageUrl = document.getElementById('postImageUrl')?.value.trim() || '';
+    const videoUrl = document.getElementById('postVideo')?.value.trim() || '';
+    if (!content && !imageUrl && !videoUrl) { showToast('لا شيء لحفظه'); return; }
+    const draftId = await drafts.saveDraft(content, imageUrl, videoUrl, { manual: true });
     if (draftId) {
-        showToast('تم حفظ المسودة');
-        // Clear composer
+        drafts.clearComposerDraft();
+        showToast(navigator.onLine === false ? 'تم حفظ المسودة دون اتصال' : 'تم حفظ المسودة');
         document.getElementById('postContent').value = '';
         document.getElementById('postContent').style.height = 'auto';
         removePreview();
-    }
+    } else showToast('تعذر حفظ المسودة');
+};
+
+window.saveFailedPostDraft = async function(content, imageUrl = '', videoUrl = '') {
+    const draftId = await drafts.saveDraft(content, imageUrl, videoUrl, { failedPublish: true, offline: true });
+    return draftId;
+};
+
+window.consumePublishedDraft = async function() {
+    const draftId = window.pendingDraftId;
+    window.pendingDraftId = '';
+    if (draftId) await drafts.deleteDraft(draftId);
 };
 
 window.showDrafts = async function() {
     hideAllViews();
     document.getElementById('drafts-view').style.display = 'block';
-
     const container = document.getElementById('drafts-list');
     container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
-
     const draftList = await drafts.getDrafts();
     container.innerHTML = drafts.renderDraftsList(draftList);
 };
 
-window.loadDraft = function(draftId) {
-    // Load draft content back to composer
+window.loadDraft = async function(draftId) {
+    const draft = await drafts.getDraft(draftId);
+    if (!draft) { showToast('المسودة غير متاحة حاليًا'); return; }
     showHome();
-    showToast('تم تحميل المسودة');
+    const content = document.getElementById('postContent');
+    if (content) { content.value = draft.content || ''; content.style.height = 'auto'; content.dispatchEvent(new Event('input', { bubbles: true })); content.focus(); }
+    if (document.getElementById('postImageUrl')) document.getElementById('postImageUrl').value = draft.imageUrl || '';
+    if (document.getElementById('postVideo')) document.getElementById('postVideo').value = draft.videoUrl || '';
+    window.pendingDraftId = draftId;
+    showToast(draft.offline ? 'تم تحميل المسودة المحفوظة دون اتصال' : 'تم تحميل المسودة');
+};
+
+window.publishDraftAction = async function(draftId) {
+    const draft = await drafts.getDraft(draftId);
+    if (!draft) { showToast('المسودة غير متاحة حاليًا'); return; }
+    await window.loadDraft(draftId);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    showToast('جاري نشر المسودة…');
+    await posts.postTweet();
 };
 
 window.deleteDraftAction = async function(draftId) {
     if (!confirm('حذف هذه المسودة؟')) return;
     await drafts.deleteDraft(draftId);
-    showDrafts(); // Refresh list
+    await showDrafts();
     showToast('تم حذف المسودة');
 };
 
@@ -2934,3 +2973,34 @@ window.postTweet = (...args) => posts.postTweet(...args);
     window.updateMimerLayout = updateLayout;
     updateLayout();
 })();
+
+// ===== Offline composer protection =====
+let composerAutosaveTimer = null;
+function saveComposerLocallySoon() {
+    const input = document.getElementById('postContent');
+    if (!input || !input.value.trim() || !authInstance.currentUser) return;
+    clearTimeout(composerAutosaveTimer);
+    composerAutosaveTimer = setTimeout(() => {
+        const imageUrl = document.getElementById('postImageUrl')?.value.trim() || '';
+        const videoUrl = document.getElementById('postVideo')?.value.trim() || '';
+        void drafts.saveComposerDraft(input.value, imageUrl, videoUrl);
+    }, 900);
+}
+function setNetworkNotice(offline) {
+    let notice = document.getElementById('mimer-network-status');
+    if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'mimer-network-status';
+        notice.className = 'mimer-network-status';
+        document.body.appendChild(notice);
+    }
+    notice.textContent = offline ? 'لا يوجد اتصال حاليًا — يتم حفظ كتابتك كمسودة' : 'عاد الاتصال — يمكنك مراجعة مسوداتك ونشرها';
+    notice.classList.toggle('is-visible', offline);
+    if (!offline) { clearTimeout(notice._hideTimer); notice._hideTimer = setTimeout(() => notice.classList.remove('is-visible'), 3200); }
+}
+window.clearComposerDraft = function() { drafts.clearComposerDraft(); };
+window.addEventListener('offline', () => { setNetworkNotice(true); saveComposerLocallySoon(); });
+window.addEventListener('online', () => setNetworkNotice(false));
+const composerForAutosave = document.getElementById('postContent');
+composerForAutosave?.addEventListener('input', saveComposerLocallySoon);
+if (navigator.onLine === false) setNetworkNotice(true);

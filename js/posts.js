@@ -407,6 +407,8 @@ async function postTweet() {
                 delete container.dataset.rendering;
             });
         }
+        await window.consumePublishedDraft?.();
+        window.clearComposerDraft?.();
         showToast('تم النشر بنجاح');
         if (postBtn) { postBtn.disabled = false; postBtn.removeAttribute('aria-busy'); delete postBtn.dataset.publishBusy; postBtn.textContent = 'نشر'; }
         publishInFlight = false;
@@ -416,7 +418,9 @@ async function postTweet() {
         //     showToast('تم إلغاء المنشور');
         // });
     } catch (error) {
-        showToast('خطأ: ' + error.message);
+        const failedDraftId = await window.saveFailedPostDraft?.(content, imageUrl, videoUrl);
+        if (failedDraftId) window.pendingDraftId = failedDraftId;
+        showToast(navigator.onLine === false ? 'لا يوجد اتصال؛ حُفظ المنشور كمسودة' : 'تعذر النشر؛ حُفظ المحتوى كمسودة');
         if (postBtn) { postBtn.disabled = false; postBtn.removeAttribute('aria-busy'); delete postBtn.dataset.publishBusy; postBtn.textContent = 'نشر'; }
         publishInFlight = false;
         publishRequestId = null;

@@ -1750,3 +1750,63 @@ body { color: var(--text-primary); }
 [data-mimer-theme="light"] .reply-specific-user { color: #000 !important; }
 [data-mimer-theme="light"] .reply-setting-option small,
 [data-mimer-theme="light"] .reply-specific-user small { color: #000 !important; opacity: .7; }
+
+/* Drawer account stats are real navigation controls, not decorative text. */
+.drawer-stats { display: flex; align-items: center; gap: 14px; }
+.drawer-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px 0;
+  border: 0;
+  color: var(--text-primary);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.drawer-stat strong { font-size: 14px; font-weight: 800; }
+.drawer-stat span { font-size: 12px; color: var(--text-secondary); }
+.drawer-stat:hover span,
+.drawer-stat:focus-visible span { color: var(--accent); }
+
+/* Offline and draft actions: clear recovery instead of silent data loss. */
+.mimer-network-status {
+  position: fixed;
+  inset-inline: 12px;
+  top: max(12px, env(safe-area-inset-top));
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid rgba(245,158,11,.45);
+  border-radius: 12px;
+  color: #7c2d12;
+  background: #fffbeb;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.mimer-network-status.is-visible { opacity: 1; transform: translateY(0); }
+.draft-item { position: relative; }
+.draft-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.draft-publish {
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.draft-delete { position: static !important; margin-inline-start: auto; }
+[data-mimer-theme="dark"] .mimer-network-status { color: #fef3c7; background: #422006; border-color: rgba(245,158,11,.55); }
+[data-mimer-theme="dim"] .mimer-network-status { color: #fef3c7; background: #3b2f14; border-color: rgba(245,158,11,.45); }

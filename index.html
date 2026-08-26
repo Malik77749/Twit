@@ -96,13 +96,13 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=37">
+    <link rel="stylesheet" href="css/professional.css?v=38">
 
     <!-- PWA Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=18')
+                navigator.serviceWorker.register('./sw.js?v=19')
                     .then(reg => console.log('SW registered'))
                     .catch(err => console.log('SW registration failed'));
             });
@@ -375,9 +375,9 @@
                         <div class="drawer-handle" id="drawer-handle">@user</div>
                     </div>
                 </div>
-                <div class="drawer-stats">
-                    <span><strong id="drawer-following">0</strong> يتابع</span>
-                    <span><strong id="drawer-followers">0</strong> متابع</span>
+                <div class="drawer-stats" aria-label="إحصاءات الحساب">
+                    <button type="button" class="drawer-stat" onclick="openMyFollowing(); closeDrawer();"><strong id="drawer-following">0</strong><span>يتابع</span></button>
+                    <button type="button" class="drawer-stat" onclick="openMyFollowers(); closeDrawer();"><strong id="drawer-followers">0</strong><span>متابع</span></button>
                 </div>
             </div>
             <nav class="drawer-nav">
@@ -595,10 +595,10 @@
                                 </button>
                             </div>
                             <div class="composer-right">
-                                <label class="composer-audience-wrap" title="اختيار الجمهور">
-                                    <span class="sr-only">جمهور المنشور</span>
-                                    <select id="post-community" class="composer-audience" aria-label="جمهور المنشور">
-                                        <option value="">الجميع</option>
+                                <label class="composer-audience-wrap" title="اختيار المجتمع" hidden>
+                                    <span class="sr-only">مجتمع النشر</span>
+                                    <select id="post-community" class="composer-audience" aria-label="مجتمع النشر">
+                                        <option value="">النشر العام</option>
                                     </select>
                                 </label>
                                 <!-- Character Counter (like X) -->
@@ -1112,6 +1112,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=76"></script>
+    <script type="module" src="js/app.js?v=77"></script>
 </body>
 </html>
