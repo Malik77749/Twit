@@ -102,7 +102,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=28')
+                navigator.serviceWorker.register('./sw.js?v=29')
                     .then(reg => console.log('SW registered'))
                     .catch(err => console.log('SW registration failed'));
             });
@@ -629,7 +629,7 @@
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 16px;">
                         <div style="display:flex;align-items:center;gap:16px;">
-                            <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                            <button class="back-btn" onclick="goBackInApp()"><i class="fas fa-arrow-right"></i></button>
                             <h2>الإشعارات</h2>
                         </div>
                         <button class="notif-mark-all-btn" onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button>
@@ -697,7 +697,7 @@
             <div id="messages-view" style="display:none;">
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
-                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <button class="back-btn" onclick="goBackInApp()"><i class="fas fa-arrow-right"></i></button>
                         <h2>الرسائل</h2>
                     </div>
                 </div>
@@ -737,7 +737,7 @@
             <div id="bookmarks-view" style="display:none;">
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
-                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <button class="back-btn" onclick="goBackInApp()"><i class="fas fa-arrow-right"></i></button>
                         <h2>المحفوظات</h2>
                     </div>
                 </div>
@@ -764,7 +764,7 @@
             <div id="drafts-view" style="display:none;">
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
-                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <button class="back-btn" onclick="goBackInApp()"><i class="fas fa-arrow-right"></i></button>
                         <h2>المسودات</h2>
                     </div>
                 </div>
@@ -775,7 +775,7 @@
             <div id="analytics-view" style="display:none;">
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
-                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <button class="back-btn" onclick="goBackInApp()"><i class="fas fa-arrow-right"></i></button>
                         <h2>الإحصائيات</h2>
                     </div>
                 </div>
@@ -786,7 +786,7 @@
             <div id="lists-view" style="display:none;">
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
-                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <button class="back-btn" onclick="goBackInApp()"><i class="fas fa-arrow-right"></i></button>
                         <h2>القوائم</h2>
                         <button class="follow-btn" onclick="createListAction()" style="margin-right:auto;font-size:13px;padding:4px 12px;">إنشاء قائمة</button>
                     </div>
@@ -798,7 +798,7 @@
             <div id="communities-view" style="display:none;">
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
-                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <button class="back-btn" onclick="goBackInApp()"><i class="fas fa-arrow-right"></i></button>
                         <h2>المجتمعات</h2>
                         <button class="follow-btn" onclick="createCommunityAction()" style="margin-right:auto;font-size:13px;padding:4px 12px;">إنشاء مجتمع</button>
                     </div>
@@ -810,7 +810,7 @@
             <div id="settings-view" style="display:none;">
                 <div class="feed-header">
                     <div style="display:flex;align-items:center;gap:16px;padding:0 16px;">
-                        <button class="back-btn" onclick="showHome()"><i class="fas fa-arrow-right"></i></button>
+                        <button class="back-btn" onclick="goBackInApp()"><i class="fas fa-arrow-right"></i></button>
                         <h2>الإعدادات</h2>
                     </div>
                 </div>
@@ -887,7 +887,7 @@
             <div id="profile-view" style="display:none;">
                 <!-- Profile Header -->
                 <div class="profile-header-bar">
-                    <button class="back-btn" id="profile-back-btn" type="button" onclick="showHome()" aria-label="رجوع"><i class="fas fa-arrow-right"></i></button>
+                    <button class="back-btn" id="profile-back-btn" type="button" onclick="goBackInApp()" aria-label="رجوع"><i class="fas fa-arrow-right"></i></button>
                     <div class="profile-header-info">
                         <h2 id="profile-view-name">مستخدم</h2>
                         <h2 id="profile-edit-title" hidden>تعديل الملف الشخصي</h2>
@@ -1106,6 +1106,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=81"></script>
+    <script type="module" src="js/app.js?v=82"></script>
 </body>
 </html>

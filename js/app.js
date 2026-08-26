@@ -3014,3 +3014,254 @@ window.addEventListener('online', () => setNetworkNotice(false));
 const composerForAutosave = document.getElementById('postContent');
 composerForAutosave?.addEventListener('input', saveComposerLocallySoon);
 if (navigator.onLine === false) setNetworkNotice(true);
+
+
+// ===== MIMER NAVIGATION HISTORY V3 =====
+(function initMimerNavigationHistory() {
+    const NAV_STATE_KEY = 'mimerNavigation';
+    const ROOT_BACK_WINDOW_MS = 1800;
+    let restoring = false;
+    let rootBackTimer = null;
+    let rootBackArmed = false;
+
+    const base = {
+        navigateTo: window.navigateTo,
+        showHome: window.showHome,
+        openSearch: window.openSearch,
+        showNotifications: window.showNotifications,
+        showMessages: window.showMessages,
+        showProfile: window.showProfile,
+        showLists: window.showLists,
+        showCommunities: window.showCommunities,
+        showAnalytics: window.showAnalytics,
+        showSettings: window.showSettings,
+        showDrafts: window.showDrafts,
+        openPostDetail: window.openPostDetail
+    };
+
+    function getScrollState() {
+        const feed = document.querySelector('.main-feed');
+        return {
+            windowY: Math.max(0, window.scrollY || 0),
+            feedY: Math.max(0, feed?.scrollTop || 0)
+        };
+    }
+
+    function getCurrentState() {
+        const state = history.state?.[NAV_STATE_KEY];
+        return state && typeof state === 'object' ? state : { view: 'home', depth: 0, scroll: getScrollState() };
+    }
+
+    function makeState(view, extra = {}) {
+        return {
+            view,
+            profileId: extra.profileId || null,
+            postId: extra.postId || null,
+            depth: Number.isFinite(extra.depth) ? extra.depth : (view === 'home' ? 0 : 0),
+            scroll: extra.scroll || getScrollState(),
+            createdAt: Date.now()
+        };
+    }
+
+    function stateMatches(a, b) {
+        return a?.view === b?.view && (a?.profileId || null) === (b?.profileId || null) && (a?.postId || null) === (b?.postId || null);
+    }
+
+    function replaceCurrentState(state) {
+        history.replaceState({ ...(history.state || {}), [NAV_STATE_KEY]: state }, '', window.location.href);
+    }
+
+    function pushState(state) {
+        history.pushState({ ...(history.state || {}), [NAV_STATE_KEY]: state }, '', window.location.href);
+    }
+
+    function rememberScroll() {
+        const current = getCurrentState();
+        replaceCurrentState({ ...current, scroll: getScrollState() });
+    }
+
+    function restoreScroll(scroll) {
+        const snapshot = scroll || { windowY: 0, feedY: 0 };
+        const apply = () => {
+            const feed = document.querySelector('.main-feed');
+            if (feed && Number.isFinite(snapshot.feedY)) feed.scrollTop = snapshot.feedY;
+            window.scrollTo({ top: Number.isFinite(snapshot.windowY) ? snapshot.windowY : 0, behavior: 'auto' });
+        };
+        requestAnimationFrame(() => {
+            apply();
+            setTimeout(apply, 80);
+            setTimeout(apply, 260);
+        });
+    }
+
+    function profileIdForNavigation(explicitId) {
+        return explicitId || window.currentProfileUserId || authInstance.currentUser?.uid || null;
+    }
+
+    function setRootBackState(isRoot) {
+        document.body.classList.toggle('mimer-navigation-root', Boolean(isRoot));
+    }
+
+    async function renderState(state, options = {}) {
+        restoring = true;
+        try {
+            // Some legacy view helpers do not hide every specialized view (for example,
+            // profile rendering can leave post detail mounted). Always clear stale views
+            // before restoring the requested route.
+            hideAllViews?.();
+            switch (state.view) {
+                case 'post-detail':
+                    if (state.postId && typeof base.openPostDetail === 'function') await base.openPostDetail(state.postId);
+                    break;
+                case 'profile':
+                    if (typeof base.showProfile === 'function') await base.showProfile(state.profileId || undefined);
+                    break;
+                case 'search':
+                    if (typeof base.openSearch === 'function') await base.openSearch();
+                    break;
+                case 'notifications':
+                    if (typeof base.showNotifications === 'function') await base.showNotifications();
+                    break;
+                case 'messages':
+                    if (typeof base.showMessages === 'function') await base.showMessages();
+                    break;
+                case 'lists':
+                    if (typeof base.showLists === 'function') await base.showLists();
+                    break;
+                case 'communities':
+                    if (typeof base.showCommunities === 'function') await base.showCommunities();
+                    break;
+                case 'analytics':
+                    if (typeof base.showAnalytics === 'function') await base.showAnalytics();
+                    break;
+                case 'settings':
+                    if (typeof base.showSettings === 'function') await base.showSettings();
+                    break;
+                case 'drafts':
+                    if (typeof base.showDrafts === 'function') await base.showDrafts();
+                    break;
+                case 'home':
+                default:
+                    if (typeof base.showHome === 'function') await base.showHome();
+                    break;
+            }
+        } finally {
+            restoring = false;
+            setRootBackState(state.view === 'home');
+            if (options.restoreScroll !== false) restoreScroll(state.scroll);
+        }
+    }
+
+    function navigate(view, extra = {}) {
+        const current = getCurrentState();
+        const candidate = makeState(view, extra);
+        if (stateMatches(current, candidate)) {
+            if (view === 'home') {
+                void renderState(candidate, { restoreScroll: false });
+            }
+            return;
+        }
+        rememberScroll();
+        if (view === 'home' && current.view !== 'home') {
+            const depth = Number.isFinite(current.depth) ? current.depth : 1;
+            if (depth > 0) {
+                history.go(-depth);
+                return;
+            }
+        }
+        const next = makeState(view, { ...extra, depth: (Number.isFinite(current.depth) ? current.depth : 0) + 1 });
+        pushState(next);
+        void renderState(next, { restoreScroll: false });
+    }
+
+    function requestBack() {
+        const current = getCurrentState();
+        if (current.view !== 'home') {
+            clearTimeout(rootBackTimer);
+            rootBackArmed = false;
+            history.back();
+            return;
+        }
+
+        if (rootBackArmed) {
+            clearTimeout(rootBackTimer);
+            rootBackArmed = false;
+            showToast?.('جارٍ الخروج');
+            history.back();
+            return;
+        }
+
+        rootBackArmed = true;
+        showToast?.('اضغط رجوع مرة أخرى للخروج');
+        rootBackTimer = setTimeout(() => { rootBackArmed = false; }, ROOT_BACK_WINDOW_MS);
+    }
+
+    const initialState = getCurrentState();
+    if (!history.state?.[NAV_STATE_KEY]) replaceCurrentState(makeState(initialState.view || 'home', initialState));
+    setRootBackState(getCurrentState().view === 'home');
+
+    window.goBackInApp = requestBack;
+    window.goBackFromPost = requestBack;
+
+    window.navigateTo = function(view) {
+        if (restoring) return base.navigateTo?.(view);
+        navigate(view === 'profile' ? 'profile' : view || 'home', view === 'profile' ? { profileId: profileIdForNavigation() } : {});
+    };
+
+    window.showHome = function() {
+        if (restoring) return base.showHome?.();
+        navigate('home');
+    };
+    window.openSearch = function() {
+        if (restoring) return base.openSearch?.();
+        navigate('search');
+    };
+    window.showNotifications = function() {
+        if (restoring) return base.showNotifications?.();
+        navigate('notifications');
+    };
+    window.showMessages = function() {
+        if (restoring) return base.showMessages?.();
+        navigate('messages');
+    };
+    window.showProfile = function(userId) {
+        if (restoring) return base.showProfile?.(userId);
+        navigate('profile', { profileId: profileIdForNavigation(userId) });
+    };
+    window.showLists = function(...args) {
+        if (restoring) return base.showLists?.(...args);
+        navigate('lists');
+    };
+    window.showCommunities = function(...args) {
+        if (restoring) return base.showCommunities?.(...args);
+        navigate('communities');
+    };
+    window.showAnalytics = function(...args) {
+        if (restoring) return base.showAnalytics?.(...args);
+        navigate('analytics');
+    };
+    window.showSettings = function(...args) {
+        if (restoring) return base.showSettings?.(...args);
+        navigate('settings');
+    };
+    window.showDrafts = function(...args) {
+        if (restoring) return base.showDrafts?.(...args);
+        navigate('drafts');
+    };
+    window.openPostDetail = function(postId) {
+        if (!postId) return;
+        if (restoring) return base.openPostDetail?.(postId);
+        navigate('post-detail', { postId: String(postId) });
+    };
+
+    window.addEventListener('popstate', (event) => {
+        const state = event.state?.[NAV_STATE_KEY];
+        if (!state) return;
+        rootBackArmed = false;
+        clearTimeout(rootBackTimer);
+        void renderState(state);
+    });
+
+    window.addEventListener('pagehide', rememberScroll, { passive: true });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') rememberScroll(); });
+})();

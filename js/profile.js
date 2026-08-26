@@ -236,7 +236,7 @@ function setProfileEditMode(enabled) {
     topSave?.toggleAttribute('hidden', !enabled);
     if (backButton) {
         backButton.setAttribute('aria-label', enabled ? 'إلغاء التعديل' : 'رجوع');
-        backButton.onclick = enabled ? () => editProfile(false) : () => window.showHome?.();
+        backButton.onclick = enabled ? () => editProfile(false) : () => window.goBackInApp?.();
     }
     [avatarTrigger, bannerTrigger].forEach((button) => {
         if (!button) return;
