@@ -385,9 +385,9 @@
         "acceptedAt": { ".write": "auth != null && auth.uid === data.parent().child('recipientId').val() && data.parent().child('status').val() === 'pending'", ".validate": "newData.isString()" },
         "rejectedBy": { ".write": "auth != null && auth.uid === data.parent().child('recipientId').val() && data.parent().child('status').val() === 'pending'", ".validate": "newData.isString()" },
         "rejectedAt": { ".write": "auth != null && auth.uid === data.parent().child('recipientId').val() && data.parent().child('status').val() === 'pending'", ".validate": "newData.isString()" },
-        "lastMessage": { ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('status').val() !== 'rejected'", ".validate": "newData.isString() || newData.val() === null" },
-        "lastMessageTime": { ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('status').val() !== 'rejected'", ".validate": "newData.isString() || newData.val() === null" },
-        "lastSenderId": { ".write": "auth != null && data.child('participants').hasChild(auth.uid) && data.child('status').val() !== 'rejected'", ".validate": "newData.isString()" },
+        "lastMessage": { ".write": "auth != null && data.parent().child('participants').hasChild(auth.uid) && data.parent().child('status').val() !== 'rejected'", ".validate": "newData.isString() || newData.val() === null" },
+        "lastMessageTime": { ".write": "auth != null && data.parent().child('participants').hasChild(auth.uid) && data.parent().child('status').val() !== 'rejected'", ".validate": "newData.isString() || newData.val() === null" },
+        "lastSenderId": { ".write": "auth != null && data.parent().child('participants').hasChild(auth.uid) && data.parent().child('status').val() !== 'rejected'", ".validate": "newData.isString()" },
         "unreadCounts": { ".write": "auth != null && data.parent().child('participants').hasChild(auth.uid)", ".validate": "newData.hasChildren() || newData.val() === null" },
         "deletedFor": { "$uid": { ".write": "auth.uid === $uid && data.parent().parent().child('participants').hasChild(auth.uid)", ".validate": "newData.isBoolean()" } },
         "$other": { ".validate": true }
