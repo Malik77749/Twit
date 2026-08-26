@@ -157,7 +157,7 @@ const COMMENT_ICON_PATHS = {
     more: '<circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle>',
     expand: '<path d="M8 4H4v4M4 4l6 6M16 20h4v-4M20 20l-6-6"></path>',
     image: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><circle cx="8.5" cy="9" r="1.4"></circle><path d="m5.5 17 4.2-4 3.2 2.7 2.2-2 3.4 3.3"></path>',
-    send: '<path d="m21 3-7.2 18-3.8-7-7-3.8z"></path><path d="M21 3 10 14"></path>'
+    send: '<path d="m3 4 18 8-18 8 3.3-8z"></path><path d="M6.3 12H21"></path>'
 };
 function commentIcon(name, filled = false) {
     const fill = filled ? ' fill="currentColor"' : '';
@@ -200,7 +200,6 @@ function mountDetailReplyDock(postId, avatar) {
     const context = dock.querySelector('.detail-reply-context');
     const contextText = dock.querySelector('.detail-reply-context-text');
     dock.querySelector('.detail-reply-send')?.addEventListener('click', event => addComment(postId, dock.dataset.replyTo || null, event));
-    input?.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); addComment(postId, dock.dataset.replyTo || null, event); } });
     input?.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 130)}px`; });
     dock.querySelector('[data-tool="expand"]')?.addEventListener('click', () => { dock.classList.toggle('expanded'); input?.focus(); });
     dock.querySelector('[data-tool="gif"]')?.addEventListener('click', () => window.showToast?.('إضافة GIF للتعليق ستكون متاحة قريبًا'));
@@ -420,8 +419,8 @@ function loadComments(postId) {
             const replies = comments.filter(c => c.parentCommentId === comment.id).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
             commentsHtml += `
-                <article class="comment" data-comment-id="${safeCommentId}">
-                    <img class="comment-avatar" src="${avatar}" alt="">
+                    <article class="comment" data-comment-id="${safeCommentId}" onclick="handleCommentCardClick(event,'${postId}','${safeCommentId}')">
+                        <img class="comment-avatar" src="${avatar}" alt="" onclick="event.stopPropagation();showProfile('${escapeHtml(String(comment.userId || ''))}')">
                     <div class="comment-body">
                         <div class="comment-meta"><span class="name">${escapeHtml(name)}</span><span class="time">${formatCommentTime(comment.timestamp)}</span></div>
                         <div class="comment-text">${escapeHtml(comment.content)}${comment.edited ? ' <span class="comment-edited">(معدّل)</span>' : ''}</div>
@@ -435,8 +434,8 @@ function loadComments(postId) {
                 const replyName = reply.userName || 'مستخدم';
                 const replyAvatar = escapeHtml(String(reply.userAvatar || DEFAULT_AVATAR));
                 commentsHtml += `
-                    <article class="comment reply" data-comment-id="${escapeHtml(String(reply.id))}">
-                        <img class="comment-avatar" src="${replyAvatar}" alt="">
+                    <article class="comment reply" data-comment-id="${escapeHtml(String(reply.id))}" onclick="handleCommentCardClick(event,'${postId}','${escapeHtml(String(reply.id))}')">
+                        <img class="comment-avatar" src="${replyAvatar}" alt="" onclick="event.stopPropagation();showProfile('${escapeHtml(String(reply.userId || ''))}')">
                         <div class="comment-body">
                             <div class="comment-meta"><span class="name">${escapeHtml(replyName)}</span><span class="time">${formatCommentTime(reply.timestamp)}</span></div>
                             <div class="comment-text">${escapeHtml(reply.content)}${reply.edited ? ' <span class="comment-edited">(معدّل)</span>' : ''}</div>
@@ -473,6 +472,11 @@ function formatCommentTime(timestamp) {
     return `${Math.floor(diff / 86400)}ي`;
 }
 
+function handleCommentCardClick(event, postId, commentId) {
+    if (event.target.closest('button, input, textarea, select, a, label')) return;
+    showCommentReplyInput(postId, commentId, event);
+}
+
 function showCommentReplyInput(postId, commentId, event) {
     event?.preventDefault();
     event?.stopPropagation();
@@ -503,4 +507,4 @@ function toggleComments(postId, event) {
     }
 }
 
-export { init, addComment, editComment, deleteComment, loadComments, toggleComments, showCommentReplyInput, toggleCommentLike, openCommentOptions, closeCommentOptions, copyCommentLink, reportComment, mountDetailReplyDock, unmountDetailReplyDock };
+export { init, addComment, editComment, deleteComment, loadComments, toggleComments, handleCommentCardClick, showCommentReplyInput, toggleCommentLike, openCommentOptions, closeCommentOptions, copyCommentLink, reportComment, mountDetailReplyDock, unmountDetailReplyDock };

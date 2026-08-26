@@ -2,7 +2,7 @@
 import { ref, update, onValue, get } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { escapeHtml } from './utils.js?v=9';
 import { showView } from './ui.js?v=11';
-import { toggleComments } from './comments.js?v=23';
+import { toggleComments } from './comments.js?v=24';
 
 let auth, database;
 let notificationsUnsub = null;

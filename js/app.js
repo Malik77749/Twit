@@ -7,7 +7,7 @@ import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } 
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=10';
 import * as posts from './posts.js?v=23';
-import * as comments from './comments.js?v=23';
+import * as comments from './comments.js?v=24';
 import * as notifications from './notifications.js?v=18';
 import * as profile from './profile.js?v=18';
 import * as pagination from './pagination.js?v=10';
@@ -661,6 +661,7 @@ window.unpinPost = posts.unpinPost;
 window.addComment = comments.addComment;
 window.toggleComments = comments.toggleComments;
 window.showCommentReplyInput = comments.showCommentReplyInput;
+window.handleCommentCardClick = comments.handleCommentCardClick;
 window.deleteComment = comments.deleteComment;
 window.editComment = comments.editComment;
 window.toggleCommentLike = comments.toggleCommentLike;
