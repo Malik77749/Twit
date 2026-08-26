@@ -2824,3 +2824,32 @@ body.mimer-authenticated.mimer-navigation-root:not(.create-post-mode) .create-po
   .feed-batch-skeleton { min-height: 108px; padding: 14px 13px; border-inline: 0; border-radius: 0; }
   .feed-batch-skeleton .skeleton-avatar { width: 40px; height: 40px; flex-basis: 40px; }
 }
+
+
+/* Reliable create-post glyph: independent from Font Awesome loading or font fallback. */
+.create-post-fab .create-post-fab-plus {
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  color: #06131b !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 34px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  position: relative !important;
+  z-index: 2 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+[data-mimer-theme="light"] .create-post-fab .create-post-fab-plus {
+  color: #ffffff !important;
+}
+@media (max-width: 760px) {
+  .create-post-fab .create-post-fab-plus { font-size: 35px !important; }
+}
+
+/* Profile cards keep their content visible even when one rich renderer fails. */
+#profile-posts .profile-post-fallback { min-height: 96px; }
+#profile-posts .profile-post-fallback .tweet-body { width: 100%; }

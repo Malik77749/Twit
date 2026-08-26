@@ -1,9 +1,9 @@
 // Profile Module
 import { ref, get, set, update, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { showLoading, hideLoading, showView } from './ui.js?v=11';
+import { showLoading, hideLoading, showView } from './ui.js?v=13';
 import { getUserData } from './firebase-helpers.js?v=9';
 import { showToast } from './utils.js?v=9';
-import { renderPost, renderRetweet, reportPost } from './posts.js?v=29';
+import { renderPost, renderRetweet, reportPost } from './posts.js?v=30';
 import { escapeHtml } from './utils.js?v=9';
 import * as cloudinary from './cloudinary.js?v=11';
 import * as imageCdn from './image-cdn.js?v=10';
@@ -68,11 +68,16 @@ async function showProfile(userId) {
         document.getElementById('profile-handle').textContent = '@' + (userData.handle || (userData.name || 'user').replace(/\s/g, '').toLowerCase());
         const numericIdEl = document.getElementById('profile-numeric-id');
         if (numericIdEl) numericIdEl.textContent = userData.numericId ? `معرّف ميمر: ${userData.numericId}` : 'معرّف ميمر: قيد التحديث';
-        const followerRecords = await get(ref(database, `followers/${userId}`));
-        const allFollowerRecords = await get(ref(database, 'followers'));
+        const [followerResult, allFollowersResult] = await Promise.allSettled([
+            get(ref(database, `followers/${userId}`)),
+            get(ref(database, 'followers'))
+        ]);
+        const followerRecords = followerResult.status === 'fulfilled' ? followerResult.value : null;
+        const allFollowerRecords = allFollowersResult.status === 'fulfilled' ? allFollowersResult.value : null;
         let liveFollowingCount = 0;
-        if (allFollowerRecords.exists()) allFollowerRecords.forEach(target => { if (target.hasChild(userId)) liveFollowingCount += 1; });
-        document.getElementById('profile-followers').textContent = followerRecords.exists() ? Object.keys(followerRecords.val() || {}).length : 0;
+        if (allFollowerRecords?.exists()) allFollowerRecords.forEach(target => { if (target.hasChild(userId)) liveFollowingCount += 1; });
+        const followerCount = followerRecords?.exists() ? Object.keys(followerRecords.val() || {}).length : 0;
+        document.getElementById('profile-followers').textContent = followerCount;
         document.getElementById('profile-following').textContent = liveFollowingCount;
         document.getElementById('profile-picture').src = userData.profilePicture || DEFAULT_AVATAR;
 
@@ -536,44 +541,50 @@ async function loadProfilePosts(userId) {
 
         allItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        // Show pinned post first (if exists)
+        // A pinned post is optional: a stale or inaccessible pin must not hide regular posts.
         if (pinnedPostId) {
-            const pinnedSnap = await get(ref(database, 'posts/' + pinnedPostId));
-            if (pinnedSnap.exists()) {
-                const pinnedEl = document.createElement('div');
-                pinnedEl.setAttribute('data-post-id', pinnedPostId);
-                pinnedEl.style.borderBottom = '2px solid var(--accent)';
-                container.appendChild(pinnedEl);
-                await renderPost({ id: pinnedPostId, ...pinnedSnap.val(), isPinned: true }, pinnedEl);
-
-                // Remove pinned from regular list
-                const pinnedIdx = allItems.findIndex(i => i.id === pinnedPostId);
-                if (pinnedIdx !== -1) allItems.splice(pinnedIdx, 1);
+            try {
+                const pinnedSnap = await get(ref(database, 'posts/' + pinnedPostId));
+                if (pinnedSnap.exists()) {
+                    const pinnedEl = document.createElement('div');
+                    pinnedEl.setAttribute('data-post-id', pinnedPostId);
+                    pinnedEl.style.borderBottom = '2px solid var(--accent)';
+                    container.appendChild(pinnedEl);
+                    try {
+                        await renderPost({ id: pinnedPostId, ...pinnedSnap.val(), isPinned: true }, pinnedEl);
+                    } catch (renderError) {
+                        console.error('Pinned profile post render error:', renderError);
+                        renderProfilePostFallback({ id: pinnedPostId, ...pinnedSnap.val() }, pinnedEl);
+                    }
+                    const pinnedIdx = allItems.findIndex(i => i.id === pinnedPostId);
+                    if (pinnedIdx !== -1) allItems.splice(pinnedIdx, 1);
+                }
+            } catch (pinError) {
+                console.warn('Pinned profile post unavailable:', pinError);
             }
         }
 
-        for (const item of allItems) {
+        // Render all regular cards together; one failed rich card gets a local fallback only.
+        const renderResults = await Promise.allSettled(allItems.map(async item => {
             const el = document.createElement('div');
             el.setAttribute('data-post-id', item.id);
             container.appendChild(el);
-            if (item.type === 'post') {
-                try {
+            try {
+                if (item.type === 'post') {
                     await renderPost(item, el);
-                } catch (renderError) {
-                    console.error('Profile post render error:', renderError);
-                    renderProfilePostFallback(item, el);
-                }
-            } else {
-                try {
+                } else {
                     const snap = await get(ref(database, 'posts/' + item.originalPostId));
-                    if (snap.exists()) {
-                        await renderRetweet(item, { id: snap.key, ...snap.val() }, el);
-                    }
-                } catch (renderError) {
-                    console.error('Profile retweet render error:', renderError);
-                    renderProfilePostFallback(item, el);
+                    if (snap.exists()) await renderRetweet(item, { id: snap.key, ...snap.val() }, el);
+                    else renderProfilePostFallback(item, el);
                 }
+            } catch (renderError) {
+                console.error('Profile item render error:', renderError);
+                renderProfilePostFallback(item, el);
             }
+            return el;
+        }));
+        if (renderResults.length && !container.children.length) {
+            container.innerHTML = '<div class="empty-state"><p>لا توجد منشورات متاحة</p></div>';
         }
 
         hideLoading();
@@ -739,15 +750,31 @@ async function loadProfileLikes(userId, container) {
         }
 
         container.innerHTML = '';
-        for (const postId of likedPostIds.slice(0, 20)) {
+        const likedPostResults = await Promise.allSettled(likedPostIds.slice(0, 20).map(async postId => {
             const postSnap = await get(ref(database, `posts/${postId}`));
-            if (!postSnap.exists()) continue;
+            return postSnap.exists() ? { id: postId, ...postSnap.val() } : null;
+        }));
+        const availableLikedPosts = likedPostResults
+            .filter(result => result.status === 'fulfilled' && result.value)
+            .map(result => result.value);
 
-            const el = document.createElement('div');
-            el.setAttribute('data-post-id', postId);
-            container.appendChild(el);
-            await renderPost({ id: postId, ...postSnap.val() }, el);
+        if (!availableLikedPosts.length) {
+            container.innerHTML = '<div class="empty-state"><p>لا توجد منشورات متاحة ضمن إعجاباتك</p></div>';
+            hideLoading();
+            return;
         }
+
+        await Promise.allSettled(availableLikedPosts.map(async post => {
+            const el = document.createElement('div');
+            el.setAttribute('data-post-id', post.id);
+            container.appendChild(el);
+            try {
+                await renderPost(post, el);
+            } catch (renderError) {
+                console.error('Liked profile post render error:', renderError);
+                renderProfilePostFallback(post, el);
+            }
+        }));
 
         hideLoading();
     } catch (error) {
