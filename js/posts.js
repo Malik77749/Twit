@@ -212,6 +212,12 @@ async function postTweet() {
 
     const postBtn = document.querySelector('.composer-submit');
     if (postBtn?.disabled || postBtn?.dataset.publishBusy === 'true') return;
+    if (navigator.onLine === false) {
+        const offlineDraftId = await window.saveFailedPostDraft?.(content, imageUrl, videoUrl);
+        if (offlineDraftId) window.pendingDraftId = offlineDraftId;
+        showToast('لا يوجد اتصال؛ حُفظ المنشور كمسودة');
+        return;
+    }
     publishInFlight = true;
     publishRequestId = `${userId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
     if (postBtn) { postBtn.disabled = true; postBtn.dataset.publishBusy = 'true'; postBtn.setAttribute('aria-busy', 'true'); postBtn.textContent = 'جاري النشر...'; }
