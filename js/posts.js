@@ -342,6 +342,10 @@ async function postTweet() {
             const replySetting = window.replySettings?.[replySettingIdx]?.value || 'everyone';
             if (replySetting !== 'everyone') {
                 postData.replySetting = replySetting;
+                if (replySetting === 'specific' && window.replyTargetUserId) postData.replyTargetUserId = window.replyTargetUserId;
+            } else {
+                delete postData.replySetting;
+                delete postData.replyTargetUserId;
             }
 
             await set(postRef, postData);
@@ -374,6 +378,7 @@ async function postTweet() {
         if (document.getElementById('postGif')) document.getElementById('postGif').value = '';
         if (document.getElementById('postLocation')) document.getElementById('postLocation').value = '';
         if (document.getElementById('post-community')) document.getElementById('post-community').value = '';
+        window.resetReplySetting?.();
         removePreview();
         const gifRow = document.getElementById('gif-input-row');
         const locationRow = document.getElementById('location-input-row');

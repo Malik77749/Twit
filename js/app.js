@@ -6,7 +6,7 @@ import { firebaseConfig } from './config.js?v=9';
 import { showView, showApp, showAuth, showLoading, hideLoading, focusComposer } from './ui.js?v=11';
 import { escapeHtml, showToast, parseContent } from './utils.js?v=9';
 import * as auth from './auth.js?v=10';
-import * as posts from './posts.js?v=23';
+import * as posts from './posts.js?v=25';
 import * as comments from './comments.js?v=24';
 import * as notifications from './notifications.js?v=18';
 import * as profile from './profile.js?v=18';
@@ -1162,24 +1162,105 @@ window.votePoll = async function(postId, optionKey) {
 // ===== Reply Setting =====
 
 const replySettings = [
-    { icon: 'fa-earth-americas', text: 'الجميع يمكنه الرد', value: 'everyone' },
-    { icon: 'fa-user-check', text: 'الأشخاص الذين تتابعهم يمكنهم الرد', value: 'following' }
+    { icon: 'fa-earth-americas', text: 'الجميع', value: 'everyone' },
+    { icon: 'fa-user-group', text: 'الأصدقاء', value: 'friends' },
+    { icon: 'fa-user-plus', text: 'شخص محدد', value: 'specific' }
 ];
 let currentReplySetting = 0;
 window.currentReplySetting = currentReplySetting;
+window.replyTargetUserId = '';
 window.replySettings = replySettings;
 
-window.cycleReplySetting = function() {
-    currentReplySetting = (currentReplySetting + 1) % replySettings.length;
-    window.currentReplySetting = currentReplySetting;
-    const setting = replySettings[currentReplySetting];
-    document.getElementById('reply-setting-text').textContent = setting.text;
-    document.querySelector('.reply-selector-btn i').className = `fas ${setting.icon}`;
+function updateReplySelectorUI(label, icon) {
+    const text = document.getElementById('reply-setting-text');
+    const button = document.getElementById('reply-selector-btn');
+    const currentIcon = button?.querySelector('i:first-child');
+    if (text) text.textContent = label || replySettings[currentReplySetting]?.text || 'الجميع';
+    if (currentIcon) currentIcon.className = `fas ${icon || replySettings[currentReplySetting]?.icon || 'fa-earth-americas'}`;
+    document.querySelectorAll('.reply-setting-option').forEach(option => {
+        const active = option.dataset.replySetting === replySettings[currentReplySetting]?.value;
+        option.classList.toggle('active', active);
+        option.setAttribute('aria-checked', active ? 'true' : 'false');
+        const check = option.querySelector('.reply-setting-check');
+        if (check) check.className = `${active ? 'fas fa-check' : 'reply-setting-check'}`;
+    });
+}
+
+window.selectReplySetting = function(value, userId = null, label = null, icon = null, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const index = replySettings.findIndex(setting => setting.value === value);
+    if (index < 0 || (value === 'specific' && !userId)) return;
+    currentReplySetting = index;
+    window.currentReplySetting = index;
+    window.replyTargetUserId = userId || '';
+    updateReplySelectorUI(value === 'specific' && label ? `@${label.replace(/^@/, '')}` : label, icon);
+    const menu = document.getElementById('reply-selector-menu');
+    const panel = document.getElementById('reply-specific-users');
+    const button = document.getElementById('reply-selector-btn');
+    if (menu) menu.hidden = true;
+    if (panel) panel.hidden = true;
+    button?.setAttribute('aria-expanded', 'false');
 };
 
-window.toggleReplySelector = function() {
+window.toggleReplySelector = function(event) {
+    event?.preventDefault();
+    event?.stopPropagation();
     const selector = document.getElementById('reply-selector');
-    selector.style.display = selector.style.display === 'none' ? 'flex' : 'none';
+    const menu = document.getElementById('reply-selector-menu');
+    const button = document.getElementById('reply-selector-btn');
+    if (!selector || !menu) return;
+    selector.hidden = false;
+    const open = menu.hidden;
+    menu.hidden = !open;
+    button?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) updateReplySelectorUI();
+};
+
+window.openSpecificReplyUsers = async function(event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const menu = document.getElementById('reply-selector-menu');
+    const panel = document.getElementById('reply-specific-users');
+    if (!menu || !panel) return;
+    menu.hidden = false;
+    panel.hidden = false;
+    panel.innerHTML = '<div class="reply-specific-loading">جاري تحميل الحسابات التي تتابعها…</div>';
+    const currentUserId = authInstance.currentUser?.uid;
+    if (!currentUserId) { panel.innerHTML = '<div class="reply-specific-loading">سجّل الدخول أولًا</div>'; return; }
+    try {
+        const [usersSnap, followersSnap] = await Promise.all([get(ref(database, 'users')), get(ref(database, 'followers'))]);
+        const followingIds = [];
+        if (followersSnap.exists()) followersSnap.forEach(target => { if (target.key !== currentUserId && target.hasChild(currentUserId)) followingIds.push(target.key); });
+        const users = followingIds.map(id => ({ id, ...(usersSnap.child(id).val() || {}) })).filter(user => user.name || user.handle).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar'));
+        if (!users.length) { panel.innerHTML = '<div class="reply-specific-loading">لا توجد حسابات تتابعها بعد</div>'; return; }
+        panel.innerHTML = users.map(user => `<button type="button" class="reply-specific-user" data-user-id="${escapeHtml(user.id)}"><img src="${escapeHtml(user.profilePicture || DEFAULT_AVATAR)}" alt=""><span><strong>${escapeHtml(user.name || 'مستخدم')}</strong><small>@${escapeHtml(user.handle || '')}</small></span></button>`).join('');
+        panel.querySelectorAll('.reply-specific-user').forEach(button => {
+            const user = users.find(item => item.id === button.dataset.userId);
+            button.addEventListener('click', clickEvent => selectReplySetting('specific', user.id, user.handle || user.name || 'مستخدم', 'fa-user-plus', clickEvent));
+        });
+    } catch (error) {
+        console.warn('Specific reply users unavailable:', error);
+        panel.innerHTML = '<div class="reply-specific-loading">تعذر تحميل الحسابات</div>';
+    }
+};
+
+window.cycleReplySetting = function() {
+    const next = replySettings[(currentReplySetting + 1) % replySettings.length];
+    if (next.value === 'specific') { openSpecificReplyUsers(); return; }
+    selectReplySetting(next.value, null, next.text, next.icon);
+};
+
+window.resetReplySetting = function() {
+    currentReplySetting = 0;
+    window.currentReplySetting = 0;
+    window.replyTargetUserId = '';
+    const menu = document.getElementById('reply-selector-menu');
+    const selector = document.getElementById('reply-selector');
+    if (menu) menu.hidden = true;
+    if (selector) selector.hidden = true;
+    document.getElementById('reply-selector-btn')?.setAttribute('aria-expanded', 'false');
+    updateReplySelectorUI('الجميع', 'fa-earth-americas');
 };
 
 // ===== Theme Functions =====

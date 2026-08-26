@@ -254,6 +254,25 @@ async function addComment(postId, parentCommentId, event) {
     }
 
     try {
+        const postSnap = await get(ref(database, `posts/${postId}`));
+        const postData = postSnap.exists() ? postSnap.val() || {} : {};
+        const replySetting = postData.replySetting || 'everyone';
+        const isPostOwner = postData.userId === userId;
+        if (!isPostOwner && replySetting === 'specific' && postData.replyTargetUserId && postData.replyTargetUserId !== userId) {
+            window.showToast?.('هذا المنشور مخصص لشخص محدد للرد');
+            return false;
+        }
+        if (!isPostOwner && replySetting === 'friends') {
+            const [authorFollowsViewer, viewerFollowsAuthor] = await Promise.all([
+                get(ref(database, `followers/${postData.userId}/${userId}`)),
+                get(ref(database, `followers/${userId}/${postData.userId}`))
+            ]);
+            if (!authorFollowsViewer.exists() || !viewerFollowsAuthor.exists()) {
+                window.showToast?.('الرد متاح للأصدقاء فقط');
+                return false;
+            }
+        }
+
         // Denormalize: store user data with comment
         const userData = await getUserData(database, userId);
 

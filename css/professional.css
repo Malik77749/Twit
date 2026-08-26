@@ -1675,3 +1675,78 @@ body { color: var(--text-primary); }
   .detail-reply-send { width: 36px !important; height: 36px !important; min-width: 36px !important; flex-basis: 36px !important; }
   .detail-reply-send .comment-ui-icon { width: 19px !important; height: 19px !important; }
 }
+
+/* Reply audience menu: contained, readable and safe on narrow screens. */
+.composer-body { position: relative; min-width: 0; }
+.reply-selector:not([hidden]) { display: inline-flex; position: relative; align-self: flex-start; z-index: 40; }
+.reply-selector-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  max-width: min(100%, 240px);
+  padding: 5px 10px;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--surface) !important;
+  box-shadow: none !important;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.reply-selector-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reply-selector-chevron { font-size: 10px; }
+.reply-selector-menu {
+  position: absolute;
+  inset-inline-start: 0;
+  top: calc(100% + 8px);
+  width: min(320px, calc(100vw - 32px));
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 14px 34px rgba(0,0,0,.18);
+  z-index: 80;
+}
+.reply-selector-menu[hidden],
+.reply-specific-users[hidden] { display: none !important; }
+.reply-setting-option,
+.reply-specific-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 11px;
+  color: var(--text-primary);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+}
+.reply-setting-option:hover,
+.reply-setting-option.active,
+.reply-specific-user:hover { background: var(--bg-hover); }
+.reply-setting-option > i:first-child { width: 20px; color: var(--accent); text-align: center; }
+.reply-setting-option > span,
+.reply-specific-user > span { display: grid; min-width: 0; flex: 1; gap: 1px; }
+.reply-setting-option strong,
+.reply-specific-user strong { font-size: 13px; }
+.reply-setting-option small,
+.reply-specific-user small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 11px; }
+.reply-setting-check { width: 18px; color: var(--accent); font-size: 12px; text-align: center; }
+.reply-specific-users { margin: 4px 2px 2px; padding-top: 4px; border-top: 1px solid var(--border-color); }
+.reply-specific-user img { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 50%; object-fit: cover; }
+.reply-specific-loading { padding: 10px 8px; color: var(--text-secondary); font-size: 12px; text-align: center; }
+@media (max-width:760px) {
+  .reply-selector-menu { width: min(300px, calc(100vw - 24px)); }
+  .reply-selector-btn { max-width: 190px; }
+  #home-view .composer-actions { position: relative; }
+}
+[data-mimer-theme="light"] .reply-selector-menu,
+[data-mimer-theme="light"] .reply-selector-btn { background: #fff !important; color: #000 !important; border-color: rgba(0,0,0,.16) !important; }
+[data-mimer-theme="light"] .reply-setting-option,
+[data-mimer-theme="light"] .reply-specific-user { color: #000 !important; }
+[data-mimer-theme="light"] .reply-setting-option small,
+[data-mimer-theme="light"] .reply-specific-user small { color: #000 !important; opacity: .7; }

@@ -190,6 +190,10 @@ async function postTweet() {
             const replySetting = window.replySettings?.[replySettingIdx]?.value || 'everyone';
             if (replySetting !== 'everyone') {
                 postData.replySetting = replySetting;
+                if (replySetting === 'specific' && window.replyTargetUserId) postData.replyTargetUserId = window.replyTargetUserId;
+            } else {
+                delete postData.replySetting;
+                delete postData.replyTargetUserId;
             }
 
             await set(postRef, postData);

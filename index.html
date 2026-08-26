@@ -96,13 +96,13 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/professional.css?v=35">
+    <link rel="stylesheet" href="css/professional.css?v=37">
 
     <!-- PWA Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=16')
+                navigator.serviceWorker.register('./sw.js?v=18')
                     .then(reg => console.log('SW registered'))
                     .catch(err => console.log('SW registration failed'));
             });
@@ -550,11 +550,18 @@
                         </div>
 
                         <!-- Who Can Reply -->
-                        <div class="reply-selector" id="reply-selector" style="display:none;">
-                            <button class="reply-selector-btn" onclick="cycleReplySetting()">
-                                <i class="fas fa-earth-americas"></i>
-                                <span id="reply-setting-text">الجميع يمكنه الرد</span>
+                        <div class="reply-selector" id="reply-selector" hidden>
+                            <button class="reply-selector-btn" id="reply-selector-btn" type="button" onclick="toggleReplySelector()" aria-expanded="false" aria-controls="reply-selector-menu">
+                                <i class="fas fa-earth-americas" aria-hidden="true"></i>
+                                <span id="reply-setting-text">الجميع</span>
+                                <i class="fas fa-chevron-down reply-selector-chevron" aria-hidden="true"></i>
                             </button>
+                            <div class="reply-selector-menu" id="reply-selector-menu" hidden role="menu" aria-label="من يستطيع الرد">
+                                <button type="button" class="reply-setting-option active" data-reply-setting="everyone" onclick="selectReplySetting('everyone', null, 'الجميع', 'fa-earth-americas', event)" role="menuitemradio" aria-checked="true"><i class="fas fa-earth-americas" aria-hidden="true"></i><span><strong>الجميع</strong><small>أي شخص يستطيع الرد</small></span><i class="fas fa-check reply-setting-check" aria-hidden="true"></i></button>
+                                <button type="button" class="reply-setting-option" data-reply-setting="friends" onclick="selectReplySetting('friends', null, 'الأصدقاء', 'fa-user-group', event)" role="menuitemradio" aria-checked="false"><i class="fas fa-user-group" aria-hidden="true"></i><span><strong>الأصدقاء</strong><small>المتابعة المتبادلة فقط</small></span><i class="fas fa-check reply-setting-check" aria-hidden="true"></i></button>
+                                <button type="button" class="reply-setting-option" data-reply-setting="specific" onclick="openSpecificReplyUsers(event)" role="menuitemradio" aria-checked="false"><i class="fas fa-user-plus" aria-hidden="true"></i><span><strong>شخص محدد</strong><small id="reply-specific-label">اختر من الحسابات التي تتابعها</small></span><i class="fas fa-chevron-left reply-setting-check" aria-hidden="true"></i></button>
+                                <div class="reply-specific-users" id="reply-specific-users" hidden></div>
+                            </div>
                         </div>
 
                         <div class="composer-divider"></div>
@@ -1105,6 +1112,6 @@
          - مؤشرات تبويب متحركة ومشاركة وقراءة مطولة
     -->
     <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTopAction()"><i class="fas fa-arrow-up"></i></button>
-    <script type="module" src="js/app.js?v=74"></script>
+    <script type="module" src="js/app.js?v=76"></script>
 </body>
 </html>
