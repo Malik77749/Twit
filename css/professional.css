@@ -1846,3 +1846,16 @@ body { color: var(--text-primary); }
   #profile-view #profile-posts { margin-top:16px; border-top:1px solid var(--border-color); }
   #profile-view #profile-posts .tweet { padding-inline:12px; }
 }
+
+/* Profile correction: reserve real flow space for the overlapping avatar and keep all profile tabs available. */
+@media (max-width:760px) {
+  #profile-view .profile-avatar-row { height:44px; min-height:44px; margin-top:-44px; padding-inline:16px; }
+  #profile-view .profile-details { padding:56px 16px 0; }
+  #profile-view .profile-tabs,
+  #profile-view.profile-view-own .profile-tabs,
+  #profile-view.profile-view-public .profile-tabs { display:flex !important; align-items:stretch; min-height:54px; margin-top:16px; overflow:hidden; border-top:1px solid var(--border-color); border-bottom:1px solid var(--border-color); }
+  #profile-view .profile-tab { min-width:0; flex:1 1 0; display:flex; align-items:center; justify-content:center; gap:4px; padding:11px 3px; font-size:11px; white-space:nowrap; }
+  #profile-view .profile-tab i { flex:0 0 auto; font-size:14px; }
+  #profile-view .profile-tab span { min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #profile-view.profile-editing .profile-tabs { display:none !important; }
+}
