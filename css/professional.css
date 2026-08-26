@@ -1859,3 +1859,210 @@ body { color: var(--text-primary); }
   #profile-view .profile-tab span { min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #profile-view.profile-editing .profile-tabs { display:none !important; }
 }
+
+/* Visual polish layer only — preserves existing structure, positions, controls and behaviors. */
+:root {
+  --mimer-ink: #f4f7fb;
+  --mimer-muted-ink: #aebbc9;
+  --mimer-surface-raised: #1b2733;
+  --mimer-surface-hover: #202f3d;
+  --mimer-line-soft: rgba(184, 202, 218, .16);
+  --mimer-shadow-soft: 0 8px 28px rgba(0, 0, 0, .16);
+  --mimer-shadow-control: 0 2px 10px rgba(0, 0, 0, .12);
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.tweet,
+.composer,
+.profile-header-bar,
+.settings-panel,
+.trending-card,
+.notification-item,
+.conversation-item,
+.search-result-item,
+.post-detail,
+.profile-tabs,
+.feed-tabs {
+  box-shadow: var(--mimer-shadow-soft);
+}
+
+.tweet,
+.composer,
+.profile-header-bar,
+.settings-panel,
+.trending-card,
+.notification-item,
+.conversation-item,
+.search-result-item,
+.post-detail {
+  background: var(--surface, var(--bg-primary));
+  box-shadow: inset 0 0 0 1px var(--mimer-line-soft), var(--mimer-shadow-soft);
+}
+
+.tweet:hover,
+.notification-item:hover,
+.conversation-item:hover,
+.search-result-item:hover,
+.trending-card:hover {
+  background: var(--mimer-surface-hover);
+}
+
+.tweet-header,
+.post-detail-header,
+.profile-header-bar,
+.feed-header,
+.page-header,
+.settings-header,
+.messages-header {
+  letter-spacing: -.01em;
+}
+
+.tweet-name,
+.profile-name,
+.profile-header-info h2,
+.post-detail-author strong {
+  color: var(--mimer-ink);
+  font-weight: 800;
+}
+
+.tweet-handle,
+.profile-handle,
+.profile-header-info span,
+.tweet-time,
+.profile-join-date,
+.profile-numeric-id {
+  color: var(--mimer-muted-ink);
+}
+
+.tweet-actions,
+.comment-engagement-bar,
+.profile-tabs,
+.feed-tabs {
+  border-color: var(--mimer-line-soft) !important;
+}
+
+.tweet-action,
+.comment-engagement-bar button,
+.profile-tab,
+.reply-selector-btn,
+.follow-btn,
+.profile-edit-btn,
+.profile-message-btn,
+.profile-more-btn,
+.post-menu-close,
+.composer-tool,
+.mobile-nav-item,
+.sidebar-item,
+.drawer-item {
+  transition: color .16s ease, background-color .16s ease, border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+.tweet-action:hover,
+.comment-engagement-bar button:hover,
+.profile-tab:hover,
+.composer-tool:hover,
+.mobile-nav-item:hover,
+.sidebar-item:hover,
+.drawer-item:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tweet-action:active,
+.comment-engagement-bar button:active,
+.profile-tab:active,
+.composer-tool:active,
+.follow-btn:active,
+.profile-edit-btn:active,
+.profile-message-btn:active,
+.profile-more-btn:active,
+.composer-submit:active {
+  transform: scale(.97);
+}
+
+.follow-btn,
+.profile-edit-btn,
+.profile-message-btn,
+.profile-more-btn,
+.reply-selector-btn {
+  box-shadow: var(--mimer-shadow-control);
+}
+
+.follow-btn:hover,
+.profile-edit-btn:hover,
+.profile-message-btn:hover,
+.profile-more-btn:hover,
+.reply-selector-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.composer-body,
+.comment-input-row,
+.detail-reply-dock,
+.comment-reply-input {
+  background: var(--surface, var(--bg-primary));
+  box-shadow: inset 0 0 0 1px var(--mimer-line-soft), var(--mimer-shadow-control);
+}
+
+.composer-input,
+.comment-input,
+.comment-reply-input textarea,
+.detail-reply-dock textarea,
+.search-box input,
+.auth-input {
+  color: var(--mimer-ink);
+  caret-color: var(--accent);
+}
+
+.composer-input::placeholder,
+.comment-input::placeholder,
+.comment-reply-input textarea::placeholder,
+.detail-reply-dock textarea::placeholder,
+.search-box input::placeholder,
+.auth-input::placeholder {
+  color: var(--mimer-muted-ink);
+  opacity: .84;
+}
+
+.composer-submit,
+.primary-btn,
+.profile-edit-top-save {
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 22%, transparent);
+  transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+
+.composer-submit:hover,
+.primary-btn:hover,
+.profile-edit-top-save:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.mobile-bottom-nav,
+.mobile-header,
+.mobile-feed-tabs {
+  box-shadow: 0 -4px 22px rgba(0, 0, 0, .16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tweet-action,
+  .comment-engagement-bar button,
+  .profile-tab,
+  .composer-tool,
+  .mobile-nav-item,
+  .sidebar-item,
+  .drawer-item,
+  .follow-btn,
+  .profile-edit-btn,
+  .profile-message-btn,
+  .profile-more-btn,
+  .reply-selector-btn,
+  .composer-submit,
+  .primary-btn,
+  .profile-edit-top-save { transition: none; }
+}

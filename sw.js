@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mimer-v24';
+const CACHE_NAME = 'mimer-v26';
 const MEDIA_CACHE_NAME = 'mimer-media-v1';
 const MEDIA_DB_NAME = 'mimer-media-meta';
 const MEDIA_DB_VERSION = 1;
