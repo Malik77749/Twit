@@ -9,7 +9,7 @@ import * as auth from './auth.js?v=10';
 import * as posts from './posts.js?v=30';
 import * as comments from './comments.js?v=24';
 import * as notifications from './notifications.js?v=18';
-import * as profile from './profile.js?v=20';
+import * as profile from './profile.js?v=21';
 import * as pagination from './pagination.js?v=10';
 import * as rateLimiter from './rate-limiter.js?v=10';
 import * as pushNotif from './push-notifications.js?v=12';
@@ -3171,6 +3171,7 @@ if (navigator.onLine === false) setNetworkNotice(true);
     let lastRenderedState = null;
     let rootBackTimer = null;
     let rootBackArmed = false;
+    const renderedViewCache = { home: false, profiles: new Set() };
 
     const base = {
         navigateTo: window.navigateTo,
@@ -3244,7 +3245,9 @@ if (navigator.onLine === false) setNetworkNotice(true);
     }
 
     function profileIdForNavigation(explicitId) {
-        return explicitId || window.currentProfileUserId || authInstance.currentUser?.uid || null;
+        // Navigation to "my profile" must always target the signed-in user.
+        // The currently viewed public profile is kept only when an explicit id is passed.
+        return explicitId || authInstance.currentUser?.uid || null;
     }
 
     function setRootBackState(isRoot) {
@@ -3258,12 +3261,22 @@ if (navigator.onLine === false) setNetworkNotice(true);
             // profile rendering can leave post detail mounted). Always clear stale views
             // before restoring the requested route.
             hideAllViews?.();
+            const cached = state.view === 'home'
+                ? renderedViewCache.home
+                : state.view === 'profile' && state.profileId && renderedViewCache.profiles.has(state.profileId);
+            if (cached) {
+                document.body.classList.remove('create-post-mode');
+                setActiveNav(state.view);
+                if (state.view === 'home' || state.view === 'profile') showView(state.view);
+                return;
+            }
             switch (state.view) {
                 case 'post-detail':
                     if (state.postId && typeof base.openPostDetail === 'function') await base.openPostDetail(state.postId);
                     break;
                 case 'profile':
                     if (typeof base.showProfile === 'function') await base.showProfile(state.profileId || undefined);
+                    if (window.currentProfileUserId) renderedViewCache.profiles.add(window.currentProfileUserId);
                     break;
                 case 'search':
                     if (typeof base.openSearch === 'function') await base.openSearch();
@@ -3295,6 +3308,7 @@ if (navigator.onLine === false) setNetworkNotice(true);
                 case 'home':
                 default:
                     if (typeof base.showHome === 'function') await base.showHome();
+                    renderedViewCache.home = true;
                     break;
             }
         } finally {
@@ -3319,9 +3333,9 @@ if (navigator.onLine === false) setNetworkNotice(true);
                 return;
             }
         }
-        const next = makeState(view, { ...extra, depth: (Number.isFinite(current.depth) ? current.depth : 0) + 1 });
+        const next = makeState(view, { ...extra, depth: (Number.isFinite(current.depth) ? current.depth : 0) + 1, scroll: extra.scroll || { windowY: 0, feedY: 0 } });
         pushState(next);
-        return renderState(next, { restoreScroll: false });
+        return renderState(next, { restoreScroll: true });
     }
 
     function requestBack() {

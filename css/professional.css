@@ -2853,3 +2853,20 @@ body.mimer-authenticated.mimer-navigation-root:not(.create-post-mode) .create-po
 /* Profile cards keep their content visible even when one rich renderer fails. */
 #profile-posts .profile-post-fallback { min-height: 96px; }
 #profile-posts .profile-post-fallback .tweet-body { width: 100%; }
+
+
+/* Mobile scrolling must remain native and vertical across every routed view. */
+@media (max-width: 760px) {
+  html, body, #app-section, .app-layout, .main-feed {
+    touch-action: pan-y !important;
+  }
+  html, body {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .app-layout, .main-feed {
+    min-height: 100vh;
+    height: auto !important;
+  }
+}
